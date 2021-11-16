@@ -7,13 +7,13 @@ Functionalities are very limited now !  Backward compat will break a lot in the 
 Examples:
 
 ```
-from orthanc_tools import Cloner
+from orthanc_tools import OrthancCloner
 from orthanc_api_client import OrthancApiClient
 
 orthanc_a = OrthancApiClient('http://localhost:8042', user='orthanc', pwd='orthanc')
 orthanc_b = OrthancApiClient('http://localhost:8043', user='orthanc', pwd='orthanc')
 
-cloner = Cloner(source=orthanc_a, destination=orthanc_b)
+cloner = OrthancCloner(source=orthanc_a, destination=orthanc_b)
 cloner.execute()
 
 ```

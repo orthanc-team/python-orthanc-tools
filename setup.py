@@ -131,7 +131,7 @@ setup(
     # https://packaging.python.org/discussions/install-requires-vs-requirements/
     install_requires=[
         'requests',
-        'orthanc-api-client==0.0.1'
+        'orthanc-api-client==0.0.3'
     ],
 
     # List additional groups of dependencies here (e.g. development

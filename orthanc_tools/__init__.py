@@ -1,4 +1,4 @@
-from orthanc_cloner import OrthancCloner
+from .orthanc_cloner import OrthancCloner
 
 
 __all__ = [

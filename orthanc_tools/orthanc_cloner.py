@@ -1,6 +1,6 @@
 from orthanc_api_client import OrthancApiClient
 
-class Cloner:
+class OrthancCloner:
 
     def __init__(self, source: OrthancApiClient, destination: OrthancApiClient):
         self._source = source

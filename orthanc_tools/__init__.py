@@ -1,6 +1,6 @@
-from .cloner import Cloner
+from orthanc_cloner import OrthancCloner
 
 
 __all__ = [
-    'Cloner'
+    'OrthancCloner'
 ]

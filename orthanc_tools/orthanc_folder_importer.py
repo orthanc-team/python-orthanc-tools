@@ -1,6 +1,5 @@
 import argparse
 import logging
-
 from orthanc_api_client import OrthancApiClient
 
 # examples:
@@ -15,11 +14,11 @@ if __name__ == '__main__':
     parser.add_argument('--user', type=str, default=None, help = 'Orthanc user name')
     parser.add_argument('--pwd', type=str, default=None, help = 'Orthanc password')
     parser.add_argument('--folder', type=str, help = 'Folder to import')
-    parser.add_argument('--skip', type=str, default='', help = 'comma separated list of extensions to ignore: ex .zip,.cne')
+    parser.add_argument('--skip_extensions', type=str, default='', help = 'comma separated list of extensions to ignore: ex .zip,.cne')
     args = parser.parse_args()
 
     o = OrthancApiClient(args.url, user=args.user, pwd=args.pwd)
     o.upload_folder(
         folder_path=args.folder, 
-        skip_extensions=args.skip.split(','),
+        skip_extensions=args.skip_extensions.split(','),
         ignore_errors=True)

@@ -25,6 +25,6 @@ $ docker exec -it xxxx bash
 
 /# pip3 install orthanc-tools
 
-/# python3 -m orthanc_tools.orthanc_folder_importer --folder=/import --url=http://localhost:8042 --user=test --pwd=test
+/# python3 -m orthanc_tools.orthanc_folder_importer --folder=/import --url=http://localhost:8042 --user=test --pwd=test --skip_extensions=.cne,.bmp,.ini
 
 ```

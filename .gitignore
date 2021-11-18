@@ -8,3 +8,4 @@ dist/
 .env
 .tox
 .cache
+tests/.files/

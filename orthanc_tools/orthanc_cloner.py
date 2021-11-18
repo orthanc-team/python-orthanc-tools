@@ -1,12 +1,11 @@
 from orthanc_api_client import OrthancApiClient
 
+
 class OrthancCloner:
 
     def __init__(self, source: OrthancApiClient, destination: OrthancApiClient):
         self._source = source
         self._destination = destination
-
-
 
     def execute(self):
         all_patient_ids = self._source.patients.get_all_ids()
@@ -24,6 +23,5 @@ class OrthancCloner:
                     for instance_id in instances_ids:
                         dicom = self._source.instances.get_file(instance_id)
 
-                        self._destination.upload_dicom(dicom)
+                        self._destination.upload(dicom)
                         instance_counter += 1
-                        print(f"copied {instance_counter} {instance_id}")

@@ -1,6 +1,3 @@
 from .orthanc_cloner import OrthancCloner
+from .orthanc_folder_importer import *
 
-
-__all__ = [
-    'OrthancCloner'
-]

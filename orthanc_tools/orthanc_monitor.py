@@ -150,6 +150,7 @@ class OrthancMonitor:
                 self._is_running = False
                 return
 
+            done = False
             while not done and self._is_running: # read as fast as you can while there are still events
                 # get the list of changes from orthanc
                 try:

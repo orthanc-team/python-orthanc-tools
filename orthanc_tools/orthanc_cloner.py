@@ -42,7 +42,12 @@ class OrthancCloner(OrthancMonitor):
 # python orthanc_tools/orthanc_cloner.py --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_url=http://192.168.0.10:8042 --dest_user=user --dest_pwd=pwd
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    level = logging.INFO
+
+    if os.environ.get('VERBOSE_ENABLED'):
+        level = logging.DEBUG
+
+    logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     parser = argparse.ArgumentParser(description='Clone the content of an Orthanc into another Orthanc')
     parser.add_argument('--source_url', type=str, default=None, help='Orthanc source url')

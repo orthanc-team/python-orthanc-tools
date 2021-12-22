@@ -15,7 +15,7 @@ class OrthancCloner(OrthancMonitor):
                  destination: OrthancApiClient,
                  workers_count: int = 1,
                  persist_status_path: str = None,
-                 polling_interval: float = 0.5
+                 polling_interval: float = 1
                  ):
         super().__init__(
             api_client=source,
@@ -34,8 +34,11 @@ class OrthancCloner(OrthancMonitor):
 
             self._destination.upload(dicom)
             logger.info(f"copied instance {instance_id}")
+            return True
+
         except Exception as ex:
             logger.error(f"Error while cloning instance {instance_id}: {str(ex)}")
+            return False
 
 
 # examples:

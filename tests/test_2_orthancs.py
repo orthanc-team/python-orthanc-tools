@@ -82,10 +82,12 @@ class Test2Orthancs(unittest.TestCase):
                 logger.info(f'processing instance {instance_id}')
                 time.sleep(5)
                 processed_resources.append(instance_id)
+                return True
 
             def process_series(series_id, api_client):
                 logger.info(f'processing series {series_id}')
                 processed_resources.append(series_id)
+                return True
 
             monitor = OrthancMonitor(
                 self.oa,

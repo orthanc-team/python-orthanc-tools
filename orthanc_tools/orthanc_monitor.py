@@ -70,7 +70,7 @@ class OrthancMonitor:
             return
 
         with self._persist_status_lock:
-            logger.debug(f"marking as being processed {sequence_id}")
+            logger.debug(f"marking change {sequence_id} as being processed")
             self._changes_id_being_processed.add(sequence_id)
 
     def _mark_change_as_processed(self, sequence_id):
@@ -87,14 +87,14 @@ class OrthancMonitor:
             else:
                 restart_at_sequence_id = self._largest_processed_change_id
 
-            logger.debug(f"marking as processed {sequence_id} restart at {restart_at_sequence_id}")
+            logger.debug(f"marking change {sequence_id} as processed, will restart at {restart_at_sequence_id}")
 
             # first write to a temp file and then move the file to make the operation robust
             tmp = self._persist_status_path + ".tmp"
             try:
                 with open(tmp, "wt") as f:
                     f.write(str(restart_at_sequence_id))
-                os.replace(tmp, self._persist_status_path) # this is an 'atomic' operation
+                os.replace(tmp, self._persist_status_path)  # this is an 'atomic' operation
             except OSError as ex:
                 raise Exception(f"Could not write sequence id to file \"{ex.filename}\": {ex.strerror}")
 
@@ -184,11 +184,13 @@ class OrthancMonitor:
                 # process events (this is blocking the worker thread until the handler returns)
                 if change.change_type in self._handlers:
                     logger.debug(f"processing change {change.sequence_id} {change.change_type}")
-                    self._handlers[change.change_type](change.resource_id, self._api_client)
+                    processed = self._handlers[change.change_type](change.resource_id, self._api_client)
+                    if processed:
+                        self._mark_change_as_processed(change.sequence_id)
                 else:
                     logger.debug(f"not processing change {change.sequence_id} {change.change_type}")
+                    self._mark_change_as_processed(change.sequence_id)
 
-                self._mark_change_as_processed(change.sequence_id)
             except Exception as ex:
                 logger.error("Unhandled exception in event handler !  Please handle exceptions inside handler: " + str(ex))
 

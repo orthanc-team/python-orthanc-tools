@@ -4,9 +4,18 @@ A set of python tools to ease Orthanc scripting.
 
 Functionalities are very limited now !  Backward compat will break a lot in the near future !
 
-Examples:
+## Installation
 
+```shell
+pip3 install orthanc-tools
 ```
+
+
+## cloning an Orthanc to another
+
+from a python script:
+
+```python
 from orthanc_tools import OrthancCloner
 from orthanc_api_client import OrthancApiClient
 
@@ -14,8 +23,14 @@ orthanc_a = OrthancApiClient('http://localhost:8042', user='orthanc', pwd='ortha
 orthanc_b = OrthancApiClient('http://localhost:8043', user='orthanc', pwd='orthanc')
 
 cloner = OrthancCloner(source=orthanc_a, destination=orthanc_b)
-cloner.execute()
+cloner.execute(existing_changes_only=False)
 
+```
+
+from a shell:
+
+```shell
+python3 -m orthanc_tools/orthanc_cloner --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_url=http://192.168.0.10:8042 --dest_user=user --dest_pwd=pwd
 ```
 
 ## import files from a folder from a Docker container

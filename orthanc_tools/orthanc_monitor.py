@@ -16,26 +16,28 @@ class OrthancMonitor:
     def __init__(self, 
                  api_client: OrthancApiClient,
                  workers_count: int = 1,
-                 sequence_id_file_path: str = None,
+                 persist_status_path: str = None,
                  start_at_sequence_id: int = None,
                  polling_interval: float = 0.5
         ):
 
         self._api_client = api_client
-        self._changes_to_process = queue.Queue()
+        self._changes_to_process = queue.Queue(workers_count + 1)
         self._monitoring_thread = None
         self._workers_count = workers_count
         self._worker_threads = []
         self._is_running = False
         self._polling_interval = polling_interval
         self._handlers = {}
-        self._sequence_id_file_path = None
+        self._persist_status_path = None
+        self._persist_status_lock = threading.RLock()
+        self._changes_id_being_processed = set()
+        self._largest_processed_change_id = 0
 
-        if sequence_id_file_path is not None:
-            self._sequence_id_file_path = sequence_id_file_path
-            self._sequence_id_file_lock = threading.RLock()
-            self._start_at_sequence_id = self._read_sequence_id_from_file()
-        
+        if persist_status_path is not None:
+            self._persist_status_path = persist_status_path
+            self._start_at_sequence_id = self._read_status_from_file()
+
         elif start_at_sequence_id is not None:
             self._start_at_sequence_id = start_at_sequence_id
         else:
@@ -52,9 +54,9 @@ class OrthancMonitor:
     def add_handler(self, change_type: ChangeType, callback):
         self._handlers[change_type] = callback
 
-    def _read_sequence_id_from_file(self):
+    def _read_status_from_file(self):
         try:
-            with open(self._sequence_id_file_path) as f:
+            with open(self._persist_status_path) as f:
                 sequence_id = int(f.read())
         except (ValueError, FileNotFoundError):  # if can not read, start at 0
             logger.warning("Could not read sequence id from file, starting at 0")
@@ -63,18 +65,36 @@ class OrthancMonitor:
         logger.info(f"Starting at sequence id from file = {sequence_id}")
         return sequence_id
 
-    def _write_sequence_id_to_file(self, sequence_id):
+    def _mark_change_as_being_processed(self, sequence_id):
+        if self._persist_status_path is None:
+            return
+
+        with self._persist_status_lock:
+            logger.debug(f"marking as being processed {sequence_id}")
+            self._changes_id_being_processed.add(sequence_id)
+
+    def _mark_change_as_processed(self, sequence_id):
         # note: this can be improved: if multiple workers are processing events, we might skip a few changes when restarting
-        if self._sequence_id_file_path is None:
+        if self._persist_status_path is None:
             return
         
-        with self._sequence_id_file_lock:
+        with self._persist_status_lock:
+            self._changes_id_being_processed.remove(sequence_id)
+
+            self._largest_processed_change_id = max(self._largest_processed_change_id, sequence_id)
+            if len(self._changes_id_being_processed) > 0:
+                restart_at_sequence_id = min(self._changes_id_being_processed) - 1
+            else:
+                restart_at_sequence_id = self._largest_processed_change_id
+
+            logger.debug(f"marking as processed {sequence_id} restart at {restart_at_sequence_id}")
+
             # first write to a temp file and then move the file to make the operation robust
-            tmp = self._sequence_id_file_path + ".tmp"
+            tmp = self._persist_status_path + ".tmp"
             try:
                 with open(tmp, "wt") as f:
-                    f.write(str(sequence_id))
-                os.replace(tmp, self._sequence_id_file_path) # this is an 'atomic' operation
+                    f.write(str(restart_at_sequence_id))
+                os.replace(tmp, self._persist_status_path) # this is an 'atomic' operation
             except OSError as ex:
                 raise Exception(f"Could not write sequence id to file \"{ex.filename}\": {ex.strerror}")
 
@@ -143,7 +163,8 @@ class OrthancMonitor:
 
                 # enqueue the events
                 for change in changes:
-                    self._changes_to_process.put(change)  # if the queue is full, this will block untill there's a free slot
+                    self._mark_change_as_being_processed(change.sequence_id)
+                    self._changes_to_process.put(change)  # if the queue is full, this will block until there's a free slot
 
             # if no events available, wait and poll again
             time.sleep(self._polling_interval)
@@ -166,7 +187,7 @@ class OrthancMonitor:
                 else:
                     logger.debug(f"not processing change {change.sequence_id} {change.change_type}")
 
-                self._write_sequence_id_to_file(change.sequence_id)  # note: not ideal when multiple thread, we might miss some changes
+                self._mark_change_as_processed(change.sequence_id)
             except Exception as ex:
                 logger.error("Unhandled exception in event handler !  Please handle exceptions inside handler: " + str(ex))
 

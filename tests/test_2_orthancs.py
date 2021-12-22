@@ -74,39 +74,56 @@ class Test2Orthancs(unittest.TestCase):
 
     def test_monitor_recovery(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            sequence_file_path = os.path.join(temp_dir, 'seq.txt')
+            persist_status_path = os.path.join(temp_dir, 'seq.txt')
 
             processed_resources = []
+
+            def process_instance(instance_id, api_client):
+                logger.info(f'processing instance {instance_id}')
+                time.sleep(5)
+                processed_resources.append(instance_id)
+
+            def process_series(series_id, api_client):
+                logger.info(f'processing series {series_id}')
+                processed_resources.append(series_id)
 
             monitor = OrthancMonitor(
                 self.oa,
                 polling_interval=0.1,
-                sequence_id_file_path=sequence_file_path
+                persist_status_path=persist_status_path,
+                workers_count=4
             )
 
             # first event is lengthy (5 seconds) and will not be processed at the time we first check the sequence id file
-            monitor.add_handler(ChangeType.NEW_INSTANCE, lambda instance_id, api_client: Timer(5, lambda: processed_resources.append(instance_id)).start())
-            monitor.add_handler(ChangeType.NEW_SERIES, lambda series_id, api_client: processed_resources.append(series_id))
+            # monitor.add_handler(ChangeType.NEW_INSTANCE, lambda instance_id, api_client: Timer(5, lambda: processed_resources.append(instance_id)).start())
+            monitor.add_handler(ChangeType.NEW_INSTANCE, process_instance)
+            monitor.add_handler(ChangeType.NEW_SERIES, process_series)
+            # monitor.add_handler(ChangeType.NEW_SERIES, lambda series_id, api_client: processed_resources.append(series_id))
 
             self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
             monitor.start()
             wait_until(lambda: len(processed_resources) > 0, 1)
-            with open(sequence_file_path, "rt") as f:
+            with open(persist_status_path, "rt") as f:
                 seq_id = int(f.read())
 
             all_changes, last_seq_id, done = self.oa.get_changes()
             all_series_ids = self.oa.series.get_all_ids()
             all_instances_ids = self.oa.instances.get_all_ids()
 
-            self.assertEqual(last_seq_id, seq_id)        # BUG: all changes are reported as processed but the change 1 has not completed yet ! -> TODO improve sequence id store
-            self.assertEqual(all_series_ids[0], processed_resources[0])
+            self.assertGreaterEqual(all_changes[0].sequence_id, seq_id)        # change '1' has not been processed yet
+            self.assertEqual(all_series_ids[0], processed_resources[0])     # change '2' has been processed
             self.assertEqual(1, len(processed_resources))  # the instance has not been processed yet because of the sleep 5
 
             monitor.stop()
 
             wait_until(lambda: len(processed_resources) == 2, 6)
             self.assertEqual(2, len(processed_resources))  # the instance should have been processed by now
+
+            with open(persist_status_path, "rt") as f:
+                seq_id = int(f.read())
+
+            self.assertLessEqual(all_changes[-1].sequence_id, seq_id)        # all changes have been processed
 
 
 

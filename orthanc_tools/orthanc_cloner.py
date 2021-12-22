@@ -14,13 +14,13 @@ class OrthancCloner(OrthancMonitor):
                  source: OrthancApiClient,
                  destination: OrthancApiClient,
                  workers_count: int = 1,
-                 sequence_id_file_path: str = None,
+                 persist_status_path: str = None,
                  polling_interval: float = 0.5
                  ):
         super().__init__(
             api_client=source,
             workers_count=workers_count,
-            sequence_id_file_path=sequence_id_file_path,
+            persist_status_path=persist_status_path,
             polling_interval=polling_interval
         )
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     cloner = OrthancCloner(
         source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd),
         destination=OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd),
-        sequence_id_file_path=persist_state_path
+        persist_status_path=persist_state_path
     )
 
     cloner.execute(existing_changes_only=False)

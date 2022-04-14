@@ -13,6 +13,9 @@ pip3 install orthanc-tools
 
 ## cloning an Orthanc to another
 
+The cloners copies everything that is currently in the source Orthanc into the destination Orthanc and,
+once this is done continues the cloning process for every DICOM instance that is received by the source.
+
 from a python script:
 
 ```python

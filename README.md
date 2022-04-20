@@ -52,9 +52,9 @@ $ docker exec -it xxxx bash
 
 The OrthancTestDbPopulator generates test images and uploads them in Orthanc.
 All images have only 4 pixels and take a minimum amount of space on disk. 
-
+By default, the generator always generates the same date, use a different seed if you need variation.
 from a shell:
 
 ```shell
-python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --pwd=pwd --studies=5000
+python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --pwd=pwd --studies=5000 --seed=42
 ```

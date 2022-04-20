@@ -8,12 +8,11 @@ import datetime
 import random
 import pydicom
 import uuid
-from helpers import get_random_dicom_date
+from .helpers import get_random_dicom_date
 
 from orthanc_api_client import OrthancApiClient, ChangeType
 from orthanc_api_client.helpers import generate_test_dicom_file
 logger = logging.getLogger('orthanc_tools')
-patient_counter = 1
 
 
 male_first_names = ['Adam', 'Adrian', 'Alan', 'Alexander', 'Andrew', 'Anthony', 'Austin', 'Benjamin', 'Blake', 'Boris', 'Brandon', 'Brian', 'Cameron', 'Carl', 'Charles', 'Christian', 'Christopher',
@@ -46,14 +45,16 @@ class OrthancTestDbPopulator:
 
     def __init__(self,
                  api_client: OrthancApiClient,
-                 studies_count: int
+                 studies_count: int,
+                 random_seed: int = None  # to make the generation repeatable
         ):
 
         self._api_client = api_client
         self._studies_count = studies_count
+        self._random_seed = random_seed
+        self._patient_counter = 1
 
     def generate_patient_tags(self, tags: object) -> object:
-        global patient_counter
         # generate a pseudo patient
         gender = random.choice(['M', 'F'])
         if gender == 'F':
@@ -64,39 +65,42 @@ class OrthancTestDbPopulator:
 
         tags["PatientName"] = '{0}^{1}'.format(first_name.upper(), last_name.upper())
         tags["PatientBirthDate"] = get_random_dicom_date(date_from=datetime.date(1920, 1, 1))
-        tags["PatientID"] = "ID-{f}-{l}-{c:08}".format(f=first_name[:3].upper(), l=last_name[:3].upper(), c=patient_counter)
+        tags["PatientID"] = "ID-{f}-{l}-{c:08}".format(f=first_name[:3].upper(), l=last_name[:3].upper(), c=self._patient_counter)
         tags["PatientSex"] = gender
 
-        patient_counter += 1
+        self._patient_counter += 1
         logger.info("created patient {id} - {name}".format(id=tags["PatientID"], name=tags["PatientName"]))
 
         return tags
 
 
     def generate_study_tags(self, tags: object, study_counter: int) -> object:
-        tags["StudyInstanceUID"] = pydicom.uid.generate_uid()
+        tags["StudyInstanceUID"] = pydicom.uid.generate_uid(entropy_srcs=[str(study_counter), str(random.randint(0, 1000000))])
         tags["StudyDescription"] = f"Study # {study_counter:08}"
         tags["StudyDate"] = get_random_dicom_date(date_from=datetime.date(2000, 1, 1))
 
         return tags
 
-    def generate_series_tags(self, tags: object, series_counter: int) -> object:
-        tags["SeriesInstanceUID"] = pydicom.uid.generate_uid()
+    def generate_series_tags(self, tags: object, series_counter: int, study_counter: int) -> object:
+        tags["SeriesInstanceUID"] = pydicom.uid.generate_uid(entropy_srcs=[str(series_counter), str(study_counter), str(random.randint(0, 1000000))])
+        tags["FrameOfReferenceUID"] = pydicom.uid.generate_uid(entropy_srcs=[str(series_counter), str(study_counter), str(random.randint(1000000, 2000000))])
         tags["SeriesDescription"] = f"Series # {series_counter:02}"
         tags["SeriesDate"] = tags["StudyDate"]
         tags["Modality"] = random.choice(["MR", "CT", "CR", "DX", "CR", "DX", "CR", "DX", "CR", "DX", "CR", "DX"])  #we want more CR and DX !
 
         return tags
 
-    def generate_instance_tags(self, tags: object, instance_counter: int) -> object:
-        tags["SOPInstanceUID"] = pydicom.uid.generate_uid()
-        tags["InstanceNumber"] = instance_counter
+    def generate_instance_tags(self, tags: object, instance_counter: int, series_counter: int, study_counter: int) -> object:
+        tags["SOPInstanceUID"] = pydicom.uid.generate_uid(entropy_srcs=[str(instance_counter), str(series_counter), str(study_counter), str(random.randint(0, 1000000))])
+        tags["InstanceNumber"] = instance_counter + 1
         tags["ContentDate"] = tags["StudyDate"]
         tags["AcquisitionDate"] = tags["StudyDate"]
 
         return tags
 
     def execute(self):
+        random.seed(self._random_seed)
+
         tags = {}
         tags = self.generate_patient_tags(tags)
 
@@ -110,7 +114,7 @@ class OrthancTestDbPopulator:
 
             series_count = random.randint(1, 6)
             for series_counter in range(0, series_count):
-                tags = self.generate_series_tags(tags, series_counter)
+                tags = self.generate_series_tags(tags, series_counter, study_counter)
 
                 if tags["Modality"] in ["MR", "CT"]:
                     instances_count = random.randint(50, 150)
@@ -120,14 +124,14 @@ class OrthancTestDbPopulator:
                 logger.info(f"--created series {tags['Modality']} with {instances_count} instances")
 
                 for instance_counter in range(0, instances_count):
-                    tags = self.generate_instance_tags(tags, instance_counter)
+                    tags = self.generate_instance_tags(tags, instance_counter, series_counter, study_counter)
 
                     dicom = generate_test_dicom_file(width=2, height=2, tags=tags)
                     self._api_client.upload(buffer=dicom)
 
 
 # examples:
-# python orthanc_tools/orthanc_test_db_populator.py --url=http://192.168.0.10:8042 --user=user --pwd=pwd --studies=50
+# python orthanc_tools/orthanc_test_db_populator.py --url=http://192.168.0.10:8042 --user=user --pwd=pwd --studies=50 --seed=42
 
 if __name__ == '__main__':
     level = logging.INFO
@@ -142,6 +146,7 @@ if __name__ == '__main__':
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
     parser.add_argument('--pwd', type=str, default=None, help='Orthanc password')
     parser.add_argument('--studies', type=int, default=100, help='Number of studies to push')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed (to make generation repeatable)')
     args = parser.parse_args()
 
     url = os.environ.get("URL", args.url)
@@ -150,7 +155,8 @@ if __name__ == '__main__':
 
     populator = OrthancTestDbPopulator(
         api_client=OrthancApiClient(url, user=user, pwd=pwd),
-        studies_count=args.studies
+        studies_count=args.studies,
+        random_seed=args.seed
     )
 
     populator.execute()

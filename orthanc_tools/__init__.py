@@ -1,6 +1,7 @@
 from .orthanc_cloner import OrthancCloner
 from .orthanc_folder_importer import *
 from .orthanc_monitor import OrthancMonitor
+from .orthanc_test_db_populator import OrthancTestDbPopulator
 
 
 # Set default logging handler to avoid "No handler found" warnings.

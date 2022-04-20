@@ -14,7 +14,7 @@ import pathlib
 import os
 import logging
 
-from orthanc_tools import OrthancCloner, OrthancMonitor
+from orthanc_tools import OrthancCloner, OrthancMonitor, OrthancTestDbPopulator
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -71,6 +71,19 @@ class Test2Orthancs(unittest.TestCase):
 
         monitor.stop()
         self.assertEqual(1, len(processed_instances))
+
+    def test_populator_repeatability(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        populator_a = OrthancTestDbPopulator(api_client=self.oa, studies_count=2, random_seed=42)
+        populator_b = OrthancTestDbPopulator(api_client=self.ob, studies_count=2, random_seed=42)
+
+        populator_a.execute()
+        populator_b.execute()
+
+        self.assertEqual(self.oa.instances.get_all_ids(), self.ob.instances.get_all_ids())
+
 
     def test_monitor_recovery(self):
         with tempfile.TemporaryDirectory() as temp_dir:

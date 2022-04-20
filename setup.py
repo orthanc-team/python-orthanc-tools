@@ -28,7 +28,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/guides/single-sourcing-package-version/
-    version='0.1.3',  # Required
+    version='0.2.0',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -131,7 +131,8 @@ setup(
     # https://packaging.python.org/discussions/install-requires-vs-requirements/
     install_requires=[
         'requests',
-        'orthanc-api-client==0.1.1'
+        'orthanc-api-client==0.2.2',
+        'pydicom'
     ],
 
     # List additional groups of dependencies here (e.g. development

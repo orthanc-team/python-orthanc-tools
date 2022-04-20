@@ -46,3 +46,15 @@ $ docker exec -it xxxx bash
 /# python3 -m orthanc_tools.orthanc_folder_importer --folder=/import --url=http://localhost:8042 --user=test --pwd=test --skip_extensions=.cne,.bmp,.ini
 
 ```
+
+
+## uploading a Test DB in Orthanc 
+
+The OrthancTestDbPopulator generates test images and uploads them in Orthanc.
+All images have only 4 pixels and take a minimum amount of space on disk. 
+
+from a shell:
+
+```shell
+python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --pwd=pwd --studies=5000
+```

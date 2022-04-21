@@ -252,7 +252,7 @@ class PacsMigrator:
 
 
 # examples:
-# migrator as source: MIGRATOR --> DESTINATION:
+# migrator as source: MIGRATOR --> DESTINATION:  ! use the --delete_from_source option with care !!!
 # python orthanc_tools/pacs_migrator.py --url=http://localhost:8042 --user=user --pwd=pwd --destination_modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
 #
 #

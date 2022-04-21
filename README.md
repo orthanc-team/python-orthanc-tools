@@ -48,6 +48,18 @@ $ docker exec -it xxxx bash
 ```
 
 
+## migrate DICOM Data from a modality to another
+
+More info in the [PacsMigrator class](orthanc_tools/pacs_migrator.py)
+```
+$ docker exec -it xxxx bash
+
+/# pip3 install orthanc-tools
+
+/# python3 -m orthanc_tools.pacs_migrator --url=http://localhost:8042 --user=user --pwd=pwd --destination_modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
+
+```
+
 ## uploading a Test DB in Orthanc 
 
 The OrthancTestDbPopulator generates test images and uploads them in Orthanc.

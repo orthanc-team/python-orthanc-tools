@@ -150,7 +150,7 @@ class PacsMigrator:
             is_right_time = False
             while not is_right_time:
                 now = time.localtime()
-                if now.tm_wday <= 4 and self._night_end_hour <= now.tm_hour <= self._night_start_hour:
+                if now.tm_wday <= 4 and self._night_end_hour <= now.tm_hour < self._night_start_hour:
                     is_right_time = False
                     logger.info("waiting for the night or week-end to come")
                     time.sleep(600)
@@ -207,7 +207,7 @@ class PacsMigrator:
                 logger.info(f"Found {len(local_studies)} studies")
 
                 for study in local_studies:
-                    self._messages.put(Message(orthanc_id=study.orthanc_id))
+                    self.push_message(Message(orthanc_id=study.orthanc_id))
             else:
                 logger.info(f"Querying remote modality {self._source_modality}")
 
@@ -232,7 +232,7 @@ class PacsMigrator:
                     logger.error(f"Too many studies in a single request: {len(remote_modality_studies)}, you'll probably miss some studies")
 
                 for study in remote_modality_studies:
-                    self._messages.put(Message(dicom_id=study.dicom_id))
+                    self.push_message(Message(dicom_id=study.dicom_id))
 
             current_date += datetime.timedelta(days=1)
 

@@ -8,6 +8,13 @@ services:
       VERBOSE_ENABLED: "true"
       ORTHANC__REGISTERED_USERS: |
         {"test": "test"}
+      ORTHANC__DICOM_AET: "ORTHANC-A"
+      ORTHANC__DICOM_MODALITIES: |
+        {
+          "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
+          "orthanc-b": ["ORTHANC-B", "orthanc-b", 4242],
+          "orthanc-c": ["ORTHANC-C", "orthanc-c", 4242]
+        }
 
   orthanc-b:
     image: osimis/orthanc:21.11.0
@@ -16,4 +23,29 @@ services:
       VERBOSE_STARTUP: "true"
       VERBOSE_ENABLED: "true"
       ORTHANC__REGISTERED_USERS: |
+        {
+          "test": "test"
+        }
+      ORTHANC__DICOM_AET: "ORTHANC-B"
+      ORTHANC__DICOM_MODALITIES: |
+        {
+          "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
+          "orthanc-b": ["ORTHANC-B", "orthanc-b", 4242],
+          "orthanc-c": ["ORTHANC-C", "orthanc-c", 4242]
+        }
+
+  orthanc-c:
+    image: osimis/orthanc:21.11.0
+    ports: ["10044:8042"]
+    environment:
+      VERBOSE_STARTUP: "true"
+      VERBOSE_ENABLED: "true"
+      ORTHANC__REGISTERED_USERS: |
         {"test": "test"}
+      ORTHANC__DICOM_AET: "ORTHANC-C"
+      ORTHANC__DICOM_MODALITIES: |
+        {
+          "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
+          "orthanc-b": ["ORTHANC-B", "orthanc-b", 4242],
+          "orthanc-c": ["ORTHANC-C", "orthanc-c", 4242]
+        }

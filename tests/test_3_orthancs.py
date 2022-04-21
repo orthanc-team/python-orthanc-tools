@@ -4,6 +4,7 @@ import pprint
 import unittest
 import subprocess
 import tempfile
+import datetime
 from threading import Timer
 import shutil
 import logging
@@ -14,7 +15,7 @@ import pathlib
 import os
 import logging
 
-from orthanc_tools import OrthancCloner, OrthancMonitor, OrthancTestDbPopulator
+from orthanc_tools import OrthancCloner, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -27,7 +28,7 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
-class Test2Orthancs(unittest.TestCase):
+class Test3Orthancs(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -38,6 +39,8 @@ class Test2Orthancs(unittest.TestCase):
         cls.oa.wait_started()
         cls.ob = OrthancApiClient('http://localhost:10043', user='test', pwd='test')
         cls.ob.wait_started()
+        cls.oc = OrthancApiClient('http://localhost:10044', user='test', pwd='test')
+        cls.oc.wait_started()
 
     @classmethod
     def tearDownClass(cls):
@@ -140,7 +143,89 @@ class Test2Orthancs(unittest.TestCase):
 
             self.assertLessEqual(all_changes[-1].sequence_id, seq_id)        # all changes have been processed
 
+    def test_pacs_migrator_orthanc_as_source(self):
+        self.oa.delete_all_content()  # source & migrator
+        self.ob.delete_all_content()  # destination
 
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        migrator = PacsMigrator(
+            api_client=self.oa,
+            destination_modality="orthanc-b",
+            from_study_date=datetime.date(2004, 1, 18),
+            to_study_date=datetime.date(2004, 1, 20),
+            delete_from_source=False
+        )
+        migrator.execute()
+
+        # check all instances have been transferred and are still on the source
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+
+    def test_pacs_migrator_orthanc_as_source_delete_from_source(self):
+        self.oa.delete_all_content()  # source & migrator
+        self.ob.delete_all_content()  # destination
+
+        populator_a = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=5,
+            random_seed=42,
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25)
+        )
+        populator_a.execute()
+
+        init_instances_ids = self.oa.instances.get_all_ids()
+
+        migrator = PacsMigrator(
+            api_client=self.oa,
+            destination_modality="orthanc-b",
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25),
+            delete_from_source=True
+        )
+        migrator.execute()
+
+        # check all instances have been transferred and have been deleted from the source
+        self.assertEqual(len(init_instances_ids), len(self.ob.instances.get_all_ids()))
+        self.assertEqual(0, len(self.oa.instances.get_all_ids()))
+
+
+    def test_pacs_migrator_aside(self):
+        self.oa.delete_all_content()  # source
+        self.ob.delete_all_content()  # migrator
+        self.oc.delete_all_content()  # destination
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        migrator = PacsMigrator(
+            api_client=self.ob,
+            source_modality="orthanc-a",
+            destination_aet="ORTHANC-C",
+            from_study_date=datetime.date(2004, 1, 18),
+            to_study_date=datetime.date(2004, 1, 20)
+        )
+        migrator.execute()
+
+        # check all instances have been transferred and are still on the source
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.oc.instances.get_all_ids()))
+
+    def test_pacs_migrator_as_destination(self):
+        self.oa.delete_all_content()  # source
+        self.ob.delete_all_content()  # migrator & destination
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        migrator = PacsMigrator(
+            api_client=self.ob,
+            source_modality="orthanc-a",
+            destination_aet="ORTHANC-B",
+            from_study_date=datetime.date(2004, 1, 18),
+            to_study_date=datetime.date(2004, 1, 20)
+        )
+        migrator.execute()
+
+        # check all instances have been transferred and are still on the source
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

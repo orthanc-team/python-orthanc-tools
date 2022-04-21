@@ -46,13 +46,17 @@ class OrthancTestDbPopulator:
     def __init__(self,
                  api_client: OrthancApiClient,
                  studies_count: int,
-                 random_seed: int = None  # to make the generation repeatable
-        ):
+                 random_seed: int = None,                   # to make the generation repeatable
+                 from_study_date: datetime.date = datetime.date(2000, 1, 1),     # StudyDate for generated studies
+                 to_study_date: datetime.date = datetime.date(2022, 4, 21)        # StudyDate for generated studies
+                 ):
 
         self._api_client = api_client
         self._studies_count = studies_count
         self._random_seed = random_seed
         self._patient_counter = 1
+        self._from_study_date = from_study_date
+        self._to_study_date = to_study_date
 
     def generate_patient_tags(self, tags: object) -> object:
         # generate a pseudo patient
@@ -77,7 +81,7 @@ class OrthancTestDbPopulator:
     def generate_study_tags(self, tags: object, study_counter: int) -> object:
         tags["StudyInstanceUID"] = pydicom.uid.generate_uid(entropy_srcs=[str(study_counter), str(random.randint(0, 1000000))])
         tags["StudyDescription"] = f"Study # {study_counter:08}"
-        tags["StudyDate"] = get_random_dicom_date(date_from=datetime.date(2000, 1, 1))
+        tags["StudyDate"] = get_random_dicom_date(date_from=self._from_study_date, date_to=self._to_study_date)
 
         return tags
 

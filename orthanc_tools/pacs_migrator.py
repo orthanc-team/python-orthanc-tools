@@ -298,7 +298,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Migrate the content of a remote modality to another modality')
     parser.add_argument('--url', type=str, default=None, help='Orthanc url (migrator)')
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
-    parser.add_argument('--pwd', type=str, default=None, help='Orthanc password')
+    parser.add_argument('--password', type=str, default=None, help='Orthanc password')
     parser.add_argument('--destination_modality', type=str, default=None, help='Destination modality (alias)')
     parser.add_argument('--destination_aet', type=str, default=None, help='Destination AET')
     parser.add_argument('--source_modality', type=str, default=None, help='Source modality (alias)')
@@ -314,7 +314,7 @@ if __name__ == '__main__':
 
     url = os.environ.get("URL", args.url)
     user = os.environ.get("USER", args.user)
-    pwd = os.environ.get("PWD", args.pwd)
+    pwd = os.environ.get("PASSWORD", args.password)
     destination_modality = os.environ.get("DESTINATION_MODALITY", args.destination_modality)
     destination_aet = os.environ.get("DESTINATION_AET", args.destination_aet)
     source_modality = os.environ.get("SOURCE_MODALITY", args.source_modality)

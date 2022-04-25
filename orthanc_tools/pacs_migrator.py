@@ -117,27 +117,35 @@ class PacsMigrator:
                 break
 
             if self.source_is_orthanc:
-                logger.info(f"C-Store study {message.orthanc_id} from orthanc to destination modality {self._destination_modality}")
-                # move the study from orthanc to the target modality
-                self._api_client.modalities.send(
-                    modality=self._destination_modality,
-                    resources_ids=message.orthanc_id,
-                    synchronous=True
-                )
-
-                if self._delete_from_source:
-                    self._api_client.studies.delete(
-                        orthanc_id=message.orthanc_id
+                try:
+                    logger.info(f"C-Store study {message.orthanc_id} from orthanc to destination modality {self._destination_modality}")
+                    # move the study from orthanc to the target modality
+                    self._api_client.modalities.send(
+                        modality=self._destination_modality,
+                        resources_ids=message.orthanc_id,
+                        synchronous=True
                     )
 
+                    if self._delete_from_source:
+                        self._api_client.studies.delete(
+                            orthanc_id=message.orthanc_id
+                        )
+                except Exception as ex:
+                    logger.error(f"Error while transferring {message.orthanc_id} {str(ex)}")
+
+
             elif self._source_modality and self._destination_aet:
-                logger.info(f"C-Move study {message.dicom_id} from source {self._source_modality} to destination AET {self._destination_aet}")
-                # move the study from source to target modality
-                self._api_client.modalities.move_study(
-                    from_modality=self._source_modality,
-                    dicom_id=message.dicom_id,
-                    to_modality_aet=self._destination_aet
-                )
+                try:
+                    logger.info(f"C-Move study {message.dicom_id} from source {self._source_modality} to destination AET {self._destination_aet}")
+                    # move the study from source to target modality
+                    self._api_client.modalities.move_study(
+                        from_modality=self._source_modality,
+                        dicom_id=message.dicom_id,
+                        to_modality_aet=self._destination_aet
+                    )
+                except Exception as ex:
+                    logger.error(f"Error while transferring {message.orthanc_id} {str(ex)}")
+
             else:
                 raise NotImplementedError("configuration not handled")
 
@@ -193,8 +201,18 @@ class PacsMigrator:
         for worker_thread in self._worker_threads:
             worker_thread.start()
 
+        if self._from_study_date < self._to_study_date:
+            # ex 20220101 -> 20220131
+            inc_date = 1
+            to_date = self._to_study_date + datetime.timedelta(days=1)
+        else:
+            # ex 20220131 -> 20220101
+            inc_date = -1
+            to_date = self._to_study_date - datetime.timedelta(days=1)
+
         current_date = self._from_study_date
-        while current_date <= self._to_study_date:
+
+        while current_date != to_date:
             logger.info("Processing date {date}".format(date=str(current_date)))
 
             query = self._dicom_tags_to_query
@@ -234,7 +252,7 @@ class PacsMigrator:
                 for study in remote_modality_studies:
                     self.push_message(Message(dicom_id=study.dicom_id))
 
-            current_date += datetime.timedelta(days=1)
+            current_date += datetime.timedelta(days=inc_date)
 
         logger.info("Waiting for worker threads to complete")
         # post one 'empty' exit message per thread to unlock the threads from waiting on the process queue

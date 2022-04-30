@@ -9,10 +9,9 @@ import multiprocessing
 import random
 import pydicom
 import uuid
-from .helpers import get_random_dicom_date, to_dicom_date, from_dicom_date
+from orthanc_api_client import helpers
 
-from orthanc_api_client import OrthancApiClient, ChangeType
-from orthanc_api_client.helpers import generate_test_dicom_file
+from orthanc_api_client import OrthancApiClient
 logger = logging.getLogger('orthanc_tools')
 
 
@@ -216,7 +215,7 @@ class PacsMigrator:
             logger.info("Processing date {date}".format(date=str(current_date)))
 
             query = self._dicom_tags_to_query
-            query["StudyDate"] = to_dicom_date(current_date)
+            query["StudyDate"] = helpers.to_dicom_date(current_date)
 
             if self.source_is_orthanc:
                 logger.info("Querying Orthanc")
@@ -318,8 +317,8 @@ if __name__ == '__main__':
     destination_modality = os.environ.get("DESTINATION_MODALITY", args.destination_modality)
     destination_aet = os.environ.get("DESTINATION_AET", args.destination_aet)
     source_modality = os.environ.get("SOURCE_MODALITY", args.source_modality)
-    from_study_date = from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))
-    to_study_date = from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
+    from_study_date = helpers.from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))
+    to_study_date = helpers.from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
     night_start_hour = os.environ.get("NIGHT_START_HOUR", args.night_start_hour)
     night_end_hour = os.environ.get("NIGHT_END_HOUR", args.night_end_hour)
     worker_threads_count = os.environ.get("WORKER_THREADS_COUNT", args.worker_threads_count)

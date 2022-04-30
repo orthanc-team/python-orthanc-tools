@@ -8,10 +8,9 @@ import datetime
 import random
 import pydicom
 import uuid
-from .helpers import get_random_dicom_date
 
-from orthanc_api_client import OrthancApiClient, ChangeType
-from orthanc_api_client.helpers import generate_test_dicom_file
+from orthanc_api_client import OrthancApiClient
+from orthanc_api_client import helpers
 logger = logging.getLogger('orthanc_tools')
 
 
@@ -68,7 +67,7 @@ class OrthancTestDbPopulator:
         last_name = random.choice(last_names)
 
         tags["PatientName"] = '{0}^{1}'.format(first_name.upper(), last_name.upper())
-        tags["PatientBirthDate"] = get_random_dicom_date(date_from=datetime.date(1920, 1, 1))
+        tags["PatientBirthDate"] = helpers.get_random_dicom_date(date_from=datetime.date(1920, 1, 1))
         tags["PatientID"] = "ID-{f}-{l}-{c:08}".format(f=first_name[:3].upper(), l=last_name[:3].upper(), c=self._patient_counter)
         tags["PatientSex"] = gender
 
@@ -81,7 +80,7 @@ class OrthancTestDbPopulator:
     def generate_study_tags(self, tags: object, study_counter: int) -> object:
         tags["StudyInstanceUID"] = pydicom.uid.generate_uid(entropy_srcs=[str(study_counter), str(random.randint(0, 1000000))])
         tags["StudyDescription"] = f"Study # {study_counter:08}"
-        tags["StudyDate"] = get_random_dicom_date(date_from=self._from_study_date, date_to=self._to_study_date)
+        tags["StudyDate"] = helpers.get_random_dicom_date(date_from=self._from_study_date, date_to=self._to_study_date)
 
         return tags
 
@@ -130,7 +129,7 @@ class OrthancTestDbPopulator:
                 for instance_counter in range(0, instances_count):
                     tags = self.generate_instance_tags(tags, instance_counter, series_counter, study_counter)
 
-                    dicom = generate_test_dicom_file(width=2, height=2, tags=tags)
+                    dicom = helpers.generate_test_dicom_file(width=2, height=2, tags=tags)
                     self._api_client.upload(buffer=dicom)
 
 

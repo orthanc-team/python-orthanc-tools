@@ -9,7 +9,7 @@ from threading import Timer
 import shutil
 import logging
 from orthanc_api_client import OrthancApiClient, ChangeType
-from orthanc_api_client.helpers import wait_until
+from orthanc_api_client import helpers
 import orthanc_api_client.exceptions as api_exceptions
 import pathlib
 import os
@@ -70,7 +70,7 @@ class Test3Orthancs(unittest.TestCase):
 
         self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
-        wait_until(lambda: len(processed_instances) > 0, 30)
+        helpers.wait_until(lambda: len(processed_instances) > 0, 30)
 
         monitor.stop()
         self.assertEqual(1, len(processed_instances))
@@ -121,7 +121,7 @@ class Test3Orthancs(unittest.TestCase):
             self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
             monitor.start()
-            wait_until(lambda: len(processed_resources) > 0, 1)
+            helpers.wait_until(lambda: len(processed_resources) > 0, 1)
             with open(persist_status_path, "rt") as f:
                 seq_id = int(f.read())
 
@@ -135,7 +135,7 @@ class Test3Orthancs(unittest.TestCase):
 
             monitor.stop()
 
-            wait_until(lambda: len(processed_resources) == 2, 6)
+            helpers.wait_until(lambda: len(processed_resources) == 2, 6)
             self.assertEqual(2, len(processed_resources))  # the instance should have been processed by now
 
             with open(persist_status_path, "rt") as f:

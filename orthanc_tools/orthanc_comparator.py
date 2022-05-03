@@ -99,7 +99,7 @@ class OrthancComparator:
             elif len(remote_match) > 1:
                 print(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
             elif len(remote_match) == 1:
-                if self._level in ['Series']:
+                if self._level in ['Series', 'Instance']:
                     self.compare_study(orthanc_id=local_study.orthanc_id, dicom_id=local_study.dicom_id, study_summary=study_summary)
 
         if not self._ignore_missing_from_orthanc:

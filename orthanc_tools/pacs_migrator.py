@@ -10,7 +10,7 @@ import random
 import pydicom
 import uuid
 from orthanc_api_client import helpers
-from scheduler import Scheduler
+from .scheduler import Scheduler
 
 from orthanc_api_client import OrthancApiClient
 logger = logging.getLogger('orthanc_tools')
@@ -178,7 +178,8 @@ class PacsMigrator:
         logger.info("From Date: " + str(self._from_study_date))
         logger.info("To Date  : " + str(self._to_study_date))
 
-        logger.info("Night & Week-end mode Enabled : " + str(self._run_only_at_night_and_weekend))
+        if self._scheduler:
+            logger.info("Night & Week-end mode Enabled : " + str(self._scheduler._run_only_at_night_and_weekend))
 
         logger.info("Migrating with {n} threads".format(n = self._worker_threads_count))
 

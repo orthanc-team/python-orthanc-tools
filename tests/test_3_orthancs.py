@@ -15,7 +15,7 @@ import pathlib
 import os
 import logging
 
-from orthanc_tools import OrthancCloner, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator
+from orthanc_tools import OrthancCloner, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, OrthancComparator
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -122,6 +122,7 @@ class Test3Orthancs(unittest.TestCase):
 
             monitor.start()
             helpers.wait_until(lambda: len(processed_resources) > 0, 1)
+            helpers.wait_until(lambda: os.path.exists(persist_status_path), 1)
             with open(persist_status_path, "rt") as f:
                 seq_id = int(f.read())
 
@@ -245,6 +246,63 @@ class Test3Orthancs(unittest.TestCase):
 
         # check all instances have been transferred and are still on the source
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+
+    def test_orthanc_comparator_as_a_migrator(self):
+        self.oa.delete_all_content()  # source & migrator
+        self.ob.delete_all_content()  # destination
+
+        # populate Orthanc A & B with 2 DBs
+        populator_a = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=5,
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25)
+        )
+        populator_a.execute()
+
+        populator_b = OrthancTestDbPopulator(
+            api_client=self.ob,
+            studies_count=5,
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25)
+        )
+        populator_b.execute()
+
+        # run the comparator with B as the modality and make sure
+        # everything in A goes to B
+        comparator = OrthancComparator(
+            api_client=self.oa,
+            modality='orthanc-b',
+            level='Series',
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25),
+            ignore_missing_from_orthanc=True,
+            transfer_missing_to_modality=True
+        )
+        comparator.execute()
+
+        # B should have both studies from A & B while A should stay untouched
+        self.assertEqual(10, len(self.ob.studies.get_all_ids()))
+        self.assertEqual(5, len(self.oa.studies.get_all_ids()))
+
+        # run the comparator with B as the modality and make sure
+        # everything in B goes to A
+        comparator = OrthancComparator(
+            api_client=self.oa,
+            modality='orthanc-b',
+            level='Series',
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25),
+            ignore_missing_on_modality=True,
+            retrieve_missing_from_orthanc=True
+        )
+        comparator.execute()
+
+        # now both orthanc should have full dataset
+        self.assertEqual(10, len(self.ob.studies.get_all_ids()))
+        self.assertEqual(10, len(self.oa.studies.get_all_ids()))
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

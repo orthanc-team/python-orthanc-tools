@@ -134,7 +134,7 @@ class OrthancTestDbPopulator:
 
 
 # examples:
-# python orthanc_tools/orthanc_test_db_populator.py --url=http://192.168.0.10:8042 --user=user --pwd=pwd --studies=50 --seed=42
+# python orthanc_tools/orthanc_test_db_populator.py --url=http://192.168.0.10:8042 --user=user --password=pwd --studies=50 --seed=42
 
 if __name__ == '__main__':
     level = logging.INFO
@@ -147,14 +147,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Populates an Orthanc with a test DB')
     parser.add_argument('--url', type=str, default=None, help='Orthanc url')
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
-    parser.add_argument('--pwd', type=str, default=None, help='Orthanc password')
+    parser.add_argument('--password', type=str, default=None, help='Orthanc password')
     parser.add_argument('--studies', type=int, default=100, help='Number of studies to push')
     parser.add_argument('--seed', type=int, default=42, help='Random seed (to make generation repeatable)')
     args = parser.parse_args()
 
     url = os.environ.get("URL", args.url)
     user = os.environ.get("USER", args.user)
-    pwd = os.environ.get("PWD", args.pwd)
+    pwd = os.environ.get("PASSWORD", args.password)
 
     populator = OrthancTestDbPopulator(
         api_client=OrthancApiClient(url, user=user, pwd=pwd),

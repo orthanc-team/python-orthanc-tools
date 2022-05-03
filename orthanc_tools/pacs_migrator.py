@@ -270,18 +270,18 @@ class PacsMigrator:
 
 # examples:
 # migrator as source: MIGRATOR --> DESTINATION:  ! use the --delete_from_source option with care !!!
-# python orthanc_tools/pacs_migrator.py --url=http://localhost:8042 --user=user --pwd=pwd --destination_modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
+# python orthanc_tools/pacs_migrator.py --url=http://localhost:8042 --user=user --password=pwd --destination_modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
 #
 #
 # migrator aside from source and destination:
 # SOURCE --> DESTINATION
 #   |
 # MIGRATOR
-# python orthanc_tools/pacs_migrator.py --url=http://localhost:8044 --user=user --pwd=pwd --source_modality=service --destination_aet=ORTHANC --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
+# python orthanc_tools/pacs_migrator.py --url=http://localhost:8044 --user=user --password=pwd --source_modality=service --destination_aet=ORTHANC --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
 #
 #
 # migrator as the destination: SOURCE --> MIGRATOR:
-# python orthanc_tools/pacs_migrator.py --url=http://localhost:8044 --user=user --pwd=pwd --source_modality=service --destination_aet=ORTHANC-DEBUG --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
+# python orthanc_tools/pacs_migrator.py --url=http://localhost:8044 --user=user --password=pwd --source_modality=service --destination_aet=ORTHANC-DEBUG --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
 #
 
 

@@ -43,7 +43,7 @@ $ docker exec -it xxxx bash
 
 /# pip3 install orthanc-tools
 
-/# python3 -m orthanc_tools.orthanc_folder_importer --folder=/import --url=http://localhost:8042 --user=test --pwd=test --skip_extensions=.cne,.bmp,.ini
+/# python3 -m orthanc_tools.orthanc_folder_importer --folder=/import --url=http://localhost:8042 --user=test --password=test --skip_extensions=.cne,.bmp,.ini
 
 ```
 
@@ -56,7 +56,7 @@ $ docker exec -it xxxx bash
 
 /# pip3 install orthanc-tools
 
-/# python3 -m orthanc_tools.pacs_migrator --url=http://localhost:8042 --user=user --pwd=pwd --destination_modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
+/# python3 -m orthanc_tools.pacs_migrator --url=http://localhost:8042 --user=user --password=pwd --destination_modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
 
 ```
 
@@ -68,5 +68,5 @@ By default, the generator always generates the same date, use a different seed i
 from a shell:
 
 ```shell
-python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --pwd=pwd --studies=5000 --seed=42
+python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --password=pwd --studies=5000 --seed=42
 ```

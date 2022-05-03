@@ -143,7 +143,7 @@ class OrthancComparator:
                     print(f"WARNING STUDY {study_summary}, transferring series to modality: {local_dicom_id}")
                     self._api_client.modalities.store(
                         modality=self._modality,
-                        resources_ids=local_series.get('ID'),
+                        resources_ids=local_serie.get('ID'),
                         synchronous=True
                     )
             elif len(remote_match) > 1:

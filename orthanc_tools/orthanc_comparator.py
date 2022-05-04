@@ -85,38 +85,46 @@ class OrthancComparator:
 
             for local_study in local_studies:
 
-                remote_match = [r for r in remote_studies if r.dicom_id == local_study.dicom_id]
-                study_summary = f"{local_study.patient_main_dicom_tags.get('PatientID')} - {local_study.patient_main_dicom_tags.get('PatientName')} - {local_study.main_dicom_tags.get('StudyDescription')}"
+                try:
+                    remote_match = [r for r in remote_studies if r.dicom_id == local_study.dicom_id]
+                    study_summary = f"{local_study.patient_main_dicom_tags.get('PatientID')} - {local_study.patient_main_dicom_tags.get('PatientName')} - {local_study.main_dicom_tags.get('StudyDescription')}"
 
-                if len(remote_match) == 0 and not self._ignore_missing_on_modality:
-                    print(f"WARNING {str(current_date)}, study missing on modality: {study_summary}")
-                    if self._transfer_missing_to_modality:
-                        print(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
-                        self._api_client.modalities.store(
-                            modality=self._modality,
-                            resources_ids=local_study.orthanc_id,
-                            synchronous=True
-                        )
-                elif len(remote_match) > 1:
-                    print(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
-                elif len(remote_match) == 1:
-                    if self._level in ['Series', 'Instance']:
-                        self.compare_study(orthanc_id=local_study.orthanc_id, dicom_id=local_study.dicom_id, study_summary=study_summary)
+                    if len(remote_match) == 0 and not self._ignore_missing_on_modality:
+                        print(f"WARNING {str(current_date)}, study missing on modality: {study_summary}")
+                        if self._transfer_missing_to_modality:
+                            print(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
+                            self._api_client.modalities.store(
+                                modality=self._modality,
+                                resources_ids=local_study.orthanc_id,
+                                synchronous=True
+                            )
+                    elif len(remote_match) > 1:
+                        print(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
+                    elif len(remote_match) == 1:
+                        if self._level in ['Series', 'Instance']:
+                            self.compare_study(orthanc_id=local_study.orthanc_id, dicom_id=local_study.dicom_id, study_summary=study_summary)
+                except Exception as ex:
+                    print(f"ERROR: {str(ex)}")
 
             if not self._ignore_missing_from_orthanc:
                 for remote_study in remote_studies:
-                    local_match = [l for l in local_studies if l.dicom_id == remote_study.dicom_id]
-                    if len(local_match) == 0:
-                        print(f"WARNING {str(current_date)}, study missing from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
-                        if self._retrieve_missing_from_orthanc:
-                            print(f"WARNING {str(current_date)}, retrieving missing study from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
-                            self._api_client.modalities.move_study(
-                                from_modality=self._modality,
-                                dicom_id=remote_study.dicom_id
-                            )
-                    elif len(local_match) > 1:
-                        print(f"WARNING {str(current_date)}, study found multiple times on Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
-                    # elif self._ignore_missing_on_modality: # in this case only, study comparison has not been performed above -> do it now
+                    try:
+
+                        local_match = [l for l in local_studies if l.dicom_id == remote_study.dicom_id]
+                        if len(local_match) == 0:
+                            print(f"WARNING {str(current_date)}, study missing from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                            if self._retrieve_missing_from_orthanc:
+                                print(f"WARNING {str(current_date)}, retrieving missing study from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                                self._api_client.modalities.move_study(
+                                    from_modality=self._modality,
+                                    dicom_id=remote_study.dicom_id
+                                )
+                        elif len(local_match) > 1:
+                            print(f"WARNING {str(current_date)}, study found multiple times on Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                        # elif self._ignore_missing_on_modality: # in this case only, study comparison has not been performed above -> do it now
+                    except Exception as ex:
+                        print(f"ERROR: {str(ex)}")
+
         except Exception as ex:
             print(f"ERROR: {str(ex)}")
 

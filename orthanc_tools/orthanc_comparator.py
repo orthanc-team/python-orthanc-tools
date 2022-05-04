@@ -59,158 +59,193 @@ class OrthancComparator:
         if self._scheduler:
             self._scheduler.wait_right_time_to_run(logger=logger)
 
-        logger.info("Processing date {date}".format(date=str(current_date)))
+        try:
+            logger.info("Processing date {date}".format(date=str(current_date)))
 
-        local_studies = self._api_client.studies.find(
-            query={
-                'StudyDate': helpers.to_dicom_date(current_date)
-            })
-        remote_studies = self._api_client.modalities.query_studies(
-            from_modality=self._modality,
-            query={
-                'StudyDate': helpers.to_dicom_date(current_date),
-                'PatientID': '',
-                'PatientName': '',
-                'StudyInstanceUID': '',
-                'StudyDescription': ''
-            })
+            local_studies = self._api_client.studies.find(
+                query={
+                    'StudyDate': helpers.to_dicom_date(current_date)
+                })
+            remote_studies = self._api_client.modalities.query_studies(
+                from_modality=self._modality,
+                query={
+                    'StudyDate': helpers.to_dicom_date(current_date),
+                    'PatientID': '',
+                    'PatientName': '',
+                    'StudyInstanceUID': '',
+                    'StudyDescription': ''
+                })
 
-        print(f"{str(current_date)}")
-        print(f"=======================================")
-        if len(local_studies) != len(remote_studies):
-            print(f"WARNING {str(current_date)}: {len(local_studies)} studies in Orthanc, {len(remote_studies)} studies in modality")
-        else:
-            print(f"found {len(local_studies)} studies on both side")
+            print(f"{str(current_date)}")
+            print(f"=======================================")
+            if len(local_studies) != len(remote_studies):
+                print(f"WARNING {str(current_date)}: {len(local_studies)} studies in Orthanc, {len(remote_studies)} studies in modality")
+            else:
+                print(f"found {len(local_studies)} studies on both side")
 
-        for local_study in local_studies:
+            for local_study in local_studies:
 
-            remote_match = [r for r in remote_studies if r.dicom_id == local_study.dicom_id]
-            study_summary = f"{local_study.patient_main_dicom_tags.get('PatientID')} - {local_study.patient_main_dicom_tags.get('PatientName')} - {local_study.main_dicom_tags.get('StudyDescription')}"
+                remote_match = [r for r in remote_studies if r.dicom_id == local_study.dicom_id]
+                study_summary = f"{local_study.patient_main_dicom_tags.get('PatientID')} - {local_study.patient_main_dicom_tags.get('PatientName')} - {local_study.main_dicom_tags.get('StudyDescription')}"
 
-            if len(remote_match) == 0 and not self._ignore_missing_on_modality:
-                print(f"WARNING {str(current_date)}, study missing on modality: {study_summary}")
-                if self._transfer_missing_to_modality:
-                    print(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
-                    self._api_client.modalities.store(
-                        modality=self._modality,
-                        resources_ids=local_study.orthanc_id,
-                        synchronous=True
-                    )
-            elif len(remote_match) > 1:
-                print(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
-            elif len(remote_match) == 1:
-                if self._level in ['Series', 'Instance']:
-                    self.compare_study(orthanc_id=local_study.orthanc_id, dicom_id=local_study.dicom_id, study_summary=study_summary)
-
-        if not self._ignore_missing_from_orthanc:
-            for remote_study in remote_studies:
-                local_match = [l for l in local_studies if l.dicom_id == remote_study.dicom_id]
-                if len(local_match) == 0:
-                    print(f"WARNING {str(current_date)}, study missing from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
-                    if self._retrieve_missing_from_orthanc:
-                        print(f"WARNING {str(current_date)}, retrieving missing study from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
-                        self._api_client.modalities.move_study(
-                            from_modality=self._modality,
-                            dicom_id=remote_study.dicom_id
+                if len(remote_match) == 0 and not self._ignore_missing_on_modality:
+                    print(f"WARNING {str(current_date)}, study missing on modality: {study_summary}")
+                    if self._transfer_missing_to_modality:
+                        print(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
+                        self._api_client.modalities.store(
+                            modality=self._modality,
+                            resources_ids=local_study.orthanc_id,
+                            synchronous=True
                         )
-                elif len(local_match) > 1:
-                    print(f"WARNING {str(current_date)}, study found multiple times on Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
-                # elif self._ignore_missing_on_modality: # in this case only, study comparison has not been performed above -> do it now
+                elif len(remote_match) > 1:
+                    print(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
+                elif len(remote_match) == 1:
+                    if self._level in ['Series', 'Instance']:
+                        self.compare_study(orthanc_id=local_study.orthanc_id, dicom_id=local_study.dicom_id, study_summary=study_summary)
+
+            if not self._ignore_missing_from_orthanc:
+                for remote_study in remote_studies:
+                    local_match = [l for l in local_studies if l.dicom_id == remote_study.dicom_id]
+                    if len(local_match) == 0:
+                        print(f"WARNING {str(current_date)}, study missing from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                        if self._retrieve_missing_from_orthanc:
+                            print(f"WARNING {str(current_date)}, retrieving missing study from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                            self._api_client.modalities.move_study(
+                                from_modality=self._modality,
+                                dicom_id=remote_study.dicom_id
+                            )
+                    elif len(local_match) > 1:
+                        print(f"WARNING {str(current_date)}, study found multiple times on Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                    # elif self._ignore_missing_on_modality: # in this case only, study comparison has not been performed above -> do it now
+        except Exception as ex:
+            print(f"ERROR: {str(ex)}")
+
 
     def compare_study(self, orthanc_id: str, dicom_id: str, study_summary: str):
         if self._scheduler:
             self._scheduler.wait_right_time_to_run(logger)
 
-        local_series = self._api_client.get_json(f"/studies/{orthanc_id}/series?expand")
+        try:
 
-        remote_series = self._api_client.modalities.query_series(
-            from_modality=self._modality,
-            query={
-                'StudyInstanceUID': dicom_id,
-                'SeriesInstanceUID': '',
-                'SeriesDescription': ''
-            })
+            local_series = self._api_client.get_json(f"/studies/{orthanc_id}/series?expand")
 
-        if len(local_series) != len(remote_series):
-            print(f"WARNING STUDY {study_summary}: {len(local_series)} series in Orthanc, {len(remote_series)} series in modality")
+            remote_series = self._api_client.modalities.query_series(
+                from_modality=self._modality,
+                query={
+                    'StudyInstanceUID': dicom_id,
+                    'SeriesInstanceUID': '',
+                    'SeriesDescription': ''
+                })
 
-        for local_serie in local_series:
-            local_dicom_id = local_serie.get('MainDicomTags').get('SeriesInstanceUID')
-            remote_match = [r for r in remote_series if r.dicom_id == local_dicom_id]
-            if len(remote_match) == 0 and not self._ignore_missing_on_modality:
-                print(f"WARNING STUDY {study_summary}, series missing from modality: {local_dicom_id}")
-                if self._transfer_missing_to_modality:
-                    print(f"WARNING STUDY {study_summary}, transferring series to modality: {local_dicom_id}")
-                    self._api_client.modalities.store(
-                        modality=self._modality,
-                        resources_ids=local_serie.get('ID'),
-                        synchronous=True
-                    )
-            elif len(remote_match) > 1:
-                print(f"WARNING STUDY {study_summary}, series found multiple times on modality: {local_dicom_id}")
-            elif len(remote_match) == 1:
-                series_summary = f"{local_dicom_id} (from STUDY {study_summary})"
-                if self._level in ['Instance']:
-                    self.compare_series(orthanc_id=local_serie.get('ID'), dicom_id=local_dicom_id, series_summary=series_summary)
+            if len(local_series) != len(remote_series):
+                print(f"WARNING STUDY {study_summary}: {len(local_series)} series in Orthanc, {len(remote_series)} series in modality")
 
-        if not self._ignore_missing_from_orthanc:
-            for remote_serie in remote_series:
-                local_match = [l for l in local_series if l.get('MainDicomTags').get('SeriesInstanceUID') == remote_serie.dicom_id]
-                if len(local_match) == 0:
-                    print(f"WARNING STUDY {dicom_id}, series missing from Orthanc: {remote_serie.dicom_id}")
-                    if self._retrieve_missing_from_orthanc:
-                        print(f"WARNING STUDY {dicom_id}, retrieving missing series from Orthanc: {remote_serie.dicom_id}")
-                        self._api_client.modalities.move_series(
-                            from_modality=self._modality,
-                            dicom_id=remote_serie.dicom_id
+            for local_serie in local_series:
+                local_dicom_id = local_serie.get('MainDicomTags').get('SeriesInstanceUID')
+                remote_match = [r for r in remote_series if r.dicom_id == local_dicom_id]
+                if len(remote_match) == 0 and not self._ignore_missing_on_modality:
+                    print(f"WARNING STUDY {study_summary}, series missing from modality: {local_dicom_id}")
+                    if self._transfer_missing_to_modality:
+                        print(f"WARNING STUDY {study_summary}, transferring series to modality: {local_dicom_id}")
+                        self._api_client.modalities.store(
+                            modality=self._modality,
+                            resources_ids=local_serie.get('ID'),
+                            synchronous=True
                         )
-                elif len(local_match) > 1:
-                    print(f"WARNING STUDY {dicom_id}, series found multiple times on Orthanc: {remote_serie.dicom_id}")
+                elif len(remote_match) > 1:
+                    print(f"WARNING STUDY {study_summary}, series found multiple times on modality: {local_dicom_id}")
+                elif len(remote_match) == 1:
+                    series_summary = f"{local_dicom_id} (from STUDY {study_summary})"
+                    if self._level in ['Instance']:
+                        self.compare_series(
+                            orthanc_id=local_serie.get('ID'),
+                            dicom_id=local_dicom_id,
+                            study_dicom_id=dicom_id,
+                            series_summary=series_summary)
+
+            if not self._ignore_missing_from_orthanc:
+                for remote_serie in remote_series:
+                    local_match = [l for l in local_series if l.get('MainDicomTags').get('SeriesInstanceUID') == remote_serie.dicom_id]
+                    if len(local_match) == 0:
+                        print(f"WARNING STUDY {dicom_id}, series missing from Orthanc: {remote_serie.dicom_id}")
+                        if self._retrieve_missing_from_orthanc:
+                            print(f"WARNING STUDY {dicom_id}, retrieving missing series from Orthanc: {remote_serie.dicom_id}")
+                            self._api_client.modalities.move_series(
+                                from_modality=self._modality,
+                                dicom_id=remote_serie.dicom_id,
+                                study_dicom_id=dicom_id
+                            )
+                    elif len(local_match) > 1:
+                        print(f"WARNING STUDY {dicom_id}, series found multiple times on Orthanc: {remote_serie.dicom_id}")
+        except Exception as ex:
+            print(f"ERROR: {str(ex)}")
 
 
-    def compare_series(self, orthanc_id: str, dicom_id: str, series_summary: str):
+    def compare_series(self, orthanc_id: str, dicom_id: str, study_dicom_id: str, series_summary: str):
 
-        local_instances = self._api_client.get_json(f"/series/{orthanc_id}/instances?expand")
+        try:
+            local_instances = self._api_client.get_json(f"/series/{orthanc_id}/instances?expand")
 
-        remote_instances = self._api_client.modalities.query_instances(
-            from_modality=self._modality,
-            query={
-                'SeriesInstanceUID': dicom_id,
-                'SOPInstanceUID': ''
-            })
+            remote_instances = self._api_client.modalities.query_instances(
+                from_modality=self._modality,
+                query={
+                    'SeriesInstanceUID': dicom_id,
+                    'SOPInstanceUID': ''
+                })
 
-        if len(local_instances) != len(remote_instances):
-            print(f"WARNING SERIES {series_summary}: {len(local_instances)} instances in Orthanc, {len(remote_instances)} instances in modality")
+            if len(local_instances) != len(remote_instances):
+                print(f"WARNING SERIES {series_summary}: {len(local_instances)} instances in Orthanc, {len(remote_instances)} instances in modality")
 
-        for local_instance in local_instances:
-            local_dicom_id = local_instance.get('MainDicomTags').get('SOPInstanceUID')
-            remote_match = [r for r in remote_instances if r.dicom_id == local_dicom_id]
+            success_count = 0
+            failure_count = 0
 
-            if len(remote_match) == 0 and not self._ignore_missing_on_modality:
-                print(f"WARNING SERIES {series_summary}, instance missing from modality: {local_dicom_id}")
-                if self._transfer_missing_to_modality:
-                    print(f"WARNING SERIES {series_summary}, transferring instance to modality: {local_dicom_id}")
-                    self._api_client.modalities.store(
-                        modality=self._modality,
-                        resources_ids=local_instance.get('ID'),
-                        synchronous=True
-                    )
-            elif len(remote_match) > 1:
-                print(f"WARNING SERIES {series_summary}, instance found multiple times on modality: {local_dicom_id}")
+            for local_instance in local_instances:
+                try:
+                    local_dicom_id = local_instance.get('MainDicomTags').get('SOPInstanceUID')
+                    remote_match = [r for r in remote_instances if r.dicom_id == local_dicom_id]
 
-        if not self._ignore_missing_from_orthanc:
-            for remote_instance in remote_instances:
-                local_match = [l for l in local_instances if l.get('MainDicomTags').get('SOPInstanceUID') == remote_instance.dicom_id]
-                if len(local_match) == 0:
-                    print(f"WARNING SERIES {series_summary}, instance missing from Orthanc: {remote_instance.dicom_id}")
-                    if self._retrieve_missing_from_orthanc:
-                        print(f"WARNING SERIES {series_summary}, retrieving instance missing from Orthanc: {remote_instance.dicom_id}")
-                        self._api_client.modalities.move_instance(
-                            from_modality=self._modality,
-                            dicom_id=remote_instance.dicom_id
-                        )
-                elif len(local_match) > 1:
-                    print(f"WARNING SERIES {series_summary}, instance found multiple times on Orthanc: {remote_instance.dicom_id}")
+                    if len(remote_match) == 0 and not self._ignore_missing_on_modality:
+                        # print(f"WARNING SERIES {series_summary}, instance missing from modality: {local_dicom_id}")
+                        if self._transfer_missing_to_modality:
+                            # print(f"WARNING SERIES {series_summary}, transferring instance to modality: {local_dicom_id}")
+                            self._api_client.modalities.store(
+                                modality=self._modality,
+                                resources_ids=local_instance.get('ID'),
+                                synchronous=True
+                            )
+                            success_count += 1
+                    elif len(remote_match) > 1:
+                        print(f"WARNING SERIES {series_summary}, instance found multiple times on modality: {local_dicom_id}")
+                except:
+                    failure_count += 1
+
+            if not self._ignore_missing_from_orthanc:
+                for remote_instance in remote_instances:
+                    try:
+                        local_match = [l for l in local_instances if l.get('MainDicomTags').get('SOPInstanceUID') == remote_instance.dicom_id]
+                        if len(local_match) == 0:
+                            # print(f"WARNING SERIES {series_summary}, instance missing from Orthanc: {remote_instance.dicom_id}")
+                            if self._retrieve_missing_from_orthanc:
+                                # print(f"WARNING SERIES {series_summary}, retrieving instance missing from Orthanc: {remote_instance.dicom_id}")
+                                self._api_client.modalities.move_instance(
+                                    from_modality=self._modality,
+                                    dicom_id=remote_instance.dicom_id,
+                                    series_dicom_id=dicom_id,
+                                    study_dicom_id=study_dicom_id
+                                )
+                                success_count += 1
+                        elif len(local_match) > 1:
+                            print(f"WARNING SERIES {series_summary}, instance found multiple times on Orthanc: {remote_instance.dicom_id}")
+                    except Exception as ex:
+                        failure_count += 1
+
+            if failure_count > 0:
+                print(f"ERROR SERIES {series_summary}, transferring/retrieving instances: {failure_count} failure, {success_count} success")
+            elif success_count > 0:
+                print(f"WARNING SERIES {series_summary}, transferred: {success_count} instances")
+
+        except Exception as ex:
+            print(f"ERROR: {str(ex)}")
 
 
 

@@ -268,12 +268,18 @@ class Test3Orthancs(unittest.TestCase):
         )
         populator_b.execute()
 
+        # transfer a few instances randomly before launching the comparator to make sur it acts correctly on incomplete series ...
+        instances_a = self.oa.instances.get_all_ids()
+        instances_b = self.ob.instances.get_all_ids()
+        self.oa.modalities.send('orthanc-b', [instances_a[0], instances_a[2], instances_a[4]])
+        self.ob.modalities.send('orthanc-a', [instances_b[0], instances_b[2], instances_b[4]])
+
         # run the comparator with B as the modality and make sure
         # everything in A goes to B
         comparator = OrthancComparator(
             api_client=self.oa,
             modality='orthanc-b',
-            level='Series',
+            level='Instance',
             from_study_date=datetime.date(2022, 4, 19),
             to_study_date=datetime.date(2022, 4, 25),
             ignore_missing_from_orthanc=True,
@@ -281,16 +287,16 @@ class Test3Orthancs(unittest.TestCase):
         )
         comparator.execute()
 
-        # B should have both studies from A & B while A should stay untouched
+        # B should have both studies from A & B while A should stay untouched (except for the few instances transferred)
         self.assertEqual(10, len(self.ob.studies.get_all_ids()))
-        self.assertEqual(5, len(self.oa.studies.get_all_ids()))
+        self.assertNotEqual(10, len(self.oa.studies.get_all_ids()))
 
         # run the comparator with B as the modality and make sure
         # everything in B goes to A
         comparator = OrthancComparator(
             api_client=self.oa,
             modality='orthanc-b',
-            level='Series',
+            level='Instance',
             from_study_date=datetime.date(2022, 4, 19),
             to_study_date=datetime.date(2022, 4, 25),
             ignore_missing_on_modality=True,
@@ -299,10 +305,7 @@ class Test3Orthancs(unittest.TestCase):
         comparator.execute()
 
         # now both orthanc should have full dataset
-        self.assertEqual(10, len(self.ob.studies.get_all_ids()))
-        self.assertEqual(10, len(self.oa.studies.get_all_ids()))
-
-
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

@@ -62,12 +62,9 @@ $ docker exec -it xxxx bash
 
 ## compare DICOM Data found in Orthanc and in a remote modality
 
+Running in a Docker environment:
 ```
-$ docker exec -it xxxx bash
-
-/# pip3 install orthanc-tools
-
-/# python3 -m orthanc_tools.orthanc_comparator --url=http://localhost:8042 --user=user --password=pwd --modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
+$ docker run -d --name comparator --network=mysetup_default python:3.9 bash -c "pip3 install orthanc-tools && python3 -u -m orthanc_tools.orthanc_comparator --level=Instance --url=http://pacs-2022:8042 --modality=pacs-2017 --from_study_date=20220201 --to_study_date=20220302 --transfer_missing_to_modality --ignore_missing_from_orthanc --run_only_at_night_and_weekend --night_start_hour=19 --night_end_hour=6"
 
 ```
 
@@ -76,7 +73,8 @@ $ docker exec -it xxxx bash
 The OrthancTestDbPopulator generates test images and uploads them in Orthanc.
 All images have only 4 pixels and take a minimum amount of space on disk. 
 By default, the generator always generates the same date, use a different seed if you need variation.
-from a shell:
+
+From a shell:
 
 ```shell
 python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --password=pwd --studies=5000 --seed=42

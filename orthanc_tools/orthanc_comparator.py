@@ -286,9 +286,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    url = os.environ.get("URL", args.url)
-    user = os.environ.get("USER", args.user)
-    password = os.environ.get("PASSWORD", args.password)
+    url = os.environ.get("ORTHANC_URL", args.url)
+    user = os.environ.get("ORTHANC_USER", args.user)
+    password = os.environ.get("ORTHANC_PWD", args.password)
     modality = os.environ.get("MODALITY", args.modality)
     level = os.environ.get("LEVEL", args.level)
     from_study_date = helpers.from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))

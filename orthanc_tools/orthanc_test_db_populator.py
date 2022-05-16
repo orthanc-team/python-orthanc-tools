@@ -152,9 +152,9 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=42, help='Random seed (to make generation repeatable)')
     args = parser.parse_args()
 
-    url = os.environ.get("URL", args.url)
-    user = os.environ.get("USER", args.user)
-    pwd = os.environ.get("PASSWORD", args.password)
+    url = os.environ.get("ORTHANC_URL", args.url)
+    user = os.environ.get("ORTHANC_USER", args.user)
+    pwd = os.environ.get("ORTHANC_PWD", args.password)
 
     populator = OrthancTestDbPopulator(
         api_client=OrthancApiClient(url, user=user, pwd=pwd),

@@ -308,9 +308,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    url = os.environ.get("URL", args.url)
-    user = os.environ.get("USER", args.user)
-    pwd = os.environ.get("PASSWORD", args.password)
+    url = os.environ.get("ORTHANC_URL", args.url)
+    user = os.environ.get("ORTHANC_USER", args.user)
+    pwd = os.environ.get("ORTHANC_PWD", args.password)
     destination_modality = os.environ.get("DESTINATION_MODALITY", args.destination_modality)
     destination_aet = os.environ.get("DESTINATION_AET", args.destination_aet)
     source_modality = os.environ.get("SOURCE_MODALITY", args.source_modality)

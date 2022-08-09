@@ -137,16 +137,23 @@ class PacsMigrator:
 
 
             elif self._source_modality and self._destination_aet:
-                try:
-                    logger.info(f"C-Move study {message.dicom_id} from source {self._source_modality} to destination AET {self._destination_aet}")
-                    # move the study from source to target modality
-                    self._api_client.modalities.move_study(
-                        from_modality=self._source_modality,
-                        dicom_id=message.dicom_id,
-                        to_modality_aet=self._destination_aet
-                    )
-                except Exception as ex:
-                    logger.error(f"Error while transferring {message.orthanc_id} {str(ex)}")
+                retry_count = 0
+                while retry_count < 5:
+                    try:
+                        logger.info(f"C-Move study {message.dicom_id} from source {self._source_modality} to destination AET {self._destination_aet}")
+                        # move the study from source to target modality
+                        self._api_client.modalities.move_study(
+                            from_modality=self._source_modality,
+                            dicom_id=message.dicom_id,
+                            to_modality_aet=self._destination_aet
+                        )
+                        break
+                    except Exception as ex:
+                        retry_count += 1
+                        if retry_count == 5:
+                            logger.error(f"Error (retried 5 times) while transferring {message.dicom_id} {str(ex)}")
+                        else:
+                            logger.warning(f"Error while transferring, retrying... {message.dicom_id} {str(ex)}")
 
             else:
                 raise NotImplementedError("configuration not handled")

@@ -1,3 +1,8 @@
+v 0.4.8
+=======
+
+- uses orthanc-api-client v 0.5.8
+
 v 0.4.7
 =======
 

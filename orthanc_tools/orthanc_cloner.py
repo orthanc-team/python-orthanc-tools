@@ -86,6 +86,7 @@ class OrthancCloner(OrthancMonitor):
 
 # examples:
 # python orthanc_tools/orthanc_cloner.py --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_url=http://192.168.0.10:8042 --dest_user=user --dest_pwd=pwd
+# python orthanc_tools/orthanc_cloner.py --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_peer=pacs  --mode=Transfer
 
 if __name__ == '__main__':
     level = logging.INFO
@@ -102,6 +103,8 @@ if __name__ == '__main__':
     parser.add_argument('--dest_url', type=str, default=None, help='Orthanc destination url')
     parser.add_argument('--dest_user', type=str, default=None, help='Orthanc destination user name')
     parser.add_argument('--dest_pwd', type=str, default=None, help='Orthanc destination password')
+    parser.add_argument('--dest_peer', type=str, default=None, help='Orthanc destination peer (peer alias in source Orthanc)')
+    parser.add_argument('--mode', type=str, default=None, help='Cloner Mode (Default, Peering, Transfer)')
     parser.add_argument('--persist_state_path', type=str, default=None, help='Path where the state of the cloner will be saved (to resume later)')
     args = parser.parse_args()
 
@@ -111,12 +114,20 @@ if __name__ == '__main__':
     dest_url = os.environ.get("DEST_URL", args.dest_url)
     dest_user = os.environ.get("DEST_USER", args.dest_user)
     dest_pwd = os.environ.get("DEST_PWD", args.dest_pwd)
+    dest_peer = os.environ.get("DEST_PEER", args.dest_peer)
+    mode = os.environ.get("MODE", args.mode)
     persist_state_path = os.environ.get("PERSIST_STATE_PATH", args.persist_state_path)
+
+    destination = None
+    if dest_url:
+        destination = OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd)
 
     cloner = OrthancCloner(
         source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd),
-        destination=OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd),
-        persist_status_path=persist_state_path
+        destination=destination,
+        persist_status_path=persist_state_path,
+        mode=mode,
+        destination_peer=dest_peer
     )
 
     cloner.execute(existing_changes_only=False)

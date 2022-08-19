@@ -6,6 +6,7 @@ services:
     environment:
       VERBOSE_STARTUP: "true"
       VERBOSE_ENABLED: "true"
+      TRANSFERS_PLUGIN_ENABLED: "true"
       ORTHANC__REGISTERED_USERS: |
         {"test": "test"}
       ORTHANC__DICOM_AET: "ORTHANC-A"
@@ -15,6 +16,12 @@ services:
           "orthanc-b": ["ORTHANC-B", "orthanc-b", 4242],
           "orthanc-c": ["ORTHANC-C", "orthanc-c", 4242]
         }
+      ORTHANC__ORTHANC_PEERS: |
+        {
+          "orthanc-a": ["http://orthanc-a:8042/", "test", "test"],
+          "orthanc-b": ["http://orthanc-b:8042/", "test", "test"],
+          "orthanc-c": ["http://orthanc-c:8042/", "test", "test"]
+        }
 
   orthanc-b:
     image: osimis/orthanc:21.11.0
@@ -22,6 +29,7 @@ services:
     environment:
       VERBOSE_STARTUP: "true"
       VERBOSE_ENABLED: "true"
+      TRANSFERS_PLUGIN_ENABLED: "true"
       ORTHANC__REGISTERED_USERS: |
         {
           "test": "test"
@@ -33,6 +41,12 @@ services:
           "orthanc-b": ["ORTHANC-B", "orthanc-b", 4242],
           "orthanc-c": ["ORTHANC-C", "orthanc-c", 4242]
         }
+      ORTHANC__ORTHANC_PEERS: |
+        {
+          "orthanc-a": ["http://orthanc-a:8042/", "test", "test"],
+          "orthanc-b": ["http://orthanc-b:8042/", "test", "test"],
+          "orthanc-c": ["http://orthanc-c:8042/", "test", "test"]
+        }
 
   orthanc-c:
     image: osimis/orthanc:21.11.0
@@ -40,6 +54,7 @@ services:
     environment:
       VERBOSE_STARTUP: "true"
       VERBOSE_ENABLED: "true"
+      TRANSFERS_PLUGIN_ENABLED: "true"
       ORTHANC__REGISTERED_USERS: |
         {"test": "test"}
       ORTHANC__DICOM_AET: "ORTHANC-C"
@@ -48,4 +63,10 @@ services:
           "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
           "orthanc-b": ["ORTHANC-B", "orthanc-b", 4242],
           "orthanc-c": ["ORTHANC-C", "orthanc-c", 4242]
+        }
+      ORTHANC__ORTHANC_PEERS: |
+        {
+          "orthanc-a": ["http://orthanc-a:8042/", "test", "test"],
+          "orthanc-b": ["http://orthanc-b:8042/", "test", "test"],
+          "orthanc-c": ["http://orthanc-c:8042/", "test", "test"]
         }

@@ -15,7 +15,7 @@ import pathlib
 import os
 import logging
 
-from orthanc_tools import OrthancCloner, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, OrthancComparator
+from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, OrthancComparator
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -46,13 +46,35 @@ class Test3Orthancs(unittest.TestCase):
     def tearDownClass(cls):
         subprocess.run(["docker-compose", "down", "-v"], cwd=here/"docker-setup")
 
-    def test_cloner(self):
+    def test_cloner_default(self):
         self.oa.delete_all_content()
         self.ob.delete_all_content()
 
         self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
         cloner = OrthancCloner(source=self.oa, destination=self.ob)
+        cloner.execute()
+
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+
+    def test_cloner_transfer(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        cloner = OrthancCloner(source=self.oa, destination_peer='orthanc-b', mode=ClonerMode.TRANSFER)
+        cloner.execute()
+
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+
+    def test_cloner_peering(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        cloner = OrthancCloner(source=self.oa, destination_peer='orthanc-b', mode=ClonerMode.PEERING)
         cloner.execute()
 
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))

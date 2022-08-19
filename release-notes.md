@@ -1,3 +1,8 @@
+v 0.5.0
+=======
+
+- added 'mode' for OrthancCloner: `ClonerMode.DEFAULT, ClonerMode.PEERING, ClonerMode.TRANSFER`
+
 v 0.4.9
 =======
 

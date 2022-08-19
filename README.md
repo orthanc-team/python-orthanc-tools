@@ -19,13 +19,17 @@ once this is done continues the cloning process for every DICOM instance that is
 from a python script:
 
 ```python
-from orthanc_tools import OrthancCloner
+from orthanc_tools import OrthancCloner, ClonerMode
 from orthanc_api_client import OrthancApiClient
 
 orthanc_a = OrthancApiClient('http://localhost:8042', user='orthanc', pwd='orthanc')
 orthanc_b = OrthancApiClient('http://localhost:8043', user='orthanc', pwd='orthanc')
 
 cloner = OrthancCloner(source=orthanc_a, destination=orthanc_b)
+cloner.execute(existing_changes_only=False)
+
+# if the destination is declared as a peer:
+cloner = OrthancCloner(source=orthanc_a, destination_peer='orthanc-b', mode=ClonerMode.TRANSFER)
 cloner.execute(existing_changes_only=False)
 
 ```

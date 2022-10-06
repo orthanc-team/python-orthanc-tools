@@ -44,7 +44,26 @@ or, inside a docker-compose file:
 ```yaml
 version: "3"
 services:
-    
+    orthanc-cloner:
+        image: orthancteam/python-orthanc-tools:0.6.0
+        volumes: ["orthanc-cloner:/status"]
+        environment:
+            RUN_ONLY_AT_NIGHT_AND_WEEKEND: "true"
+            NIGHT_START_HOUR: "15"
+            NIGHT_END_HOUR: "6"
+            SOURCE_URL: "http://orthanc-a:8042"
+#            SOURCE_USER: "user"
+#            SOURCE_PWD: "pwd"
+            DEST_URL: "http://orthanc-b:8042"
+#            DEST_USER: "user"
+#            DEST_PWD: "pwd"
+            MODE: "Default"
+            PERSIST_STATE_PATH: "/status/status.txt"
+            WORKERS_THREAD_COUNT: "6"
+#            VERBOSE_ENABLED: "true"
+        entrypoint: python -m orthanc_tools.orthanc_cloner
+volumes:
+    orthanc-cloner:  
 
 ```
 

@@ -129,7 +129,7 @@ if __name__ == '__main__':
     dest_peer = os.environ.get("DEST_PEER", args.dest_peer)
     mode = os.environ.get("MODE", args.mode)
     persist_state_path = os.environ.get("PERSIST_STATE_PATH", args.persist_state_path)
-    worker_threads_count = int(os.environ.get("WORKERS_THREADS_COUNT", str(args.worker_threads_count)))
+    worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 

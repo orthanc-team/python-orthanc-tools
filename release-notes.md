@@ -1,3 +1,8 @@
+v 0.6.1
+=======
+
+- uses orthanc-api-client v 0.7.1 to fix `OrthancCloner` with reverse-proxies
+
 v 0.6.0
 =======
 

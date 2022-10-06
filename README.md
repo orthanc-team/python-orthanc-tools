@@ -37,7 +37,15 @@ cloner.execute(existing_changes_only=False)
 from a shell:
 
 ```shell
-python3 -m orthanc_tools.orthanc_cloner --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_url=http://192.168.0.10:8042 --dest_user=user --dest_pwd=pwd
+python3 -m orthanc_tools.orthanc_cloner --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_url=http://192.168.0.10:8042 --dest_user=user --dest_pwd=pwd --run_only_at_night_and_weekend=true --night_start_hour=19 --night_end_hour=6
+```
+
+or, inside a docker-compose file:
+```yaml
+version: "3"
+services:
+    
+
 ```
 
 ## import files from a folder from a Docker container

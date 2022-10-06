@@ -131,7 +131,7 @@ class Test3Orthancs(unittest.TestCase):
                 self.oa,
                 polling_interval=0.1,
                 persist_status_path=persist_status_path,
-                workers_count=4
+                worker_threads_count=4
             )
 
             # first event is lengthy (5 seconds) and will not be processed at the time we first check the sequence id file

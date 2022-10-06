@@ -1,3 +1,9 @@
+v 0.6.0
+=======
+
+- added a scheduler for `OrthancCloner` to allow running at night and weekends.
+- BREAKING_CHANGE: `OrthancCloner` constructor: renamed `workers_count` into `worker_threads_count`
+
 v 0.5.1
 =======
 

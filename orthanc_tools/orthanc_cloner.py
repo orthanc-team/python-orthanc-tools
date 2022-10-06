@@ -4,6 +4,7 @@ import os
 from strenum import StrEnum
 
 from orthanc_api_client import OrthancApiClient, ResourceType
+from .scheduler import Scheduler
 from .orthanc_monitor import OrthancMonitor, ChangeType
 
 logger = logging.getLogger('orthanc_tools')
@@ -21,22 +22,29 @@ class OrthancCloner(OrthancMonitor):
     def __init__(self,
                  source: OrthancApiClient,
                  destination: OrthancApiClient = None,          # must be defined for DEFAULT mode
-                 workers_count: int = 1,
+                 worker_threads_count: int = 1,
                  persist_status_path: str = None,
                  polling_interval: float = 1,
                  mode: ClonerMode = ClonerMode.DEFAULT,
-                 destination_peer: str = None                    # the 'alias' of the destination peer if declared in Orthanc.  It must be defined for PEERING and TRANSFER mode
+                 destination_peer: str = None,                    # the 'alias' of the destination peer if declared in Orthanc.  It must be defined for PEERING and TRANSFER mode
+                 scheduler: Scheduler = None,
                  ):
         super().__init__(
             api_client=source,
-            workers_count=workers_count,
+            worker_threads_count=worker_threads_count,
             persist_status_path=persist_status_path,
-            polling_interval=polling_interval
+            polling_interval=polling_interval,
+            scheduler=scheduler
         )
 
         self._destination = destination
         self._destination_peer = destination_peer
         self._mode = mode
+
+        if self._scheduler:
+            logger.info("Night & Week-end mode Enabled : " + str(self._scheduler._run_only_at_night_and_weekend))
+
+        logger.info("Migrating with {n} threads".format(n=self._worker_threads_count))
 
         if self._mode in [ClonerMode.PEERING, ClonerMode.TRANSFER]:
             if destination_peer is None:
@@ -106,6 +114,10 @@ if __name__ == '__main__':
     parser.add_argument('--dest_peer', type=str, default=None, help='Orthanc destination peer (peer alias in source Orthanc)')
     parser.add_argument('--mode', type=str, default=None, help='Cloner Mode (Default, Peering, Transfer)')
     parser.add_argument('--persist_state_path', type=str, default=None, help='Path where the state of the cloner will be saved (to resume later)')
+    parser.add_argument('--worker_threads_count', type=int, default=1, help='Number of worker threads')
+
+    Scheduler.add_parser_arguments(parser)
+
     args = parser.parse_args()
 
     source_url = os.environ.get("SOURCE_URL", args.source_url)
@@ -117,6 +129,9 @@ if __name__ == '__main__':
     dest_peer = os.environ.get("DEST_PEER", args.dest_peer)
     mode = os.environ.get("MODE", args.mode)
     persist_state_path = os.environ.get("PERSIST_STATE_PATH", args.persist_state_path)
+    worker_threads_count = int(os.environ.get("WORKERS_THREADS_COUNT", str(args.worker_threads_count)))
+
+    scheduler = Scheduler.create_from_args_and_env_var(args)
 
     destination = None
     if dest_url:
@@ -127,7 +142,9 @@ if __name__ == '__main__':
         destination=destination,
         persist_status_path=persist_state_path,
         mode=mode,
-        destination_peer=dest_peer
+        destination_peer=dest_peer,
+        scheduler=scheduler,
+        worker_threads_count=worker_threads_count
     )
 
     cloner.execute(existing_changes_only=False)

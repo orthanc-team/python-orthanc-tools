@@ -5,6 +5,7 @@ import os
 import logging
 
 from orthanc_api_client import OrthancApiClient, ChangeType
+from .scheduler import Scheduler
 logger = logging.getLogger('orthanc_tools')
 
 
@@ -15,16 +16,17 @@ class OrthancMonitor:
 
     def __init__(self, 
                  api_client: OrthancApiClient,
-                 workers_count: int = 1,
+                 worker_threads_count: int = 1,
                  persist_status_path: str = None,
                  start_at_sequence_id: int = None,
-                 polling_interval: float = 0.5
+                 polling_interval: float = 0.5,
+                 scheduler: Scheduler = None
         ):
 
         self._api_client = api_client
-        self._changes_to_process = queue.Queue(workers_count + 1)
+        self._changes_to_process = queue.Queue(worker_threads_count + 1)
         self._monitoring_thread = None
-        self._workers_count = workers_count
+        self._worker_threads_count = worker_threads_count
         self._worker_threads = []
         self._is_running = False
         self._polling_interval = polling_interval
@@ -33,6 +35,7 @@ class OrthancMonitor:
         self._persist_status_lock = threading.RLock()
         self._changes_id_being_processed = set()
         self._largest_processed_change_id = 0
+        self._scheduler = scheduler
 
         if persist_status_path is not None:
             self._persist_status_path = persist_status_path
@@ -112,7 +115,7 @@ class OrthancMonitor:
         )
 
         # create worker threads
-        for thread_id in range(0, self._workers_count):
+        for thread_id in range(0, self._worker_threads_count):
             self._worker_threads.append(threading.Thread(
                 target=self._process_changes,
                 name=f"Worker Thread {thread_id}",
@@ -133,7 +136,7 @@ class OrthancMonitor:
         self._monitoring_thread.join()
 
         # post one 'empty' exit message per thread to unlock the threads from waiting on the process queue
-        for i in range(0, self._workers_count):
+        for i in range(0, self._worker_threads_count):
             self._changes_to_process.put(None)
 
         for t in self._worker_threads:
@@ -152,6 +155,10 @@ class OrthancMonitor:
 
             done = False
             while not done and self._is_running: # read as fast as you can while there are still events
+
+                if self._scheduler:
+                    self._scheduler.wait_right_time_to_run(logger=logger)
+
                 # get the list of changes from orthanc
                 try:
                     changes, last_sequence_id, done = self._api_client.get_changes(

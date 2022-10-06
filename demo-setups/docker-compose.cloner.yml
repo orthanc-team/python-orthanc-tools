@@ -1,0 +1,46 @@
+# start the demo with
+#   docker-compose -f docker-compose.cloner.yml up
+version: "3.1"
+
+services:
+
+    orthanc-a:
+        image: osimis/orthanc:22.9.2
+        ports: ["8042:8042"]
+        environment:
+            ORTHANC__AUTHENTICATION_ENABLED: "false"
+            ORTHANC__NAME: "A"
+        volumes: ["orthanc-storage-a:/var/lib/orthanc/db"]
+        restart: unless-stopped
+
+    orthanc-b:
+        image: osimis/orthanc:22.9.2
+        ports: ["8043:8042"]
+        environment:
+            ORTHANC__AUTHENTICATION_ENABLED: "false"
+            ORTHANC__NAME: "B"
+        volumes: ["orthanc-storage-b:/var/lib/orthanc/db"]
+        restart: unless-stopped
+
+    orthanc-cloner:
+        image: orthancteam/python-orthanc-tools:0.6.0
+        volumes: ["orthanc-cloner:/status"]
+        environment:
+            RUN_ONLY_AT_NIGHT_AND_WEEKEND: "true"
+            NIGHT_START_HOUR: "15"
+            NIGHT_END_HOUR: "6"
+            SOURCE_URL: "http://orthanc-a:8042"
+#            SOURCE_USER: "user"
+#            SOURCE_PWD: "pwd"
+            DEST_URL: "http://orthanc-b:8042"
+#            DEST_USER: "user"
+#            DEST_PWD: "pwd"
+            MODE: "Default"
+            PERSIST_STATE_PATH: "/status/status.txt"
+            WORKERS_THREAD_COUNT: "6"
+#            VERBOSE_ENABLED: "true"
+        entrypoint: python -m orthanc_tools.orthanc_cloner
+volumes:
+    orthanc-cloner:
+    orthanc-storage-a:
+    orthanc-storage-b:

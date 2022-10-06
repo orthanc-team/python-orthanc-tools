@@ -19,7 +19,7 @@ class Scheduler:
                 now = time.localtime()
                 if now.tm_wday <= 4 and self._night_end_hour <= now.tm_hour < self._night_start_hour:
                     is_right_time = False
-                    logger.info("waiting for the night or week-end to come")
+                    logger.info("waiting 10 min for the night or week-end to come")
                     time.sleep(600)
                 else:
                     is_right_time = True
@@ -33,8 +33,8 @@ class Scheduler:
 
     @classmethod
     def create_from_args_and_env_var(cls, args):
-        night_start_hour = os.environ.get("NIGHT_START_HOUR", args.night_start_hour)
-        night_end_hour = os.environ.get("NIGHT_END_HOUR", args.night_end_hour)
+        night_start_hour = int(os.environ.get("NIGHT_START_HOUR", str(args.night_start_hour)))
+        night_end_hour = int(os.environ.get("NIGHT_END_HOUR", str(args.night_end_hour)))
         if os.environ.get("RUN_ONLY_AT_NIGHT_AND_WEEKEND", None) is not None:
             run_only_at_night_and_weekend = os.environ.get("RUN_ONLY_AT_NIGHT_AND_WEEKEND") == "true"
         else:

@@ -62,9 +62,6 @@ class PacsMigrator:
                  destination_modality: str = None,      # Destination modality as configured in Orthanc (alias)
                  destination_aet: str = None,           # Destination AET
                  delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only vali
-                 # run_only_at_night_and_weekend: bool = False,
-                 # night_start_hour: int = 18,
-                 # night_end_hour: int = 6,
                  scheduler: Scheduler = None,
                  worker_threads_count: int = multiprocessing.cpu_count() - 1  # by default, use all CPUs but one for compression
                  ):
@@ -79,9 +76,6 @@ class PacsMigrator:
         self._max_cfind_study_count = max_cfind_study_count
         self._destination_modality = destination_modality
         self._destination_aet = destination_aet
-        # self._run_only_at_night_and_weekend = run_only_at_night_and_weekend
-        # self._night_start_hour = night_start_hour
-        # self._night_end_hour = night_end_hour
         self._delete_from_source = delete_from_source
         self._scheduler = scheduler
 
@@ -308,9 +302,6 @@ if __name__ == '__main__':
     parser.add_argument('--to_study_date', type=str, required=True, help='To Study Date (format 20190225)')
     parser.add_argument('--delete_from_source', default=False, action='store_true', help='delete data from source (only if source is an Orthanc)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Worker threads count')
-    # parser.add_argument('--run_only_at_night_and_weekend', default=False, action='store_true', help='enables script only at night')
-    # parser.add_argument('--night_start_hour', type=int, default=19, help='Night start hour')
-    # parser.add_argument('--night_end_hour', type=int, default=6, help='Night start hour')
     Scheduler.add_parser_arguments(parser)
 
     args = parser.parse_args()
@@ -326,12 +317,6 @@ if __name__ == '__main__':
     worker_threads_count = os.environ.get("WORKER_THREADS_COUNT", args.worker_threads_count)
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
-    # night_start_hour = os.environ.get("NIGHT_START_HOUR", args.night_start_hour)
-    # night_end_hour = os.environ.get("NIGHT_END_HOUR", args.night_end_hour)
-    # if os.environ.get("RUN_ONLY_AT_NIGHT_AND_WEEKEND", None) is not None:
-    #     run_only_at_night_and_weekend = os.environ.get("RUN_ONLY_AT_NIGHT_AND_WEEKEND") == "true"
-    # else:
-    #     run_only_at_night_and_weekend = args.run_only_at_night_and_weekend
 
     if os.environ.get("DELETE_FROM_SOURCE", None) is not None:
         delete_from_source = os.environ.get("DELETE_FROM_SOURCE") == "true"
@@ -347,9 +332,6 @@ if __name__ == '__main__':
         source_modality=source_modality,
         delete_from_source=delete_from_source,
         scheduler=scheduler,
-        # run_only_at_night_and_weekend=run_only_at_night_and_weekend,
-        # night_start_hour=night_start_hour,
-        # night_end_hour=night_end_hour,
         worker_threads_count=worker_threads_count
     )
 

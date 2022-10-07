@@ -20,8 +20,10 @@ class OrthancMonitor:
                  persist_status_path: str = None,
                  start_at_sequence_id: int = None,
                  polling_interval: float = 0.5,
-                 scheduler: Scheduler = None
-        ):
+                 scheduler: Scheduler = None,
+                 max_retries: int = 5,
+                 error_folder_path: str = None
+    ):
 
         self._api_client = api_client
         self._changes_to_process = queue.Queue(worker_threads_count + 1)
@@ -36,6 +38,8 @@ class OrthancMonitor:
         self._changes_id_being_processed = set()
         self._largest_processed_change_id = 0
         self._scheduler = scheduler
+        self._error_folder_path = error_folder_path
+        self._max_retries = max_retries
 
         if persist_status_path is not None:
             self._persist_status_path = persist_status_path
@@ -187,19 +191,45 @@ class OrthancMonitor:
                 self._changes_to_process.task_done()
                 break
 
-            try:
-                # process events (this is blocking the worker thread until the handler returns)
-                if change.change_type in self._handlers:
-                    logger.debug(f"processing change {change.sequence_id} {change.change_type}")
-                    processed = self._handlers[change.change_type](change.resource_id, self._api_client)
-                    if processed:
-                        self._mark_change_as_processed(change.sequence_id)
-                else:
-                    logger.debug(f"not processing change {change.sequence_id} {change.change_type}")
-                    self._mark_change_as_processed(change.sequence_id)
+            retries = 0
+            retry_delays = [5, 20, 60, 300, 900, 1800, 3600, 7200]
+            processed = False
+            last_error = None
 
-            except Exception as ex:
-                logger.error("Unhandled exception in event handler !  Please handle exceptions inside handler: " + str(ex))
+            while not processed and retries <= min(self._max_retries, len(retry_delays)):
+                if retries >= 1:
+                    delay = retry_delays[retries - 1]
+                    logger.info(f"waiting {delay} seconds before retrying change  {change.sequence_id} {change.change_type}")
+                    time.sleep(delay)
+
+                try:
+                    # process events (this is blocking the worker thread until the handler returns)
+                    if change.change_type in self._handlers:
+                        logger.debug(f"processing change {change.sequence_id} {change.change_type}")
+                        processed = self._handlers[change.change_type](change.resource_id, self._api_client)
+                    else:
+                        logger.debug(f"not processing change {change.sequence_id} {change.change_type}")
+                        processed = True  # but we consider it has been processed not to handle it after a restart
+
+                except Exception as ex:
+                    logger.exception("Unhandled exception in event handler: ", ex)
+                    last_error = str(ex)
+
+                retries = retries + 1
+
+
+            if not processed and self._error_folder_path:
+                error_file_path = os.path.join(self._error_folder_path, f"{change.sequence_id:010d}." + str(change.change_type) + ".error.txt")
+                try:
+                    with open(error_file_path, "wt") as f:
+                        f.write(last_error)
+                except OSError as ex:
+                    raise Exception(f"Could not write error report to file \"{ex.filename}\": {ex.strerror}")
+                # if we store errors on disk, we consider that the change has been processed since we keep a track of its failure -> it will not be handled again after a restart
+                processed = True
+
+            if processed:
+                self._mark_change_as_processed(change.sequence_id)
 
             self._changes_to_process.task_done()  # tell the queue the item has been processed
 

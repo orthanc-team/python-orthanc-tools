@@ -37,7 +37,7 @@ services:
 #            DEST_PWD: "pwd"
             MODE: "Default"
             PERSIST_STATE_PATH: "/status/status.txt"
-            WORKERS_THREAD_COUNT: "6"
+            WORKER_THREADS_COUNT: "6"
 #            VERBOSE_ENABLED: "true"
         entrypoint: python -m orthanc_tools.orthanc_cloner
 volumes:

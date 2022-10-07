@@ -1,3 +1,9 @@
+
+- CI publishes orthancteam/python-orthanc-tools Docker image
+- fixes incompatibilities with orthanc-api-client v 0.7.1
+- `OrthancCloner` `Transfer` mode now triggers on `StableStudy` event instead of `NewStudy`
+- `OrthancCloner` now implements retries in case of failure and store failures in a specific folder. 
+
 v 0.6.1
 =======
 

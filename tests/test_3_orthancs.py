@@ -64,6 +64,7 @@ class Test3Orthancs(unittest.TestCase):
         self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
         cloner = OrthancCloner(source=self.oa, destination_peer='orthanc-b', mode=ClonerMode.TRANSFER)
+        time.sleep(2) # wait for StableStudy event
         cloner.execute()
 
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
@@ -80,13 +81,19 @@ class Test3Orthancs(unittest.TestCase):
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
     def test_monitor(self):
+        self.oa.delete_all_content()
         processed_instances = []
 
         monitor = OrthancMonitor(
             self.oa,
             polling_interval=0.1
         )
-        monitor.add_handler(ChangeType.NEW_INSTANCE, lambda instance_id, api_client: processed_instances.append(instance_id))
+
+        def new_instance_handler(instance_id, api_client):
+            processed_instances.append(instance_id),
+            return True
+
+        monitor.add_handler(ChangeType.NEW_INSTANCE, new_instance_handler)
 
         monitor.start()
 

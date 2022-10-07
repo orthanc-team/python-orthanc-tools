@@ -7,6 +7,7 @@ services:
       VERBOSE_STARTUP: "true"
       VERBOSE_ENABLED: "true"
       TRANSFERS_PLUGIN_ENABLED: "true"
+      ORTHANC__STABLE_AGE: "1"
       ORTHANC__REGISTERED_USERS: |
         {"test": "test"}
       ORTHANC__DICOM_AET: "ORTHANC-A"

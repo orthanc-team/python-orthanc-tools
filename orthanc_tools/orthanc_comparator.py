@@ -94,7 +94,7 @@ class OrthancComparator:
                         if self._transfer_missing_to_modality:
                             self._logger.warning(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
                             self._api_client.modalities.store(
-                                modality=self._modality,
+                                target_modality=self._modality,
                                 resources_ids=local_study.orthanc_id,
                                 synchronous=True
                             )
@@ -156,7 +156,7 @@ class OrthancComparator:
                     if self._transfer_missing_to_modality:
                         self._logger.warning(f"WARNING STUDY {study_summary}, transferring series to modality: {local_dicom_id}")
                         self._api_client.modalities.store(
-                            modality=self._modality,
+                            target_modality=self._modality,
                             resources_ids=local_serie.get('ID'),
                             synchronous=True
                         )
@@ -186,7 +186,7 @@ class OrthancComparator:
                     elif len(local_match) > 1:
                         self._logger.warning(f"WARNING STUDY {dicom_id}, series found multiple times on Orthanc: {remote_serie.dicom_id}")
         except Exception as ex:
-            self._logger.error(f"ERROR: {str(ex)}")
+            self._logger.exception(f"ERROR: {str(ex)}")
 
 
     def compare_series(self, orthanc_id: str, dicom_id: str, study_dicom_id: str, series_summary: str):
@@ -217,7 +217,7 @@ class OrthancComparator:
                         if self._transfer_missing_to_modality:
                             self._logger.warning(f"WARNING SERIES {series_summary}, transferring instance to modality: {local_dicom_id}")
                             self._api_client.modalities.store(
-                                modality=self._modality,
+                                target_modality=self._modality,
                                 resources_ids=local_instance.get('ID'),
                                 synchronous=True
                             )

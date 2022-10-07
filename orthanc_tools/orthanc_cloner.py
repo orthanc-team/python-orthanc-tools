@@ -28,13 +28,17 @@ class OrthancCloner(OrthancMonitor):
                  mode: ClonerMode = ClonerMode.DEFAULT,
                  destination_peer: str = None,                    # the 'alias' of the destination peer if declared in Orthanc.  It must be defined for PEERING and TRANSFER mode
                  scheduler: Scheduler = None,
-                 ):
+                 max_retries: int = 5,
+                 error_folder_path: str = None
+        ):
         super().__init__(
             api_client=source,
             worker_threads_count=worker_threads_count,
             persist_status_path=persist_status_path,
             polling_interval=polling_interval,
-            scheduler=scheduler
+            scheduler=scheduler,
+            max_retries=max_retries,
+            error_folder_path=error_folder_path
         )
 
         self._destination = destination
@@ -56,7 +60,7 @@ class OrthancCloner(OrthancMonitor):
         if self._mode in [ClonerMode.PEERING, ClonerMode.DEFAULT]:
             self.add_handler(ChangeType.NEW_INSTANCE, self.handle_new_instance)
         elif self._mode == ClonerMode.TRANSFER:
-            self.add_handler(ChangeType.NEW_STUDY, self.handle_new_study)
+            self.add_handler(ChangeType.STABLE_STUDY, self.handle_stable_study)
 
 
     def handle_new_instance(self, instance_id, api_client):
@@ -69,13 +73,14 @@ class OrthancCloner(OrthancMonitor):
                 return True
             elif self._mode == ClonerMode.PEERING:
                 api_client.peers.send(target_peer=self._destination_peer, resources_ids=instance_id)
+                return True
 
         except Exception as ex:
             logger.error(f"Error while cloning instance {instance_id}: {str(ex)}")
             return False
 
 
-    def handle_new_study(self, study_id, api_client):
+    def handle_stable_study(self, study_id, api_client):
         try:
             if self._mode == ClonerMode.TRANSFER:
                 transfer_job = api_client.transfers.send(
@@ -113,8 +118,10 @@ if __name__ == '__main__':
     parser.add_argument('--dest_pwd', type=str, default=None, help='Orthanc destination password')
     parser.add_argument('--dest_peer', type=str, default=None, help='Orthanc destination peer (peer alias in source Orthanc)')
     parser.add_argument('--mode', type=str, default=None, help='Cloner Mode (Default, Peering, Transfer)')
-    parser.add_argument('--persist_state_path', type=str, default=None, help='Path where the state of the cloner will be saved (to resume later)')
+    parser.add_argument('--persist_state_path', type=str, default=None, help='File path where the state of the cloner will be saved (to resume later)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Number of worker threads')
+    parser.add_argument('--error_folder_path', type=str, default=None, help='Folder path where to store error reports')
+    parser.add_argument('--max_retries', type=int, default=5, help='Number of retries in case of error')
 
     Scheduler.add_parser_arguments(parser)
 

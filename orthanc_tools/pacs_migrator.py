@@ -117,7 +117,7 @@ class PacsMigrator:
                     logger.info(f"C-Store study {message.orthanc_id} from orthanc to destination modality {self._destination_modality}")
                     # move the study from orthanc to the target modality
                     self._api_client.modalities.send(
-                        modality=self._destination_modality,
+                        target_modality=self._destination_modality,
                         resources_ids=message.orthanc_id,
                         synchronous=True
                     )
@@ -314,7 +314,7 @@ if __name__ == '__main__':
     source_modality = os.environ.get("SOURCE_MODALITY", args.source_modality)
     from_study_date = helpers.from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))
     to_study_date = helpers.from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
-    worker_threads_count = os.environ.get("WORKER_THREADS_COUNT", args.worker_threads_count)
+    worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 

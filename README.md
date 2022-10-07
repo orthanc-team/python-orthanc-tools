@@ -61,6 +61,8 @@ services:
             PERSIST_STATE_PATH: "/status/status.txt"
             WORKERS_THREAD_COUNT: "6"
 #            VERBOSE_ENABLED: "true"
+            ERROR_FOLDER_PATH: "/status"
+            MAX_RETRIES: "3"
         entrypoint: python -m orthanc_tools.orthanc_cloner
 volumes:
     orthanc-cloner:  

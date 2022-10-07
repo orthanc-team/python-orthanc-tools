@@ -20,7 +20,7 @@ jobs:
     - name: Run python tests
       run: |
         python setup.py egg_info
-        pip install -r orthanc_tools.egg-info/requires.txt
+        pip install -r requirements.txt
         python -m unittest tests/test_3_orthancs.py
 
     - name: Extract metadata (tags, labels) for Docker (python-orthanc-tools)

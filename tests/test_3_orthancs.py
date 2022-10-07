@@ -64,7 +64,7 @@ class Test3Orthancs(unittest.TestCase):
         self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
         cloner = OrthancCloner(source=self.oa, destination_peer='orthanc-b', mode=ClonerMode.TRANSFER)
-        time.sleep(2) # wait for StableStudy event
+        time.sleep(5) # wait for StableStudy event
         cloner.execute()
 
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))

@@ -1,3 +1,5 @@
+v 0.6.2
+=======
 
 - CI publishes orthancteam/python-orthanc-tools Docker image
 - fixes incompatibilities with orthanc-api-client v 0.7.1

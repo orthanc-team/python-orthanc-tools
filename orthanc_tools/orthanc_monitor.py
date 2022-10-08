@@ -91,10 +91,11 @@ class OrthancMonitor:
             self._largest_processed_change_id = max(self._largest_processed_change_id, sequence_id)
             if len(self._changes_id_being_processed) > 0:
                 restart_at_sequence_id = min(self._changes_id_being_processed) - 1
+                logger.debug(f"marking change {sequence_id} as processed, will restart at {restart_at_sequence_id}, changes being processed: " + ", ".join([str(c) for c in self._changes_id_being_processed]))
             else:
                 restart_at_sequence_id = self._largest_processed_change_id
+                logger.debug(f"marking change {sequence_id} as processed, will restart at {restart_at_sequence_id}")
 
-            logger.debug(f"marking change {sequence_id} as processed, will restart at {restart_at_sequence_id}")
 
             # first write to a temp file and then move the file to make the operation robust
             tmp = self._persist_status_path + ".tmp"
@@ -199,14 +200,15 @@ class OrthancMonitor:
             while not processed and retries <= min(self._max_retries, len(retry_delays)):
                 if retries >= 1:
                     delay = retry_delays[retries - 1]
-                    logger.info(f"waiting {delay} seconds before retrying change  {change.sequence_id} {change.change_type}")
+                    logger.info(f"waiting {delay} seconds before retrying change {change.sequence_id} {change.change_type}")
                     time.sleep(delay)
 
                 try:
                     # process events (this is blocking the worker thread until the handler returns)
                     if change.change_type in self._handlers:
                         logger.debug(f"processing change {change.sequence_id} {change.change_type}")
-                        processed = self._handlers[change.change_type](change.resource_id, self._api_client)
+                        self._handlers[change.change_type](change.sequence_id, change.resource_id, self._api_client)
+                        processed = True
                     else:
                         logger.debug(f"not processing change {change.sequence_id} {change.change_type}")
                         processed = True  # but we consider it has been processed not to handle it after a restart

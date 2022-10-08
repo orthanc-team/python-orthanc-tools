@@ -89,9 +89,8 @@ class Test3Orthancs(unittest.TestCase):
             polling_interval=0.1
         )
 
-        def new_instance_handler(instance_id, api_client):
+        def new_instance_handler(change_id, instance_id, api_client):
             processed_instances.append(instance_id),
-            return True
 
         monitor.add_handler(ChangeType.NEW_INSTANCE, new_instance_handler)
 
@@ -123,16 +122,14 @@ class Test3Orthancs(unittest.TestCase):
 
             processed_resources = []
 
-            def process_instance(instance_id, api_client):
+            def process_instance(change_id, instance_id, api_client):
                 logger.info(f'processing instance {instance_id}')
                 time.sleep(5)
                 processed_resources.append(instance_id)
-                return True
 
-            def process_series(series_id, api_client):
+            def process_series(change_id, series_id, api_client):
                 logger.info(f'processing series {series_id}')
                 processed_resources.append(series_id)
-                return True
 
             monitor = OrthancMonitor(
                 self.oa,
@@ -142,10 +139,8 @@ class Test3Orthancs(unittest.TestCase):
             )
 
             # first event is lengthy (5 seconds) and will not be processed at the time we first check the sequence id file
-            # monitor.add_handler(ChangeType.NEW_INSTANCE, lambda instance_id, api_client: Timer(5, lambda: processed_resources.append(instance_id)).start())
             monitor.add_handler(ChangeType.NEW_INSTANCE, process_instance)
             monitor.add_handler(ChangeType.NEW_SERIES, process_series)
-            # monitor.add_handler(ChangeType.NEW_SERIES, lambda series_id, api_client: processed_resources.append(series_id))
 
             self.oa.upload_file(here / "stimuli/CT_small.dcm")
 

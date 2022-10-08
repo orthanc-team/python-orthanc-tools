@@ -63,24 +63,21 @@ class OrthancCloner(OrthancMonitor):
             self.add_handler(ChangeType.STABLE_STUDY, self.handle_stable_study)
 
 
-    def handle_new_instance(self, instance_id, api_client):
+    def handle_new_instance(self, change_id, instance_id, api_client):
         try:
             if self._mode == ClonerMode.DEFAULT:
                 dicom = api_client.instances.get_file(instance_id)
 
                 self._destination.upload(dicom)
-                logger.info(f"copied instance {instance_id}")
-                return True
+                logger.info(f"{change_id}, copied instance {instance_id}")
             elif self._mode == ClonerMode.PEERING:
                 api_client.peers.send(target_peer=self._destination_peer, resources_ids=instance_id)
-                return True
 
         except Exception as ex:
-            logger.error(f"Error while cloning instance {instance_id}: {str(ex)}")
-            return False
+            raise Exception(f"Error while cloning instance {instance_id}: {str(ex)}")
 
 
-    def handle_stable_study(self, study_id, api_client):
+    def handle_stable_study(self, change_id, study_id, api_client):
         try:
             if self._mode == ClonerMode.TRANSFER:
                 transfer_job = api_client.transfers.send(
@@ -90,12 +87,10 @@ class OrthancCloner(OrthancMonitor):
                 )
                 transfer_job.wait_completed(timeout=None)
 
-            logger.info(f"transfered study {study_id}")
-            return True
+            logger.info(f"{change_id} transfered study {study_id}")
 
         except Exception as ex:
-            logger.error(f"Error while transferring study {study_id}: {str(ex)}")
-            return False
+            raise Exception(f"Error while transferring study {study_id}: {str(ex)}")
 
 # examples:
 # python orthanc_tools/orthanc_cloner.py --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_url=http://192.168.0.10:8042 --dest_user=user --dest_pwd=pwd

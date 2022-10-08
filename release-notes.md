@@ -1,8 +1,12 @@
+v 0.6.4
+=======
+- `OrthancMonitor`: no logs for unprocessed changes
+
 v 0.6.3
 =======
 - BREAKING_CHANGE: `OrthancMonitor` handlers now receive `change_id` as the first argument and shall throw in case of failures.
   They should not return `True` or `False`.
-- `OrthancCloner`: more logs
+- `OrthancCloner`: more acurate logs
 
 v 0.6.2
 =======

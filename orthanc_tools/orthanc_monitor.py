@@ -37,6 +37,7 @@ class OrthancMonitor:
         self._persist_status_lock = threading.RLock()
         self._changes_id_being_processed = set()
         self._largest_processed_change_id = 0
+        self._largest_ignored_change_id = 0
         self._scheduler = scheduler
         self._error_folder_path = error_folder_path
         self._max_retries = max_retries
@@ -80,7 +81,7 @@ class OrthancMonitor:
             logger.debug(f"marking change {sequence_id} as being processed")
             self._changes_id_being_processed.add(sequence_id)
 
-    def _mark_change_as_processed(self, sequence_id):
+    def _mark_change_as_processed(self, sequence_id, has_ignored_change):
         # note: this can be improved: if multiple workers are processing events, we might skip a few changes when restarting
         if self._persist_status_path is None:
             return
@@ -91,11 +92,12 @@ class OrthancMonitor:
             self._largest_processed_change_id = max(self._largest_processed_change_id, sequence_id)
             if len(self._changes_id_being_processed) > 0:
                 restart_at_sequence_id = min(self._changes_id_being_processed) - 1
-                logger.debug(f"marking change {sequence_id} as processed, will restart at {restart_at_sequence_id}, changes being processed: " + ", ".join([str(c) for c in self._changes_id_being_processed]))
+                if not has_ignored_change:
+                    logger.debug(f"marking change {sequence_id} as processed, will restart at {restart_at_sequence_id}, changes being processed: " + ", ".join([str(c) for c in self._changes_id_being_processed]))
             else:
-                restart_at_sequence_id = self._largest_processed_change_id
-                logger.debug(f"marking change {sequence_id} as processed, will restart at {restart_at_sequence_id}")
-
+                restart_at_sequence_id = max(self._largest_processed_change_id, self._largest_ignored_change_id)
+                if not has_ignored_change:
+                    logger.debug(f"marking change {sequence_id} as processed, will restart at {restart_at_sequence_id}")
 
             # first write to a temp file and then move the file to make the operation robust
             tmp = self._persist_status_path + ".tmp"
@@ -176,8 +178,11 @@ class OrthancMonitor:
 
                 # enqueue the events
                 for change in changes:
-                    self._mark_change_as_being_processed(change.sequence_id)
-                    self._changes_to_process.put(change)  # if the queue is full, this will block until there's a free slot
+                    if change.change_type in self._handlers: # enqueue only the changes that will be handled
+                        self._mark_change_as_being_processed(change.sequence_id)
+                        self._changes_to_process.put(change)  # if the queue is full, this will block until there's a free slot
+                    else:
+                        self._largest_ignored_change_id = change.sequence_id
 
             # if no events available, wait and poll again
             time.sleep(self._polling_interval)
@@ -206,12 +211,9 @@ class OrthancMonitor:
                 try:
                     # process events (this is blocking the worker thread until the handler returns)
                     if change.change_type in self._handlers:
-                        logger.debug(f"processing change {change.sequence_id} {change.change_type}")
+                        logger.info(f"processing change {change.sequence_id} {change.change_type}")
                         self._handlers[change.change_type](change.sequence_id, change.resource_id, self._api_client)
                         processed = True
-                    else:
-                        logger.debug(f"not processing change {change.sequence_id} {change.change_type}")
-                        processed = True  # but we consider it has been processed not to handle it after a restart
 
                 except Exception as ex:
                     logger.exception("Unhandled exception in event handler: ", ex)
@@ -231,7 +233,7 @@ class OrthancMonitor:
                 processed = True
 
             if processed:
-                self._mark_change_as_processed(change.sequence_id)
+                self._mark_change_as_processed(change.sequence_id, has_ignored_change=False)
 
             self._changes_to_process.task_done()  # tell the queue the item has been processed
 

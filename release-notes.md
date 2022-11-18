@@ -1,3 +1,7 @@
+v 
+=======
+- uses orthanc-api-client v 0.8.0
+
 v 0.6.4
 =======
 - `OrthancMonitor`: no logs for unprocessed changes

@@ -1,6 +1,7 @@
-v 
+v 0.6.5
 =======
 - uses orthanc-api-client v 0.8.0
+- `OrthancCloner`: fix retry bug
 
 v 0.6.4
 =======

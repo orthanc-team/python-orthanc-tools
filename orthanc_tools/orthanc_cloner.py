@@ -3,7 +3,7 @@ import logging
 import os
 from strenum import StrEnum
 
-from orthanc_api_client import OrthancApiClient, ResourceType
+from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus
 from .scheduler import Scheduler
 from .orthanc_monitor import OrthancMonitor, ChangeType
 
@@ -86,6 +86,9 @@ class OrthancCloner(OrthancMonitor):
                     resource_type=ResourceType.STUDY
                 )
                 transfer_job.wait_completed(timeout=None)
+                
+                if transfer_job.info.status != JobStatus.SUCCESS:
+                    raise Exception(str(transfer_job.info.content))
 
             logger.info(f"{change_id} transfered study {study_id}")
 

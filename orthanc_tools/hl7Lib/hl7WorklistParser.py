@@ -1,7 +1,7 @@
 import contextlib
 import typing
-from hl7Lib import Hl7MessageParser
-
+# from hl7Lib import Hl7MessageParser
+from .hl7MessageParser import Hl7MessageParser
 
 
 class Hl7WorklistParser(Hl7MessageParser):

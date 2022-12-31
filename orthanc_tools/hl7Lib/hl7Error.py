@@ -1,17 +1,16 @@
-import hl7Lib
 import os
 
 
 class Hl7Error(Exception):
-    def __init__(self, message, hl7Request = None, hl7Response = None):
+    def __init__(self, message, hl7_request = None, hl7_response = None):
         self.message = message
-        self.hl7Request = hl7Request
-        self.hl7Response = hl7Response
+        self.hl7_request = hl7_request
+        self.hl7_response = hl7_response
 
     def __str__(self):
         return os.linesep.join(['HL7 client exception: {0}'.format(self.message),
-                                'request = {0}'.format(str(self.hl7Request).replace('\r', os.linesep)),
-                                'response = {0}'.format(str(self.hl7Response).replace('\r', os.linesep))])
+                                'request = {0}'.format(str(self.hl7_request).replace('\r', os.linesep)),
+                                'response = {0}'.format(str(self.hl7_response).replace('\r', os.linesep))])
 
 
 class UnsupportedMessageType(Exception):

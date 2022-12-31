@@ -1,6 +1,8 @@
 import socketserver, subprocess, sys, re, socket
 from threading import Thread
-from hl7Lib import Hl7MessageValidator, UnsupportedMessageType, InvalidHL7Message
+#from hl7Lib import Hl7MessageValidator, UnsupportedMessageType, InvalidHL7Message
+from .hl7MessageValidator import Hl7MessageValidator
+from .hl7Error import UnsupportedMessageType, InvalidHL7Message
 import hl7
 import logging
 

@@ -1,5 +1,5 @@
 import unittest
-from hl7Lib import Hl7MessageParser
+from orthanc_tools import Hl7MessageParser
 
 class TestHl7MessageParser(unittest.TestCase):
 

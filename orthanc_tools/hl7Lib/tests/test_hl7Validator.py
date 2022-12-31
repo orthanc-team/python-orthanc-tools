@@ -1,5 +1,5 @@
 import unittest
-from hl7Lib import Hl7MessageValidator
+from orthanc_tools import Hl7MessageValidator
 
 class TestHl7MessageValidator(unittest.TestCase):
 

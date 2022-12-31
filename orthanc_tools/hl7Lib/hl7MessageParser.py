@@ -1,5 +1,6 @@
 import typing
-from hl7Lib import Hl7MessageValidator
+# from hl7Lib import Hl7MessageValidator
+# from .hl7MessageValidator import Hl7MessageValidator
 import hl7
 
 class Hl7MessageParser:
@@ -16,7 +17,7 @@ class Hl7MessageParser:
     def __init__(self):
         self._hl7_message = None
 
-        self.fieldsDefinitions = {
+        self.fields_definitions = {
             '_encoding': 'MSH.F18'
         }
 
@@ -26,14 +27,14 @@ class Hl7MessageParser:
         :param key: the HL7 location of the field to extract (i.e: 'OBR.F18' or 'PID.F3.R1.C4')
         :return:
         """
-        self.fieldsDefinitions[field_name] = key
+        self.fields_definitions[field_name] = key
 
     def add_fields_definitions(self, definitions: typing.Dict[str, str]):
         """
         :param definitions: a dictionary like: {'PatientID': 'PID.F3.R1.C1'}
         """
         for key, value in definitions.items():
-            self.fieldsDefinitions[key] = value
+            self.fields_definitions[key] = value
 
     def parse(self, message: str, strict: bool = True) -> typing.Dict[str, str]:
         # message = Hl7MessageValidator().validate(message, strict)
@@ -41,7 +42,7 @@ class Hl7MessageParser:
 
         values = {}
 
-        for fieldName, key in self.fieldsDefinitions.items():
+        for fieldName, key in self.fields_definitions.items():
             value = self._extract_field(key)
             if value is not None:
                 values[fieldName] = value

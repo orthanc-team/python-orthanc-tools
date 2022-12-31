@@ -1,7 +1,7 @@
 import unittest, os, glob
 import hl7  # https://python-hl7.readthedocs.org/en/latest/
 import pydicom
-from hl7Lib import DicomWorklistBuilder
+from orthanc_tools import DicomWorklistBuilder
 import tempfile
 import time
 

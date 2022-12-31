@@ -1,5 +1,5 @@
 import unittest
-from hl7Lib import Hl7WorklistParser
+from orthanc_tools import Hl7WorklistParser
 
 
 class TestHl7MessageExtractor(unittest.TestCase):
@@ -15,8 +15,8 @@ class TestHl7MessageExtractor(unittest.TestCase):
     )
 
     def test_message_from_avignon(self):
-        worklistParser = Hl7WorklistParser()
-        values = worklistParser.parse(self.message1)
+        worklist_parser = Hl7WorklistParser()
+        values = worklist_parser.parse(self.message1)
 
         self.assertEqual('F', values.get('PatientSex'))
         self.assertEqual('19521103', values.get('PatientBirthDate'))
@@ -32,7 +32,7 @@ class TestHl7MessageExtractor(unittest.TestCase):
         self.assertEqual('153700', values.get('ScheduledProcedureStepStartTime'))
         self.assertEqual('MAIDEN^^^^^^L', values.get('PatientMotherBirthName'))
 
-    messageAvignonWithAccent = (
+    message_avignon_with_accent = (
         "\x0bMSH|^~\&|isc84.org|isc84.org|||2017-06-08 13:21:57.808791||ORM^O01|482124|P|2.3.1|||||||||\r"
         "PID|||201604549^^^isc84.org||TESTX^TESTY^^^Mme^^L|BOUCHER^^^^^^L|19730131|F|||28 AV DES PETUNIAS^DONZERE^^26290^991\r"
         "PV1||N|||||||||||||||\r"
@@ -42,8 +42,8 @@ class TestHl7MessageExtractor(unittest.TestCase):
     )
 
     def test_message_from_avignon_with_accent(self):
-        worklistParser = Hl7WorklistParser()
-        values = worklistParser.parse(self.messageAvignonWithAccent)
+        worklist_parser = Hl7WorklistParser()
+        values = worklist_parser.parse(self.message_avignon_with_accent)
 
         self.assertEqual('ÉCHOGRAPHIE DE L\'ABDOMEN ET DU PETIT BASSIN (PELVIS)', values.get('RequestedProcedureDescription'))
 
@@ -59,8 +59,8 @@ class TestHl7MessageExtractor(unittest.TestCase):
     )
 
     def test_message2(self):
-        worklistParser = Hl7WorklistParser()
-        values = worklistParser.parse(self.message2)
+        worklist_parser = Hl7WorklistParser()
+        values = worklist_parser.parse(self.message2)
 
         self.assertEqual('19500131', values.get('PatientBirthDate'))
         self.assertEqual('0195313690', values.get('PatientID'))
@@ -102,10 +102,10 @@ class TestHl7MessageExtractor(unittest.TestCase):
     )
 
     def test_message3(self):
-        worklistParser = Hl7WorklistParser()
-        worklistParser.set_field_definition('AccessionNumber', 'OBR.F3')
+        worklist_parser = Hl7WorklistParser()
+        worklist_parser.set_field_definition('AccessionNumber', 'OBR.F3')
 
-        values = worklistParser.parse(self.message3)
+        values = worklist_parser.parse(self.message3)
 
         self.assertEqual('19730211', values.get('PatientBirthDate'))
         self.assertEqual('43560', values.get('PatientID'))

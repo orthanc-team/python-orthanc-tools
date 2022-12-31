@@ -1,6 +1,5 @@
 import os
 import typing
-from helpers import UidHelpers
 import pydicom
 from enum import Enum
 
@@ -33,25 +32,25 @@ class DicomWorklistBuilder:
         assert self._folder is not None or file_name is not None, "Please always provide a folder when creating the builder or provide a filename each time you generate a worklist"
 
         # now, let's try to build a DWL out of this
-        fileMeta = pydicom.dataset.Dataset()
-        fileMeta.MediaStorageSOPClassUID = '1.2.276.0.7230010.3.1.0.1'  # shall we use 1.2.840.10008.5.1.4.31 ?
-        fileMeta.MediaStorageSOPInstanceUID = UidHelpers.getDicomUid()
-        fileMeta.ImplementationClassUID = '1.2.826.0.1.3680043.9.6676.1.0.0.1'  # 1.2.826.0.1.3680043.9.6676. is Osimis prefix
-        fileMeta.ImplementationVersionName = 'OSIMISHL7DWL'
+        file_meta = pydicom.dataset.Dataset()
+        file_meta.MediaStorageSOPClassUID = '1.2.276.0.7230010.3.1.0.1'  # shall we use 1.2.840.10008.5.1.4.31 ?
+        file_meta.MediaStorageSOPInstanceUID = pydicom.uid.generate_uid()
+        file_meta.ImplementationClassUID = '1.2.826.0.1.3680043.9.6676.1.0.0.1'  # 1.2.826.0.1.3680043.9.6676. is Osimis prefix
+        file_meta.ImplementationVersionName = 'OSIMISHL7DWL'
 
-        ds = pydicom.dataset.FileDataset(file_name, {}, file_meta = fileMeta, preamble = b'\0' * 128)
+        ds = pydicom.dataset.FileDataset(file_name, {}, file_meta = file_meta, preamble = b'\0' * 128)
         if not "SOPInstanceUID" in values:
-            values["SOPInstanceUID"] = UidHelpers.getDicomUid()
+            values["SOPInstanceUID"] = pydicom.uid.generate_uid()
         if not "StudyInstanceUID" in values:
-            values["StudyInstanceUID"] = UidHelpers.getDicomUid()  # set a default StudyInstanceUID.  It might be overriden from the dwl object
+            values["StudyInstanceUID"] = pydicom.uid.generate_uid()  # set a default StudyInstanceUID.  It might be overriden from the dwl object
 
         # clip patient address at 64 chars (one of the Avignon CT does not handle them)
-        patientAddress = values.get('PatientAddress')
-        if patientAddress and len(patientAddress) > 64:
-            patientAddress = patientAddress[:60] + "..."
-            values['PatientAddress'] = patientAddress
+        patient_address = values.get('PatientAddress')
+        if patient_address and len(patient_address) > 64:
+            patient_address = patient_address[:60] + "..."
+            values['PatientAddress'] = patient_address
 
-        for fieldName, elementType in [('AccessionNumber', DicomElementType.REQUIRED),
+        for field_name, element_type in [('AccessionNumber', DicomElementType.REQUIRED),
                                         ('InstitutionName', DicomElementType.OPTIONAL),
                                         ('InstitutionAddress', DicomElementType.OPTIONAL),
                                         ('PatientID', DicomElementType.MANDATORY),
@@ -68,14 +67,14 @@ class DicomWorklistBuilder:
                                         ('RequestedProcedureID', DicomElementType.MANDATORY),
                                         ('SpecificCharacterSet', DicomElementType.MANDATORY)
                           ]:
-            self._add_field(ds, values, fieldName, elementType)
+            self._add_field(ds, values, field_name, element_type)
 
         ds.ReferencedStudySequence = pydicom.sequence.Sequence()
         ds.ReferencedPatientSequence = pydicom.sequence.Sequence()
 
         step = pydicom.dataset.Dataset()
         step.ScheduledProcedureStepDescription = values.get('RequestedProcedureDescription')
-        for fieldName, elementType in [('Modality', DicomElementType.REQUIRED),
+        for field_name, element_type in [('Modality', DicomElementType.REQUIRED),
                                         ('ScheduledProcedureStepStartDate', DicomElementType.OPTIONAL),
                                         ('ScheduledProcedureStepStartTime', DicomElementType.OPTIONAL),
                                         ('ReferringPhysicianName', DicomElementType.REQUIRED),
@@ -84,7 +83,7 @@ class DicomWorklistBuilder:
                                         ('ScheduledProcedureStepID', DicomElementType.MANDATORY),
                                         ('ScheduledStationName', DicomElementType.REQUIRED),
                                         ]:
-            self._add_field(step, values, fieldName, elementType)
+            self._add_field(step, values, field_name, element_type)
 
         ds.ScheduledProcedureStepSequence = pydicom.sequence.Sequence([step])
 

@@ -24,6 +24,8 @@ jobs:
         python setup.py egg_info
         pip install -r requirements.txt
         python -m unittest tests/test_3_orthancs.py
+        python -m unittest tests/test_old_files_deleter.py
+        python -m unittest orthanc_tools/hl7Lib/tests/runAllTests.py        
 
     - name: Log in to Docker Hub
       uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9

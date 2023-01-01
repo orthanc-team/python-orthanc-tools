@@ -1,3 +1,7 @@
+v 0.7.0
+=======
+- added hl7 tools
+
 v 0.6.5
 =======
 - uses orthanc-api-client v 0.8.0

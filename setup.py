@@ -28,7 +28,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/guides/single-sourcing-package-version/
-    version='0.6.5',  # Required
+    version='0.7.0',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -103,7 +103,7 @@ setup(
     # Note that this is a list of additional keywords, separated
     # by commas, to be used to assist searching for the distribution in a
     # larger catalog.
-    keywords='orthanc, dicom, rest api',  # Optional
+    keywords='orthanc, dicom, rest api, hl7',  # Optional
 
     # You can just specify package directories manually here if your project is
     # simple. Or you can use find_packages().
@@ -131,7 +131,9 @@ setup(
     install_requires=[
         'requests',
         'orthanc-api-client>=0.8.0',
-        'pydicom'
+        'pydicom',
+        'hl7==0.4.2',
+        'six'
     ],
 
     # List additional groups of dependencies here (e.g. development

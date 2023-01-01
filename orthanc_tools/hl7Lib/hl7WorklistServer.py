@@ -1,6 +1,5 @@
 import os, argparse, sys
 from .hl7WorklistParser import Hl7WorklistParser
-from .hl7MessageValidator import Hl7MessageValidator
 from .dicomWorklistBuilder import DicomWorklistBuilder
 from .hl7Server import MLLPServer
 import hl7, random
@@ -8,6 +7,7 @@ from datetime import datetime
 import logging
 
 from orthanc_tools import OldFilesDeleter
+
 
 class Hl7WorklistServer(MLLPServer):
     def __init__(self,

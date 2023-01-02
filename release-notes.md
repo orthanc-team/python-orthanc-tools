@@ -1,3 +1,11 @@
+v 0.7.2
+=======
+- really fix CI and build problems
+
+v 0.7.1
+=======
+- fix CI and build problems
+
 v 0.7.0
 =======
 - added hl7 tools

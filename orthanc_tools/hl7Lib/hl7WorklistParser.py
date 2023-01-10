@@ -20,7 +20,8 @@ class Hl7WorklistParser(Hl7MessageParser):
             'PatientAddress' : 'PID.F11',
 
             # --- OBR segment
-            'AccessionNumber': 'OBR.F18',
+            #'AccessionNumber': 'OBR.F18',
+            'AccessionNumber': 'OBR.F3.R1.C1',
             'PatientState': 'OBR.F12',
             '_requestingPhysicianOBR': 'OBR.F16',
             'ReasonForTheRequestedProcedure': 'OBR.F31',
@@ -89,7 +90,7 @@ class Hl7WorklistParser(Hl7MessageParser):
                 if 'BODY HEIGHT' in observation.upper():
                     values['PatientHeight'] = self._get_whole_field('OBX.F5', segment_index = i)
 
-        if values.get('_encoding') in [None, '8859/1']:
+        if values.get('_encoding') in [None, '8859/1', '8859/15']:
             values['SpecificCharacterSet'] = 'ISO_IR 100'
 
         if values.get('_scheduledProcedureStepStartDateTime') is not None:

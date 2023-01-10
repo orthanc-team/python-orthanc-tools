@@ -72,7 +72,11 @@ class Hl7WorklistServer(MLLPServer):
         hl7_request = hl7.parse(message)  # we need to parse it here only the build the response
 
         values = self._parser.parse(hl7_message = message)
-        worklistFilePath = self._builder.generate(values)
+        try:
+            self._logger.info("generating file...")
+            worklistFilePath = self._builder.generate(values)
+        except Exception as e:
+            self._logger.error("file not generated: {exception}".format(exception=e))
         self._logger.info("generated file: {path}".format(path = worklistFilePath))
 
         hl7_response = hl7.parse('MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1\rMSA|AA|{message_id}'.format(  # TODO: handle encoding

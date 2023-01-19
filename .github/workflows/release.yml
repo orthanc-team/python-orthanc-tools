@@ -23,7 +23,7 @@ jobs:
       run: |
         python setup.py egg_info
         pip install -r requirements.txt
-        python -m unittest ../orthanc_tools/hl7Lib/tests/test_hl7_server.py
+        python -m unittest orthanc_tools/hl7Lib/tests/test_hl7_server.py
         python -m unittest tests/test_3_orthancs.py
         python -m unittest tests/test_old_files_deleter.py
 

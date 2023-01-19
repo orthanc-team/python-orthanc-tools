@@ -130,7 +130,7 @@ setup(
     # https://packaging.python.org/discussions/install-requires-vs-requirements/
     install_requires=[
         'requests',
-        'orthanc-api-client>=0.8.0',
+        'orthanc-api-client>=0.8.3',
         'pydicom',
         'hl7==0.4.2',
         'six'

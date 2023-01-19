@@ -13,7 +13,6 @@ class OldFilesDeleter:
 
     def __init__(self, folder_to_monitor: str, timeout: float = 24*3600.0, filter: str = "*", execution_interval: float = 1*3600.0, recursive: bool = True, logger: logging.Logger = logging.getLogger('OldFilesDeleter')):
         """
-
         :param folder_to_monitor: the folder to monitor
         :param timeout: the age (in seconds) after which the file shall be deleted
         :param filter: a filter to filter the files to be monitored by the Deleter

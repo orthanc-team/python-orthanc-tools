@@ -1,14 +1,15 @@
 import contextlib
 import typing
 # from hl7Lib import Hl7MessageParser
-from .hl7MessageParser import Hl7MessageParser
+from .hl7_message_parser import Hl7MessageParser
 
 
 class Hl7WorklistParser(Hl7MessageParser):
 
-    def __init__(self):
+    def __init__(self, specific_fields: dict = None):
         super(Hl7WorklistParser, self).__init__()
 
+        # Let's add "standards" field
         self.add_fields_definitions({
             # --- PID segment
             'PatientID': 'PID.F3.R1.C1',
@@ -36,15 +37,19 @@ class Hl7WorklistParser(Hl7MessageParser):
             'ConfidentialityConstraintOnPatientDataDescription' : 'PV1.F16',
 
             # --- ORC segment
-            'OrderPlacerIdentifierSequence' : 'ORC.F2',
-            'RequestedProcedureID' : 'ORC.F2',
-            'ScheduledProcedureStepID' : 'ORC.F2',
+            'OrderPlacerIdentifierSequence' : 'ORC.F2.R1.C1',
+            'RequestedProcedureID' : 'ORC.F2.R1.C1',
+            'ScheduledProcedureStepID' : 'ORC.F2.R1.C1',
             'OrderFillerIdentifierSequence' : 'ORC.F3',
             '_requestingPhysicianORC' : 'ORC.F12',
 
             # --- ZDS segment
             'StudyInstanceUID' : 'ZDS.F1.R1.C1'
         })
+
+        # Let's add specific fields (they will override the default ones)
+        if specific_fields is not None:
+            self.add_fields_definitions(specific_fields)
 
     def parse(self, hl7_message: str) -> typing.Dict:
 
@@ -77,6 +82,9 @@ class Hl7WorklistParser(Hl7MessageParser):
             values['PatientSex'] = None
         elif sex in ['A', 'N']:  # ambiguous or Not Applicable in HL7 -> 'other' in Dicom
             values['PatientSex'] = 'O'
+
+        # clean birthdate
+        values['PatientBirthDate'] = values['PatientBirthDate'][0:8]
 
         if values.get('_ambulatoryStatus') is not None and 'B6' in values['_ambulatoryStatus']:
             values['PregnancyStatus'] = 3

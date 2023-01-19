@@ -42,10 +42,10 @@ class Hl7MessageParser:
 
         values = {}
 
-        for fieldName, key in self.fields_definitions.items():
+        for field_name, key in self.fields_definitions.items():
             value = self._extract_field(key)
             if value is not None:
-                values[fieldName] = value
+                values[field_name] = value
 
         return values
 

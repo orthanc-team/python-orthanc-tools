@@ -1,27 +1,31 @@
 import unittest, os, glob
 import hl7  # https://python-hl7.readthedocs.org/en/latest/
 import pydicom
-from orthanc_tools import Hl7WorklistServer, MLLPClient, DicomWorklistBuilder, Hl7WorklistParser, Hl7MessageValidator
+from orthanc_tools import MLLPClient, DicomWorklistBuilder, Hl7WorklistParser, Hl7MessageValidator, MLLPServer, Hl7OrmWorklistMsgHandler
 import tempfile
-import time
 import logging
 
-class TestHl7WorklistServer(unittest.TestCase):
+class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
 
     def test_avignon_with_ge_modality(self):
-        port_number = 2000  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+        port_number = 2002  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
         with tempfile.TemporaryDirectory() as temporary_dir:
             parser = Hl7WorklistParser()
             builder = DicomWorklistBuilder(folder = temporary_dir)
+            orm_handler = Hl7OrmWorklistMsgHandler(parser=parser, builder=builder)
 
-            with Hl7WorklistServer(
+            mllp_server = MLLPServer(
                     host = 'localhost',
                     port = port_number,
-                    parser = parser,
-                    builder = builder,
-                    logger = logging.getLogger('WORKLIST SERVER'),
-                    automatic_deletion_delay = 2
-            ) as server:
+                    handlers = {
+                    'ORM^O01': (orm_handler.handle_orm_message,)
+                    },
+                    logger = logging.getLogger('WORKLIST SERVER')
+            )
+
+            mllp_server.add_handlers({'ORM^O01': (orm_handler.handle_orm_message,)})
+
+            with mllp_server as server:
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
@@ -62,24 +66,20 @@ class TestHl7WorklistServer(unittest.TestCase):
                 self.assertEqual("723085", wl.RequestedProcedureID)
                 self.assertEqual("RUE MARIE CURIE^BRUXELLES^^74850^99100..LONG ADDRESS..123456...", wl.PatientAddress)
 
-                # make sure the file has been deleted after the automaticDeletionDelay
-                time.sleep(2.5)
-                files = glob.glob('{path}/*.wl'.format(path = temporary_dir))
-                self.assertEqual(0, len(files))
-
     def test_from_q_doc_chu_liege(self):
-        port_number = 2001  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+        port_number = 2003  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
         with tempfile.TemporaryDirectory() as temporary_dir:
-            parser = Hl7WorklistParser()
+            parser = Hl7WorklistParser({'AccessionNumber': 'OBR.F18'})
             builder = DicomWorklistBuilder(folder = temporary_dir)
+            orm_handler = Hl7OrmWorklistMsgHandler(parser=parser, builder=builder)
 
-            with Hl7WorklistServer(
+            with MLLPServer(
                     host = 'localhost',
                     port = port_number,
-                    parser = parser,
-                    builder = builder,
-                    logger = logging.getLogger('WORKILIST SERVER'),
-                    encoding = 'iso-8859-1'
+                    handlers = {
+                    'ORM^O01': (orm_handler.handle_orm_message,)
+                    },
+                    logger = logging.getLogger('WORKLIST SERVER')
             ) as server:
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
@@ -103,18 +103,23 @@ class TestHl7WorklistServer(unittest.TestCase):
                 self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)
                 self.assertEqual("CT cérébral", wl.RequestedProcedureDescription)
 
+                # check that the specific field is correctly handled
+                self.assertEqual("0897456", wl.AccessionNumber)
+
     def test_orthanc_worklist_c_find_encoding_bug(self):
-        port_number = 2002  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+        port_number = 2004  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
         with tempfile.TemporaryDirectory() as temporary_dir:
             parser = Hl7WorklistParser()
             builder = DicomWorklistBuilder(folder = temporary_dir)
+            orm_handler = Hl7OrmWorklistMsgHandler(parser=parser, builder=builder)
 
-            with Hl7WorklistServer(
-                    host = 'localhost',
-                    port = port_number,
-                    parser = parser,
-                    builder = builder,
-                    logger = logging.getLogger('WORKILIST SERVER')
+            with MLLPServer(
+                    host='localhost',
+                    port=port_number,
+                    handlers={
+                        'ORM^O01': (orm_handler.handle_orm_message,)
+                    },
+                    logger=logging.getLogger('WORKLIST SERVER')
             ) as server:
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
@@ -143,3 +148,57 @@ class TestHl7WorklistServer(unittest.TestCase):
                 self.assertEqual("DOCTOR_CODE^DOCTOR^NAME", wl.RequestingPhysician)
                 self.assertEqual("CT", wl.ScheduledProcedureStepSequence[0].Modality)
                 self.assertEqual("20170608", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
+
+    def test_ried_worklists(self):
+        port_number = 2005  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            parser = Hl7WorklistParser()
+            builder = DicomWorklistBuilder(folder = temporary_dir)
+            orm_handler = Hl7OrmWorklistMsgHandler(parser=parser, builder=builder)
+
+            mllp_server = MLLPServer(
+                    host = 'localhost',
+                    port = port_number,
+                    handlers = {
+                    'ORM^O01^ORM_O01': (orm_handler.handle_orm_message,)
+                    },
+                    logger = logging.getLogger('WORKLIST SERVER')
+            )
+
+            with mllp_server as server:
+                # validate that ORM messages do create worklist files
+                with MLLPClient('localhost', port_number) as client:
+                    hl7_request = hl7.parse(
+                        "\x0bMSH|^~\&|ECSIMAGING|CORADIX|BEA|BEA|20201001140735||ORM^O01^ORM_O01|6af22cb1-38af-4dc7-93d5-83e749394237|P|2.3.1|||||FRA|8859/15|FRA||\r"
+                        "PID|1||5343197^^^ECSIMAGING^PI||LLOxxx^Simxxx^^^^^D~LLOxxx^Simxxx^^^^^L||19550812000000|F|||2 rue ^^THUIR^^66300^^H||^^PH^^^^^^^^^0404040404~^^CP^^^^^^^^^0606060606|||U||A1.02412251^^^ECSIMAGING^AN||||||||^^||^^||\r"
+                        "PV1||O||R||||Docteur^Traitant|||||||||||A1.02412251^^^ECSIMAGING^VN|||||||||||||||||||||||||20201001134400||||||||\r"
+                        "ORC|NW|3264557^ECSIMAGING|3264557^ECSIMAGING|2412251^ECSIMAGING|||1^^^20201001141000|||||Docteur^Quenotte|||20201001141000||||||||||\r"
+                        "OBR|1||3264557^ECSIMAGING|I90 FOIE IV^IRM FOIE IV^ECSIMAGING^ZCQJ004^IRM FOIE IV^CCAM||||||||||||Docteur^Quenotte||||||||NMR|||1^^20^20201001141000\r"
+                        "ZDS|1.3.6.1.4.1.31672.1.2.1.973852.91.1596520991.411\r"
+                        "\x1c\x0d"
+                    )
+                    response = client.send(hl7_request)
+                    hl7Response = hl7.parse(response)
+
+                # make sure a file has been created
+                files = glob.glob('{path}/*.wl'.format(path = temporary_dir))
+                self.assertEqual(1, len(files))
+                worklist_file_path = files[0]
+
+                # check the content of the file
+                wl = pydicom.read_file(worklist_file_path)
+                self.assertEqual("LLOxxx^Simxxx^^^", wl.PatientName)
+                self.assertEqual("19550812", wl.PatientBirthDate)
+                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+                self.assertEqual("IRM FOIE IV", wl.RequestedProcedureDescription)
+                self.assertEqual("Docteur^Quenotte", wl.RequestingPhysician)
+                self.assertEqual("NMR", wl.ScheduledProcedureStepSequence[0].Modality)
+                self.assertEqual("20201001", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
+
+                # make sure all 'mandatory' fields are there
+                self.assertEqual("3264557", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
+                self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
+                self.assertEqual("Docteur^Traitant", wl.ReferringPhysicianName)
+                self.assertEqual("3264557", wl.RequestedProcedureID)
+                self.assertEqual("2 rue ^^THUIR^^66300^^H", wl.PatientAddress)
+                self.assertEqual("3264557", wl.AccessionNumber)

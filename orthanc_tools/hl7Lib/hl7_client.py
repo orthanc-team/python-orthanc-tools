@@ -5,7 +5,7 @@ import os.path
 import six
 import socket
 import sys
-from .hl7MessageValidator import Hl7MessageValidator
+from .hl7_message_validator import Hl7MessageValidator
 
 
 class MLLPClient(object):

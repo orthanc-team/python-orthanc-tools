@@ -1,8 +1,10 @@
+from datetime import datetime
+import random
 import socketserver, subprocess, sys, re, socket
 from threading import Thread
 #from hl7Lib import Hl7MessageValidator, UnsupportedMessageType, InvalidHL7Message
-from .hl7MessageValidator import Hl7MessageValidator
-from .hl7Error import UnsupportedMessageType, InvalidHL7Message
+from .hl7_message_validator import Hl7MessageValidator
+from .hl7_error import UnsupportedMessageType, InvalidHL7Message
 import hl7
 import logging
 
@@ -147,12 +149,34 @@ class MLLPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     def __init__(self, host, port, handlers, timeout = 10, logger = logging.getLogger()):
         self.host = host
         self.port = port
-        self._handlers = handlers
+        self._handlers = {
+            'ERR': (handle_error_message,)
+            }
+        self.add_handlers(handlers)
+
         self.timeout = timeout
         self.thread = None
         self._is_running = False
         self._logger = logger
         super().__init__((host, port), _Hl7MllpRequestHandler)
+
+    def add_handlers(self, handlers: dict):
+        """
+        Allow to add handler(s) to an existing server.
+        No restart is needed.
+
+        Use example:
+        mllp_server = MLLPServer(
+                    host = 'localhost',
+                    port = 2575,
+                    handlers = {
+                    'ERR': (orm_handler.handle_error_message,)
+                    },
+                    logger = logging.getLogger('WORKLIST SERVER')
+            )
+        mllp_server.add_handler({'ORM^O01': (orm_handler.handle_orm_message,)})
+        """
+        self._handlers.update(handlers)
 
     def serve_forever(self):
         self._is_running = True
@@ -190,15 +214,27 @@ class MLLPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 def default_message_handler(message):
     return NotImplementedError("Please implement a message handler.")
 
-def default_error_handler(message):
-    return NotImplementedError("Please implement an error handler.")
+def handle_error_message(self, message: str, error_description: str = None) -> hl7.Message:
+
+    hl7_request = hl7.parse(message)  # we need to re-parse it here only the build the response
+
+    hl7_response = hl7.parse('MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1\rMSA|AR|{message_id}|{error}'.format(  # TODO: handle encoding
+        sending_application = hl7_request['MSH.F5.R1.C1'],
+        receiving_application = hl7_request['MSH.F3.R1.C1'],
+        receiving_facility = hl7_request['MSH.F4.R1.C1'],
+        date_time = datetime.now().strftime("%Y%m%d%H%M%S"),
+        message_id = hl7_request['MSH.F10.R1.C1'],
+        ack_message_id = str(random.randrange(0, 10 ** 15)),
+        error = error_description
+    ))
+    return hl7_response
 
 # this is just a very quick usage example that does nothing usefull since it uses abstract handler
 if __name__ == "__main__":
     # server = Hl7Server(port = 2575, requestHandler = Hl7BaseRequestHandler)
     server = MLLPServer('localhost', 2575, {
         'ORU^R01': (default_message_handler,),
-        'ERR': (default_error_handler,)
+        'ERR': (handle_error_message,)
     })
     # terminate with Ctrl-C
     try:

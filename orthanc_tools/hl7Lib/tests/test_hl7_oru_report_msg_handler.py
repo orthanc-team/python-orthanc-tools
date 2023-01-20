@@ -10,6 +10,7 @@ from orthanc_api_client import OrthancApiClient
 
 here = pathlib.Path(__file__).parent.resolve().parent.resolve().parent.resolve().parent.resolve()
 
+
 class TestHl7OruReportMsgHandler(unittest.TestCase):
 
     @classmethod

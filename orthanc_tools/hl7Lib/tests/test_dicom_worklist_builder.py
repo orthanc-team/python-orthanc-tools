@@ -14,9 +14,9 @@ class MyDicomWorklistBuilder(DicomWorklistBuilder):
 
 class TestDicomWorklistBuilder(unittest.TestCase):
 
-    def testCustomize(self):
-        with tempfile.TemporaryDirectory() as temporaryDir:
-            builder = MyDicomWorklistBuilder(temporaryDir)
+    def test_customize(self):
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            builder = MyDicomWorklistBuilder(temporary_dir)
             values = {
                 "AccessionNumber" : "1",
                 "PatientID" : "2",
@@ -30,6 +30,6 @@ class TestDicomWorklistBuilder(unittest.TestCase):
             }
             filename = builder.generate(values = values)
 
-            wlReadback = pydicom.read_file(filename)
-            self.assertEqual(60, len(wlReadback.StudyInstanceUID))
-            self.assertEqual("2", wlReadback.PatientID)
+            wl_readback = pydicom.read_file(filename)
+            self.assertEqual(60, len(wl_readback.StudyInstanceUID))
+            self.assertEqual("2", wl_readback.PatientID)

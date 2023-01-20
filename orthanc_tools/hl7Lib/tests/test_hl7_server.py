@@ -8,6 +8,7 @@ import time
 import re
 from orthanc_tools import MLLPServer, MLLPClient
 
+
 def hl7_echo_message_handler(incoming_hl7_message: str) -> hl7.Message:
     """
     This is a 'stupid' handler that just repeats the message it receives (useful for testing)
@@ -25,6 +26,7 @@ def hl7_default_error_handler(incoming_hl7_message: str, error_description: str)
 
 
 class TestHl7Server(unittest.TestCase):
+
     def test_start_and_stop(self):
         server = MLLPServer('localhost', 2575, {
         })

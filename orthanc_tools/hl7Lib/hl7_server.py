@@ -39,7 +39,7 @@ class _Hl7MllpRequestHandler(socketserver.StreamRequestHandler):
     Internal class: implements the request handler
     """
 
-    def setup(self, encoding = 'iso-8859-1'):
+    def setup(self, encoding: str = 'iso-8859-1'):
         self.encoding = encoding
         self.sb = b'\x0b'
         self.eb = b'\x1c'

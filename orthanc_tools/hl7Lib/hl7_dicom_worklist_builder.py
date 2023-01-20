@@ -12,13 +12,13 @@ class DicomElementType(Enum):
 
 class DicomWorklistBuilder:
 
-    def __init__(self, folder = None):
+    def __init__(self, folder: str = None):
         self._folder = folder
 
     def get_folder(self):
         return self._folder
 
-    # to override in derived class to customize the workilist before it saved to disk
+    # to override in derived class to customize the workilist before it is saved to disk
     def customize(self, ds: pydicom.dataset.FileDataset) -> pydicom.dataset.FileDataset:
         return ds
 

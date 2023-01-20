@@ -2,8 +2,10 @@ import typing
 import tempfile
 import base64
 
+
 class ReportSeriesBuilder:
-    def __init__(self, orthanc_client, series_name: str = "Report"):
+
+    def __init__(self, orthanc_client: 'OrthancApiClient', series_name: str = "Report"):
         """
         orthanc_client: a well configured orthancClient, must contain the study to attach the pdf to
         series_name: the SeriesDescription of the series which will contain the pdf
@@ -12,7 +14,7 @@ class ReportSeriesBuilder:
         self._orthanc_client = orthanc_client
         self._series_name = series_name
 
-    def generate(self, values: typing.Dict[str, str]):
+    def generate(self, values: typing.Dict[str, str]) -> str:
         """
         This will extract the pdf from the base64 string,
         search for the study base on the StudyInstanceUID and then
@@ -20,7 +22,10 @@ class ReportSeriesBuilder:
 
         values: dict with these values: Base64Report, StudyInstanceUID, PatientName
 
+        returns the instance_id of the created instance
         """
+
+        # TODO: refactor not to use a temporary file but only memory buffers
 
         with tempfile.NamedTemporaryFile() as f:
             # let's build the pdf from the base64 encoded field

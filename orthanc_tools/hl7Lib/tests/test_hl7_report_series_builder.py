@@ -7,6 +7,7 @@ from orthanc_api_client import OrthancApiClient
 
 here = pathlib.Path(__file__).parent.resolve().parent.resolve().parent.resolve().parent.resolve()
 
+
 class TestReportSeriesBuilder(unittest.TestCase):
 
     @classmethod

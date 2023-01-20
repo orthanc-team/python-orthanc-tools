@@ -1,6 +1,7 @@
 import unittest
 from orthanc_tools import Hl7MessageParser
 
+
 class TestHl7MessageParser(unittest.TestCase):
 
     def test_message(self):

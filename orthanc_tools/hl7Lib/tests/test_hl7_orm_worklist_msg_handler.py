@@ -5,6 +5,7 @@ from orthanc_tools import MLLPClient, DicomWorklistBuilder, Hl7WorklistParser, H
 import tempfile
 import logging
 
+
 class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
 
     def test_avignon_with_ge_modality(self):
@@ -18,7 +19,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                     host = 'localhost',
                     port = port_number,
                     handlers = {
-                    'ORM^O01': (orm_handler.handle_orm_message,)
+                        'ORM^O01': (orm_handler.handle_orm_message,)
                     },
                     logger = logging.getLogger('WORKLIST SERVER')
             )
@@ -39,7 +40,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                         "\x1c\x0d"
                     )
                     response = client.send(hl7_request)
-                    hl7Response = hl7.parse(response)
+                    hl7_response = hl7.parse(response)
 
                 # make sure a file has been created
                 files = glob.glob('{path}/*.wl'.format(path = temporary_dir))

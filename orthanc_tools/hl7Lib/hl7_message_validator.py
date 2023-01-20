@@ -10,7 +10,7 @@ class Hl7MessageValidator():
     and returns a string with the real message.
     """
 
-    def __init__(self, encoding = 'iso-8859-1', sb = b'\x0b', eb = b'\x1c', cr = b'\r'):
+    def __init__(self, encoding: str = 'iso-8859-1', sb: bytes = b'\x0b', eb: bytes = b'\x1c', cr: bytes = b'\r'):
         self.encoding = encoding
         self.sb = sb
         self.eb = eb
@@ -18,7 +18,7 @@ class Hl7MessageValidator():
         self.validator = re.compile(self.sb.decode() + "(([^\r]+\r)*([^\r]+\r?))" + self.eb.decode() + self.cr.decode())
         self.validator_without_delimiters = re.compile("(([^\r]+\r)*([^\r]+\r?))")
 
-    def validate(self, source: typing.Union[str, bytes], strict: bool = True) -> str:
+    def validate(self, source: typing.Union[str, bytes], strict: bool = True) -> typing.Optional[str]:
         """
         validates the structure of HL7 message (mainly the delimiters) and returns a string with the real message in which the delimiters have been removed (the segment separator in the returned string is \r)
         :param source: a bytes array or str with the message

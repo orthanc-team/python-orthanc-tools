@@ -3,6 +3,7 @@ import typing
 # from hl7Lib import Hl7MessageParser
 from .hl7_message_parser import Hl7MessageParser
 
+
 class Hl7ReportParser(Hl7MessageParser):
 
     def __init__(self, specific_fields: dict = None):

@@ -1,6 +1,7 @@
 from optparse import OptionParser
 
 import hl7
+import typing
 import os.path
 import six
 import socket
@@ -8,7 +9,7 @@ import sys
 from .hl7_message_validator import Hl7MessageValidator
 
 
-class MLLPClient(object):
+class MLLPClient:
     """
     A basic, blocking, HL7 MLLP client based upon :py:mod:`socket`.
 
@@ -18,7 +19,7 @@ class MLLPClient(object):
         with MLLPClient(host, port) as client:
             client.send(msg)
     """
-    def __init__(self, host, port, encoding = 'iso-8859-1'):
+    def __init__(self, host: str, port: int, encoding: str = 'iso-8859-1'):
         self.encoding = encoding
         self.sb = b'\x0b' # <SB>, vertical tab
         self.eb = b'\x1c' # <EB>, file separator
@@ -73,7 +74,7 @@ class MLLPClient(object):
         return message
 
 
-    def send(self, message):
+    def send(self, message: typing.Union[bytes, bytearray, hl7.Message]):
         """ sends a message to an HL7 server.
 
         Args:

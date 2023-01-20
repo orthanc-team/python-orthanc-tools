@@ -5,6 +5,7 @@ import hl7, random
 from datetime import datetime
 import logging
 
+
 class Hl7OruReportMsgHandler:
 
     def __init__(self,

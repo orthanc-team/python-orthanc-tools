@@ -1,8 +1,8 @@
 import unittest
 from orthanc_tools import Hl7MessageValidator
 
-class TestHl7MessageValidator(unittest.TestCase):
 
+class TestHl7MessageValidator(unittest.TestCase):
 
     def test_short_hl7_valid_message(self):
 

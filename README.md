@@ -69,6 +69,24 @@ volumes:
 
 ```
 
+### OrthancCloner performance
+
+Here are a set of measures performed during a long transfer between 2 VMs running on Azure using OrthancCloner v 0.6.3.
+
+The source Orthanc (v1.9.0) is running on a 4 vCPU VM with 16GB RAM.  Postgresql is running on the same VM and DICOM files are stored on data disks are attached to the VM.
+
+The destination Orthanc (v1.11.2) is running on a 4 vCPU VM with 16GB RAM.  It is using a flexible managed Postgresql server and an object storage to store DICOM files.
+
+| Cloner Mode                                      | WorkersThreadCount | throughput [GB/h] | throughput [instances/h] |
+|--------------------------------------------------|-------------------:|------------------:|-------------------------:|
+| Default                                          |                 12 |                38 |                        ? |
+| Default                                          |                 18 |                67 |                  142.000 |
+| Default                                          |                 24 |                66 |                  160.000 |
+| Transfer, Transfers.Threads=6, ConcurrentJobs=2  |                  3 |                20 |                        ? |
+| Transfer, Transfers.Threads=6, ConcurrentJobs=12 |                  6 |                15 |                        ? | 
+
+
+
 ## import files from a folder from a Docker container
 
 ```

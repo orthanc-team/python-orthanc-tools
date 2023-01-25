@@ -136,7 +136,7 @@ if __name__ == '__main__':
     persist_state_path = os.environ.get("PERSIST_STATE_PATH", args.persist_state_path)
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     error_folder_path = os.environ.get("ERROR_FOLDER_PATH", args.error_folder_path)
-    max_retries = os.environ.get("MAX_RETRIES", args.max_retries)
+    max_retries = int(os.environ.get("MAX_RETRIES", args.max_retries))
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 

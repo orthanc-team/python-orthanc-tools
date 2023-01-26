@@ -1,3 +1,8 @@
+v 0.7.4
+=======
+- added bypass of 404 errors in the cloner
+- fixed parsing error for MAX_RETRIES arg in cloner
+
 v 0.7.3
 =======
 - added oru messages handler (for reports) in hl7 lib

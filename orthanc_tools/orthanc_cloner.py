@@ -3,7 +3,7 @@ import logging
 import os
 from strenum import StrEnum
 
-from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus
+from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus, ResourceNotFound
 from .scheduler import Scheduler
 from .orthanc_monitor import OrthancMonitor, ChangeType
 
@@ -73,9 +73,19 @@ class OrthancCloner(OrthancMonitor):
             elif self._mode == ClonerMode.PEERING:
                 api_client.peers.send(target_peer=self._destination_peer, resources_ids=instance_id)
 
+        except ResourceNotFound as ex:
+            # some instances seems to be missing although their NewInstance change is still in DB.
+            # In this case, simply log the error and do not retry in the OrthancMonitor (don't raise the Exception)
+            if self._error_folder_path:
+                error_file_path = os.path.join(self._error_folder_path, f"{change_id:010d}.NewInstance.error.txt")
+                try:
+                    with open(error_file_path, "wt") as f:
+                        f.write(f"Error while cloning instance {instance_id}: {str(ex)}")
+                except OSError as ex:
+                    raise Exception(f"Could not write error report to file \"{ex.filename}\": {ex.strerror}")
+
         except Exception as ex:
             raise Exception(f"Error while cloning instance {instance_id}: {str(ex)}")
-
 
     def handle_stable_study(self, change_id, study_id, api_client):
         try:

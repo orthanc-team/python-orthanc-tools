@@ -74,7 +74,8 @@ class OrthancCloner(OrthancMonitor):
                 api_client.peers.send(target_peer=self._destination_peer, resources_ids=instance_id)
 
         except ResourceNotFound as ex:
-            # some instances seems to be missing although their NewInstance change is still in DB.
+            # An instance may have been deleted (by a user, a script,...) between the moment we called the /changes route
+            # and the moment we try to handle it. So, the `get_file` will return a 404 http error.
             # In this case, simply log the error and do not retry in the OrthancMonitor (don't raise the Exception)
             if self._error_folder_path:
                 error_file_path = os.path.join(self._error_folder_path, f"{change_id:010d}.NewInstance.error.txt")

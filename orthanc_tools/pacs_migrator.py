@@ -10,7 +10,7 @@ import random
 import pydicom
 import uuid
 from orthanc_api_client import helpers
-from .scheduler import Scheduler
+from .helpers.scheduler import Scheduler
 
 from orthanc_api_client import OrthancApiClient
 logger = logging.getLogger('orthanc_tools')

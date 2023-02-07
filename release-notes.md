@@ -1,3 +1,6 @@
+
+- BREAKING_CHANGE: moved helpers classes into `helpers` package: `OldFilesDeleter`, `Scheduler`, `TimeOut`, `Timer`
+
 v 0.7.4
 =======
 - added bypass of 404 errors in the cloner

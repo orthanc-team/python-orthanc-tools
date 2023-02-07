@@ -5,7 +5,7 @@ import os
 import logging
 
 from orthanc_api_client import OrthancApiClient, ChangeType
-from .scheduler import Scheduler
+from .helpers.scheduler import Scheduler
 logger = logging.getLogger('orthanc_tools')
 
 

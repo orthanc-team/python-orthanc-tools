@@ -4,7 +4,7 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from orthanc_tools.time_out import TimeOut
+from orthanc_tools.helpers.time_out import TimeOut
 
 class TestOldFilesDeleter(TestCase):
 

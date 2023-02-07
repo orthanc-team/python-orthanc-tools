@@ -2,7 +2,7 @@ import os
 import logging
 import argparse
 import datetime
-from .scheduler import Scheduler
+from .helpers.scheduler import Scheduler
 from orthanc_api_client import helpers
 
 from orthanc_api_client import OrthancApiClient

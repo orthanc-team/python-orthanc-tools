@@ -114,7 +114,7 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    packages=["orthanc_tools", "orthanc_tools.hl7Lib"],  # Required
+    packages=["orthanc_tools", "orthanc_tools.hl7Lib", "orthanc_tools.helpers"],  # Required
 
     # Specify which Python versions you support. In contrast to the
     # 'Programming Language' classifiers above, 'pip install' will check this

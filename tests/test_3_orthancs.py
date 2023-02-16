@@ -15,7 +15,7 @@ import pathlib
 import os
 import logging
 
-from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, OrthancComparator
+from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -330,6 +330,76 @@ class Test3Orthancs(unittest.TestCase):
 
         # now both orthanc should have full dataset
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+
+    def test_all_instance_forwarder_modes(self):
+
+        for mode in [ForwarderMode.DICOM, ForwarderMode.DICOM_SERIES_BY_SERIES, ForwarderMode.DICOM_WEB, ForwarderMode.DICOM_SERIES_BY_SERIES, ForwarderMode.PEERING, ForwarderMode.TRANSFER]:
+            for trigger in [ChangeType.STABLE_STUDY, ChangeType.STABLE_SERIES, ChangeType.NEW_INSTANCE]:
+                self.ob.delete_all_content()  # destination
+                self.oa.delete_all_content()  # source
+
+                instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
+
+                with OrthancForwarder(source=self.oa,
+                                      destinations=[ForwarderDestination(destination="orthanc-b", forwarder_mode=mode)],
+                                      trigger=trigger,
+                                      polling_interval_in_seconds=0.1) as forwarder:
+
+                    # wait until the the source is empty (= the forwarder has completed its job)
+                    helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
+
+                    self.assertEqual(len(instances_ids), len(self.ob.instances.get_all_ids()))
+                    # check it has been removed from Orthanc A
+                    self.assertEqual(0, len(self.oa.instances.get_all_ids()))
+
+
+    def test_orthanc_forwarder_filter_and_process(self):
+        self.ob.delete_all_content()  # destination
+        self.oa.delete_all_content()  # source
+
+        mode = ForwarderMode.DICOM_SERIES_BY_SERIES
+        trigger = ChangeType.STABLE_STUDY
+
+
+        instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
+
+        # keep only the sT2W/FLAIR series, delete other series
+        def filter_instance(api_client, instance_id) -> bool:
+            return api_client.instances.get(instance_id).series.main_dicom_tags.get('SeriesDescription') == 'sT2W/FLAIR'
+
+        def process_instance(api_client, instance_id):
+            modified = api_client.instances.modify(
+                instance_id,
+                replace_tags={"InstitutionName": "MY", "OtherPatientIDs": "1234"},
+                keep_tags=['SOPInstanceUID', 'SeriesInstanceUID', 'StudyInstanceUID'],
+                force=True,
+            )
+            r = api_client.upload(buffer=modified)
+            self.assertEqual(r[0], instance_id)
+
+        with OrthancForwarder(
+            source=self.oa,
+            destinations=[ForwarderDestination(destination="orthanc-b", forwarder_mode=mode)],
+            trigger=trigger,
+            polling_interval_in_seconds=0.1,
+            instance_filter=filter_instance,
+            instance_processor=process_instance
+            ) as forwarder:
+
+            # wait until the the source is empty (= the forwarder has completed its job)
+            helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=3000)  # TODO: 30 s
+
+            # check only the flair series has arrived on b
+            self.assertEqual(1, len(self.ob.instances.get_all_ids()))
+            forwarded_instance = self.ob.instances.get(self.ob.instances.get_all_ids()[0])
+            self.assertEqual("MY", forwarded_instance.tags.get('InstitutionName'))
+            self.assertEqual("1234", forwarded_instance.tags.get('OtherPatientIDs'))
+            self.assertEqual("sT2W/FLAIR", forwarded_instance.series.main_dicom_tags.get('SeriesDescription'))
+
+            # check it has been removed from Orthanc A
+            self.assertEqual(0, len(self.oa.instances.get_all_ids()))
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

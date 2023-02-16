@@ -1,7 +1,7 @@
 version: "3"
 services:
   orthanc-a:
-    image: osimis/orthanc:21.11.0
+    image: osimis/orthanc:23.2.0
     ports: ["10042:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -11,6 +11,7 @@ services:
       ORTHANC__REGISTERED_USERS: |
         {"test": "test"}
       ORTHANC__DICOM_AET: "ORTHANC-A"
+      ORTHANC__OVERWRITE_INSTANCES: "true"
       ORTHANC__DICOM_MODALITIES: |
         {
           "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
@@ -23,9 +24,15 @@ services:
           "orthanc-b": ["http://orthanc-b:8042/", "test", "test"],
           "orthanc-c": ["http://orthanc-c:8042/", "test", "test"]
         }
+      ORTHANC__DICOM_WEB__SERVERS: |
+        {
+          "orthanc-a": ["http://orthanc-a:8042/dicom-web/", "test", "test"],
+          "orthanc-b": ["http://orthanc-b:8042/dicom-web/", "test", "test"],
+          "orthanc-c": ["http://orthanc-c:8042/dicom-web/", "test", "test"]
+        }
 
   orthanc-b:
-    image: osimis/orthanc:21.11.0
+    image: osimis/orthanc:23.2.0
     ports: ["10043:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -36,6 +43,7 @@ services:
           "test": "test"
         }
       ORTHANC__DICOM_AET: "ORTHANC-B"
+      ORTHANC__OVERWRITE_INSTANCES: "true"
       ORTHANC__DICOM_MODALITIES: |
         {
           "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
@@ -48,9 +56,15 @@ services:
           "orthanc-b": ["http://orthanc-b:8042/", "test", "test"],
           "orthanc-c": ["http://orthanc-c:8042/", "test", "test"]
         }
+      ORTHANC__DICOM_WEB__SERVERS: |
+        {
+          "orthanc-a": ["http://orthanc-a:8042/dicom-web/", "test", "test"],
+          "orthanc-b": ["http://orthanc-b:8042/dicom-web/", "test", "test"],
+          "orthanc-c": ["http://orthanc-c:8042/dicom-web/", "test", "test"]
+        }
 
   orthanc-c:
-    image: osimis/orthanc:21.11.0
+    image: osimis/orthanc:23.2.0
     ports: ["10044:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -59,6 +73,7 @@ services:
       ORTHANC__REGISTERED_USERS: |
         {"test": "test"}
       ORTHANC__DICOM_AET: "ORTHANC-C"
+      ORTHANC__OVERWRITE_INSTANCES: "true"
       ORTHANC__DICOM_MODALITIES: |
         {
           "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
@@ -70,4 +85,10 @@ services:
           "orthanc-a": ["http://orthanc-a:8042/", "test", "test"],
           "orthanc-b": ["http://orthanc-b:8042/", "test", "test"],
           "orthanc-c": ["http://orthanc-c:8042/", "test", "test"]
+        }
+      ORTHANC__DICOM_WEB__SERVERS: |
+        {
+          "orthanc-a": ["http://orthanc-a:8042/dicom-web/", "test", "test"],
+          "orthanc-b": ["http://orthanc-b:8042/dicom-web/", "test", "test"],
+          "orthanc-c": ["http://orthanc-c:8042/dicom-web/", "test", "test"]
         }

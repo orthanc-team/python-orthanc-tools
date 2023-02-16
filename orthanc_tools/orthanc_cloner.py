@@ -4,7 +4,6 @@ import os
 from strenum import StrEnum
 
 from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus, ResourceNotFound
-from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus
 from .helpers.scheduler import Scheduler
 from .orthanc_monitor import OrthancMonitor, ChangeType
 

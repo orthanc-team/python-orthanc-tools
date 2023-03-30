@@ -1,6 +1,8 @@
 import os
 import time
 import logging
+logger = logging.getLogger(__name__)
+
 
 class Scheduler:
     """
@@ -12,7 +14,7 @@ class Scheduler:
         self._night_end_hour = night_end_hour
         self._run_only_at_night_and_weekend = run_only_at_night_and_weekend
 
-    def wait_right_time_to_run(self, logger):
+    def wait_right_time_to_run(self):
         if self._run_only_at_night_and_weekend:
             is_right_time = False
             while not is_right_time:

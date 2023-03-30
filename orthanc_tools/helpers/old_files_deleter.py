@@ -6,12 +6,15 @@ from .time_out import TimeOut
 import threading
 import logging
 
+logger = logging.getLogger(__name__)
+
+
 class OldFilesDeleter:
     """
     removes files that are older than a certain age (usefull, i.e, to remove worklists that are too old
     """
 
-    def __init__(self, folder_to_monitor: str, timeout: float = 24*3600.0, filter: str = "*", execution_interval: float = 1*3600.0, recursive: bool = True, logger: logging.Logger = logging.getLogger('OldFilesDeleter')):
+    def __init__(self, folder_to_monitor: str, timeout: float = 24*3600.0, filter: str = "*", execution_interval: float = 1*3600.0, recursive: bool = True):
         """
         :param folder_to_monitor: the folder to monitor
         :param timeout: the age (in seconds) after which the file shall be deleted
@@ -24,14 +27,12 @@ class OldFilesDeleter:
         self._filter = filter
         self._execution_interval = execution_interval
         self._recursive = recursive
-        self._logger = logger
         self._thread = None
         self._execution_count = 0 # mainly used in unit tests
 
     def execute_once(self):
         self._execution_count += 1
 
-        # with self._logger.context(str(self._executionCount)):
         deleted_file_counter = 0
         oldest_time = time.time() - self._timeout
 
@@ -42,11 +43,11 @@ class OldFilesDeleter:
         for file_path in glob.glob(glob_filter, recursive = self._recursive):
             last_modification_time = os.path.getmtime(file_path)
             if last_modification_time < oldest_time:
-                self._logger.debug("deleting {file_path}".format(file_path = file_path))
+                logger.debug("deleting {file_path}".format(file_path = file_path))
                 os.unlink(file_path)
                 deleted_file_counter += 1
 
-        self._logger.info("deleted {n} old file(s)".format(n = deleted_file_counter))
+        logger.info("deleted {n} old file(s)".format(n = deleted_file_counter))
 
     def execute(self):
         self._is_running = True
@@ -68,7 +69,7 @@ class OldFilesDeleter:
         self.stop()
 
     def start(self):
-        self._logger.info("Starting old files deleter ({folder})".format(folder = self._folder_to_monitor))
+        logger.info("Starting old files deleter ({folder})".format(folder = self._folder_to_monitor))
 
         # create monitoring thread
         self._thread = threading.Thread(
@@ -78,6 +79,6 @@ class OldFilesDeleter:
         self._thread.start()
 
     def stop(self):
-        self._logger.info("Stopping old files deleter ({folder})".format(folder = self._folder_to_monitor))
+        logger.info("Stopping old files deleter ({folder})".format(folder = self._folder_to_monitor))
         self._is_running = False
         self._thread.join()

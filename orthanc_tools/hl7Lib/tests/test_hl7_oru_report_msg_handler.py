@@ -44,8 +44,7 @@ class TestHl7OruReportMsgHandler(unittest.TestCase):
             port=port_number,
             handlers={
                 'ORU^R01^ORU_R01': (oru_handler.handle_oru_message,)
-            },
-            logger=logging.getLogger('HL7 ORU report SERVER')
+            }
         )
 
         with mllp_server as server:
@@ -98,8 +97,7 @@ class TestHl7OruReportMsgHandler(unittest.TestCase):
             port=port_number,
             handlers={
                 'ORU^R01^ORU_R01': (oru_handler.handle_oru_message,)
-            },
-            logger=logging.getLogger('HL7 ORU report SERVER')
+            }
         )
 
         with mllp_server as server:

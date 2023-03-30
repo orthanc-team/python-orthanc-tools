@@ -5,18 +5,18 @@ import hl7, random
 from datetime import datetime
 import logging
 
+logger = logging.getLogger(__name__)
+
 
 class Hl7OruReportMsgHandler:
 
     def __init__(self,
                  parser: Hl7ReportParser,
                  builder: ReportSeriesBuilder,
-                 logger: logging.Logger = logging.getLogger(),
                  encoding: str = 'ascii'  # TODO: currently not used !
                  ):
 
-        self._logger = logger
-        self._logger.info("Creating ORU report message handler")
+        logger.info("Creating ORU report message handler")
 
         self._parser = parser
         self._builder = builder
@@ -26,7 +26,7 @@ class Hl7OruReportMsgHandler:
         # TODO: improve logging as it was done with osimis logger
         # with self._logger.context(str(self._messageCounter)):
 
-        self._logger.info("received message:{eol}{message}".format(message = str(message).replace('\r', os.linesep), eol = os.linesep))
+        logger.info("received message:{eol}{message}".format(message = str(message).replace('\r', os.linesep), eol = os.linesep))
         hl7_request = hl7.parse(message)  # we need to parse it here only the build the response
 
         values = self._parser.parse(hl7_message = message)
@@ -34,11 +34,11 @@ class Hl7OruReportMsgHandler:
         succeeded = "AE" # "Application Error", there is a problem processing the message. The sending application must correct the problem before attempting to resend the message.
 
         try:
-            self._logger.info(f"extracting pdf file... {values['PatientName']}")
+            logger.info(f"extracting pdf file... {values['PatientName']}")
             self._builder.generate(values)
             succeeded = "AA" # Positive acknowledgment: the message was successfully processed.
         except Exception as e:
-            self._logger.error("pdf not added to the study: {exception}".format(exception=e))
+            logger.error("pdf not added to the study: {exception}".format(exception=e))
 
         hl7_response = hl7.parse('MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1\rMSA|{acknowledge_status}|{message_id}'.format(  # TODO: handle encoding
             sending_application = hl7_request['MSH.F5.R1.C1'],
@@ -49,5 +49,5 @@ class Hl7OruReportMsgHandler:
             acknowledge_status = succeeded,
             ack_message_id = str(random.randrange(0, 10**15))
         ))
-        self._logger.info("sending response:{eol}{response}".format(response = str(hl7_response).replace('\r', os.linesep), eol = os.linesep))
+        logger.info("sending response:{eol}{response}".format(response = str(hl7_response).replace('\r', os.linesep), eol = os.linesep))
         return hl7_response

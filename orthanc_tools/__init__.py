@@ -13,6 +13,6 @@ from .helpers import *
 import logging
 from logging import NullHandler
 
-logger = logging.getLogger('orthanc_tools')
+logger = logging.getLogger(__name__)
 logger.addHandler(NullHandler())
 

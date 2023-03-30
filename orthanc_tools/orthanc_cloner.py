@@ -7,7 +7,7 @@ from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus, Resour
 from .helpers.scheduler import Scheduler
 from .orthanc_monitor import OrthancMonitor, ChangeType
 
-logger = logging.getLogger('orthanc_tools')
+logger = logging.getLogger(__name__)
 
 
 class ClonerMode(StrEnum):

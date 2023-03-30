@@ -8,6 +8,7 @@ from .hl7_error import UnsupportedMessageType, InvalidHL7Message
 import hl7
 import logging
 
+logger = logging.getLogger(__name__)
 
 #
 # class UnsupportedMessageType(Exception):
@@ -146,7 +147,7 @@ class MLLPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """
     allow_reuse_address = True
 
-    def __init__(self, host, port, handlers, timeout = 10, logger = logging.getLogger()):
+    def __init__(self, host, port, handlers, timeout = 10):
         self.host = host
         self.port = port
         self._handlers = {
@@ -157,7 +158,6 @@ class MLLPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         self.timeout = timeout
         self.thread = None
         self._is_running = False
-        self._logger = logger
         super().__init__((host, port), _Hl7MllpRequestHandler)
 
     def add_handlers(self, handlers: dict):
@@ -180,9 +180,9 @@ class MLLPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
     def serve_forever(self):
         self._is_running = True
-        self._logger.info("Starting MLLP Server listening on port {port}".format(port = self.port))
+        logger.info("Starting MLLP Server listening on port {port}".format(port = self.port))
         socketserver.TCPServer.serve_forever(self)
-        self._logger.info("Stopping MLLP Server")
+        logger.info("Stopping MLLP Server")
         self._is_running = False
 
     def start(self):

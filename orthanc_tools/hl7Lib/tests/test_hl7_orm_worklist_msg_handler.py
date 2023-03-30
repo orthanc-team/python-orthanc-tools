@@ -20,8 +20,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                     port = port_number,
                     handlers = {
                         'ORM^O01': (orm_handler.handle_orm_message,)
-                    },
-                    logger = logging.getLogger('WORKLIST SERVER')
+                    }
             )
 
             mllp_server.add_handlers({'ORM^O01': (orm_handler.handle_orm_message,)})
@@ -79,8 +78,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                     port = port_number,
                     handlers = {
                     'ORM^O01': (orm_handler.handle_orm_message,)
-                    },
-                    logger = logging.getLogger('WORKLIST SERVER')
+                    }
             ) as server:
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
@@ -119,8 +117,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                     port=port_number,
                     handlers={
                         'ORM^O01': (orm_handler.handle_orm_message,)
-                    },
-                    logger=logging.getLogger('WORKLIST SERVER')
+                    }
             ) as server:
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
@@ -162,8 +159,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                     port = port_number,
                     handlers = {
                     'ORM^O01^ORM_O01': (orm_handler.handle_orm_message,)
-                    },
-                    logger = logging.getLogger('WORKLIST SERVER')
+                    }
             )
 
             with mllp_server as server:

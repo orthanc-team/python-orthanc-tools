@@ -11,7 +11,7 @@ import uuid
 
 from orthanc_api_client import OrthancApiClient
 from orthanc_api_client import helpers
-logger = logging.getLogger('orthanc_tools')
+logger = logging.getLogger(__name__)
 
 
 male_first_names = ['Adam', 'Adrian', 'Alan', 'Alexander', 'Andrew', 'Anthony', 'Austin', 'Benjamin', 'Blake', 'Boris', 'Brandon', 'Brian', 'Cameron', 'Carl', 'Charles', 'Christian', 'Christopher',

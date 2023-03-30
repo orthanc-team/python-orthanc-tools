@@ -13,7 +13,7 @@ from orthanc_api_client import helpers
 from .helpers.scheduler import Scheduler
 
 from orthanc_api_client import OrthancApiClient
-logger = logging.getLogger('orthanc_tools')
+logger = logging.getLogger(__name__)
 
 
 class Message:

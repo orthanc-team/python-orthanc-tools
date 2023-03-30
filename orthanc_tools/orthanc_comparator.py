@@ -4,8 +4,10 @@ import argparse
 import datetime
 from .helpers.scheduler import Scheduler
 from orthanc_api_client import helpers
-
+import logging
 from orthanc_api_client import OrthancApiClient
+
+logger = logging.getLogger(__name__)
 
 class OrthancComparator:
 
@@ -19,8 +21,7 @@ class OrthancComparator:
                  transfer_missing_to_modality: bool = False,
                  ignore_missing_from_orthanc: bool = False,
                  retrieve_missing_from_orthanc: bool = False,
-                 ignore_missing_on_modality: bool = False,
-                 logger: logging.Logger = logging.getLogger('orthanc_tools')
+                 ignore_missing_on_modality: bool = False
                  ):
 
         if level not in ["Study", "Series", "Instance"]:
@@ -36,7 +37,6 @@ class OrthancComparator:
         self._ignore_missing_from_orthanc = ignore_missing_from_orthanc
         self._retrieve_missing_from_orthanc = retrieve_missing_from_orthanc
         self._ignore_missing_on_modality = ignore_missing_on_modality
-        self._logger = logger
 
     def execute(self):
 
@@ -57,10 +57,10 @@ class OrthancComparator:
 
     def compare_date(self, current_date: datetime.date):
         if self._scheduler:
-            self._scheduler.wait_right_time_to_run(logger=self._logger)
+            self._scheduler.wait_right_time_to_run()
 
         try:
-            self._logger.info("Processing date {date}".format(date=str(current_date)))
+            logger.info("Processing date {date}".format(date=str(current_date)))
 
             local_studies = self._api_client.studies.find(
                 query={
@@ -76,12 +76,12 @@ class OrthancComparator:
                     'StudyDescription': ''
                 })
 
-            self._logger.info(f"{str(current_date)}")
-            self._logger.info(f"=======================================")
+            logger.info(f"{str(current_date)}")
+            logger.info(f"=======================================")
             if len(local_studies) != len(remote_studies):
-                self._logger.warning(f"WARNING {str(current_date)}: {len(local_studies)} studies in Orthanc, {len(remote_studies)} studies in modality")
+                logger.warning(f"WARNING {str(current_date)}: {len(local_studies)} studies in Orthanc, {len(remote_studies)} studies in modality")
             else:
-                self._logger.info(f"found {len(local_studies)} studies on both side")
+                logger.info(f"found {len(local_studies)} studies on both side")
 
             for local_study in local_studies:
 
@@ -90,21 +90,21 @@ class OrthancComparator:
                     study_summary = f"{local_study.patient_main_dicom_tags.get('PatientID')} - {local_study.patient_main_dicom_tags.get('PatientName')} - {local_study.main_dicom_tags.get('StudyDescription')}"
 
                     if len(remote_match) == 0 and not self._ignore_missing_on_modality:
-                        self._logger.warning(f"WARNING {str(current_date)}, study missing on modality: {study_summary}")
+                        logger.warning(f"WARNING {str(current_date)}, study missing on modality: {study_summary}")
                         if self._transfer_missing_to_modality:
-                            self._logger.warning(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
+                            logger.warning(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
                             self._api_client.modalities.store(
                                 target_modality=self._modality,
                                 resources_ids=local_study.orthanc_id,
                                 synchronous=True
                             )
                     elif len(remote_match) > 1:
-                        self._logger.warning(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
+                        logger.warning(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
                     elif len(remote_match) == 1:
                         if self._level in ['Series', 'Instance']:
                             self.compare_study(orthanc_id=local_study.orthanc_id, dicom_id=local_study.dicom_id, study_summary=study_summary)
                 except Exception as ex:
-                    self._logger.error(f"ERROR: {str(ex)}")
+                    logger.error(f"ERROR: {str(ex)}")
 
             if not self._ignore_missing_from_orthanc:
                 for remote_study in remote_studies:
@@ -112,26 +112,26 @@ class OrthancComparator:
 
                         local_match = [l for l in local_studies if l.dicom_id == remote_study.dicom_id]
                         if len(local_match) == 0:
-                            self._logger.warning(f"WARNING {str(current_date)}, study missing from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                            logger.warning(f"WARNING {str(current_date)}, study missing from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
                             if self._retrieve_missing_from_orthanc:
-                                self._logger.warning(f"WARNING {str(current_date)}, retrieving missing study from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                                logger.warning(f"WARNING {str(current_date)}, retrieving missing study from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
                                 self._api_client.modalities.move_study(
                                     from_modality=self._modality,
                                     dicom_id=remote_study.dicom_id
                                 )
                         elif len(local_match) > 1:
-                            self._logger.warning(f"WARNING {str(current_date)}, study found multiple times on Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
+                            logger.warning(f"WARNING {str(current_date)}, study found multiple times on Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
                         # elif self._ignore_missing_on_modality: # in this case only, study comparison has not been performed above -> do it now
                     except Exception as ex:
-                        self._logger.error(f"ERROR: {str(ex)}")
+                        logger.error(f"ERROR: {str(ex)}")
 
         except Exception as ex:
-            self._logger.error(f"ERROR: {str(ex)}")
+            logger.error(f"ERROR: {str(ex)}")
 
 
     def compare_study(self, orthanc_id: str, dicom_id: str, study_summary: str):
         if self._scheduler:
-            self._scheduler.wait_right_time_to_run(self._logger)
+            self._scheduler.wait_right_time_to_run()
 
         try:
 
@@ -146,22 +146,22 @@ class OrthancComparator:
                 })
 
             if len(local_series) != len(remote_series):
-                self._logger.warning(f"WARNING STUDY {study_summary}: {len(local_series)} series in Orthanc, {len(remote_series)} series in modality")
+                logger.warning(f"WARNING STUDY {study_summary}: {len(local_series)} series in Orthanc, {len(remote_series)} series in modality")
 
             for local_serie in local_series:
                 local_dicom_id = local_serie.get('MainDicomTags').get('SeriesInstanceUID')
                 remote_match = [r for r in remote_series if r.dicom_id == local_dicom_id]
                 if len(remote_match) == 0 and not self._ignore_missing_on_modality:
-                    self._logger.warning(f"WARNING STUDY {study_summary}, series missing from modality: {local_dicom_id}")
+                    logger.warning(f"WARNING STUDY {study_summary}, series missing from modality: {local_dicom_id}")
                     if self._transfer_missing_to_modality:
-                        self._logger.warning(f"WARNING STUDY {study_summary}, transferring series to modality: {local_dicom_id}")
+                        logger.warning(f"WARNING STUDY {study_summary}, transferring series to modality: {local_dicom_id}")
                         self._api_client.modalities.store(
                             target_modality=self._modality,
                             resources_ids=local_serie.get('ID'),
                             synchronous=True
                         )
                 elif len(remote_match) > 1:
-                    self._logger.warning(f"WARNING STUDY {study_summary}, series found multiple times on modality: {local_dicom_id}")
+                    logger.warning(f"WARNING STUDY {study_summary}, series found multiple times on modality: {local_dicom_id}")
                 elif len(remote_match) == 1:
                     series_summary = f"{local_dicom_id} (from STUDY {study_summary})"
                     if self._level in ['Instance']:
@@ -175,18 +175,18 @@ class OrthancComparator:
                 for remote_serie in remote_series:
                     local_match = [l for l in local_series if l.get('MainDicomTags').get('SeriesInstanceUID') == remote_serie.dicom_id]
                     if len(local_match) == 0:
-                        self._logger.warning(f"WARNING STUDY {dicom_id}, series missing from Orthanc: {remote_serie.dicom_id}")
+                        logger.warning(f"WARNING STUDY {dicom_id}, series missing from Orthanc: {remote_serie.dicom_id}")
                         if self._retrieve_missing_from_orthanc:
-                            self._logger.warning(f"WARNING STUDY {dicom_id}, retrieving missing series from Orthanc: {remote_serie.dicom_id}")
+                            logger.warning(f"WARNING STUDY {dicom_id}, retrieving missing series from Orthanc: {remote_serie.dicom_id}")
                             self._api_client.modalities.move_series(
                                 from_modality=self._modality,
                                 dicom_id=remote_serie.dicom_id,
                                 study_dicom_id=dicom_id
                             )
                     elif len(local_match) > 1:
-                        self._logger.warning(f"WARNING STUDY {dicom_id}, series found multiple times on Orthanc: {remote_serie.dicom_id}")
+                        logger.warning(f"WARNING STUDY {dicom_id}, series found multiple times on Orthanc: {remote_serie.dicom_id}")
         except Exception as ex:
-            self._logger.exception(f"ERROR: {str(ex)}")
+            logger.exception(f"ERROR: {str(ex)}")
 
 
     def compare_series(self, orthanc_id: str, dicom_id: str, study_dicom_id: str, series_summary: str):
@@ -202,7 +202,7 @@ class OrthancComparator:
                 })
 
             if len(local_instances) != len(remote_instances):
-                self._logger.warning(f"WARNING SERIES {series_summary}: {len(local_instances)} instances in Orthanc, {len(remote_instances)} instances in modality")
+                logger.warning(f"WARNING SERIES {series_summary}: {len(local_instances)} instances in Orthanc, {len(remote_instances)} instances in modality")
 
             success_count = 0
             failure_count = 0
@@ -213,9 +213,9 @@ class OrthancComparator:
                     remote_match = [r for r in remote_instances if r.dicom_id == local_dicom_id]
 
                     if len(remote_match) == 0 and not self._ignore_missing_on_modality:
-                        self._logger.warning(f"WARNING SERIES {series_summary}, instance missing from modality: {local_dicom_id}")
+                        logger.warning(f"WARNING SERIES {series_summary}, instance missing from modality: {local_dicom_id}")
                         if self._transfer_missing_to_modality:
-                            self._logger.warning(f"WARNING SERIES {series_summary}, transferring instance to modality: {local_dicom_id}")
+                            logger.warning(f"WARNING SERIES {series_summary}, transferring instance to modality: {local_dicom_id}")
                             self._api_client.modalities.store(
                                 target_modality=self._modality,
                                 resources_ids=local_instance.get('ID'),
@@ -223,7 +223,7 @@ class OrthancComparator:
                             )
                             success_count += 1
                     elif len(remote_match) > 1:
-                        self._logger.warning(f"WARNING SERIES {series_summary}, instance found multiple times on modality: {local_dicom_id}")
+                        logger.warning(f"WARNING SERIES {series_summary}, instance found multiple times on modality: {local_dicom_id}")
                 except:
                     failure_count += 1
 
@@ -232,9 +232,9 @@ class OrthancComparator:
                     try:
                         local_match = [l for l in local_instances if l.get('MainDicomTags').get('SOPInstanceUID') == remote_instance.dicom_id]
                         if len(local_match) == 0:
-                            self._logger.warning(f"WARNING SERIES {series_summary}, instance missing from Orthanc: {remote_instance.dicom_id}")
+                            logger.warning(f"WARNING SERIES {series_summary}, instance missing from Orthanc: {remote_instance.dicom_id}")
                             if self._retrieve_missing_from_orthanc:
-                                self._logger.warning(f"WARNING SERIES {series_summary}, retrieving instance missing from Orthanc: {remote_instance.dicom_id}")
+                                logger.warning(f"WARNING SERIES {series_summary}, retrieving instance missing from Orthanc: {remote_instance.dicom_id}")
                                 self._api_client.modalities.move_instance(
                                     from_modality=self._modality,
                                     dicom_id=remote_instance.dicom_id,
@@ -243,17 +243,17 @@ class OrthancComparator:
                                 )
                                 success_count += 1
                         elif len(local_match) > 1:
-                            self._logger.warning(f"WARNING SERIES {series_summary}, instance found multiple times on Orthanc: {remote_instance.dicom_id}")
+                            logger.warning(f"WARNING SERIES {series_summary}, instance found multiple times on Orthanc: {remote_instance.dicom_id}")
                     except Exception as ex:
                         failure_count += 1
 
             if failure_count > 0:
-                self._logger.error(f"ERROR SERIES {series_summary}, transferring/retrieving instances: {failure_count} failure, {success_count} success")
+                logger.error(f"ERROR SERIES {series_summary}, transferring/retrieving instances: {failure_count} failure, {success_count} success")
             elif success_count > 0:
-                self._logger.warning(f"WARNING SERIES {series_summary}, transferred: {success_count} instances")
+                logger.warning(f"WARNING SERIES {series_summary}, transferred: {success_count} instances")
 
         except Exception as ex:
-            self._logger.error(f"ERROR: {str(ex)}")
+            logger.error(f"ERROR: {str(ex)}")
 
 
 if __name__ == '__main__':

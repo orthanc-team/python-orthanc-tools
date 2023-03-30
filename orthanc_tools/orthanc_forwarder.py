@@ -15,7 +15,7 @@ from .helpers.scheduler import Scheduler
 from .helpers.time_out import TimeOut
 from .orthanc_monitor import OrthancMonitor, ChangeType
 
-logger = logging.getLogger('orthanc_tools')
+logger = logging.getLogger(__name__)
 
 
 class ForwarderMode(StrEnum):
@@ -89,7 +89,7 @@ class OrthancForwarder:
                  max_retry_count_at_startup: int = 5,
                  polling_interval_in_seconds: int = 1,
                  worker_threads_count: int = 1,
-                 instance_filter = None,    # a method to filter instances.  Signature: Filter(api_client, instance_id) -> bool
+                 instance_filter = None,    # a method to filter instances.  Signature: Filter(api_client, instance_id) -> bool (returns True to keep an instance, returns False to delete it)
                  instance_processor = None  # a method to process instances before forwarding them.  Signature: Process(api_client, instance_id)
                  ):
 

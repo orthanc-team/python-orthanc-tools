@@ -1,3 +1,7 @@
+
+- uniformized logger names to `__name__`
+- BREAKING_CHANGE: do not pass logger between classes, always use the default module logger
+
 v 0.8.0
 =======
 

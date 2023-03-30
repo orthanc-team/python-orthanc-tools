@@ -91,7 +91,7 @@ class OrthancCloner(OrthancMonitor):
     def handle_stable_study(self, change_id, study_id, api_client):
         try:
             if self._mode == ClonerMode.TRANSFER:
-                transfer_job = api_client.transfers.send(
+                transfer_job = api_client.transfers.send_async(
                     target_peer=self._destination_peer,
                     resources_ids=study_id,
                     resource_type=ResourceType.STUDY

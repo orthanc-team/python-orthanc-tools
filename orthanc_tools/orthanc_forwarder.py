@@ -1,12 +1,13 @@
 import argparse
+import datetime
 import logging
 import time
 import uuid
 import os
 import threading
 from strenum import StrEnum
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple
 from enum import Enum
 
 from orthanc_api_client import OrthancApiClient, Study, Series, JobStatus, ResourceNotFound, InstancesSet, ResourceType
@@ -29,30 +30,38 @@ class ForwarderMode(StrEnum):
 @dataclass
 class ForwarderDestination:
     destination: str                        # the alias of the destination Modality, Peer or DicomWeb server
-    forwarder_mode: ForwarderMode             # the mode to use to forward to the destination
+    forwarder_mode: ForwarderMode           # the mode to use to forward to the destination
     alternate_destination: str = None       # an alternate destination in case this one can not be contacted
 
 
-class ForwarderMetadata(Enum):
-    INSTANCE_PROCESSED = 4600
-    SENT_TO_DESTINATIONS = 4601
+# class ForwarderMetadata(Enum):
+#     INSTANCE_PROCESSED = 4600
+#     SENT_TO_DESTINATIONS = 4601
+#     NEXT_RETRY = 4602
+
+
+@dataclass
+class ForwarderInstancesSetStatus:
+    processed: bool = field(init=False, default=False)
+    sent_to_destinations: List[str] = field(default_factory=list)
+    retry_count: int = field(init=False, default=0)
+    next_retry: Optional[datetime.datetime] = None
 
 
 class OrthancForwarder:
-
     """
     Forwards everything Orthanc receives to another Orthanc peer, a DICOM modality or DicomWeb server.
     The Forwarder deletes the study/instances once they have been forwarded.
 
     The images may be modified before being sent.  In that case, you should:
-    - either provide a instance_processor if you are modifying the instances 'in_place' (keeping the same Orthanc ids)
+    - either provide an instance_processor callback if you are modifying the instances 'in_place' (keeping the same Orthanc ids)
     - or override process() in a subclass
-    The modifications shall be idempotent:  it shall always give the same result
+    The modifications shall be idempotent:  it shall always give the same result if you repeat the modification multiple times
 
     The images may be filtered out before being processed and forwarded.  In that case, you should:
     - either provide an instance_filter callback
     - or override filter() in a subclass
-    Images that are filtered out are deleted.
+    Images that are filtered out are deleted from the forwarder.
 
     To run correctly, an OrthancForwarder must have the UserMetadata 'ModifiedByOrthancForwarder' defined in its config file.
 
@@ -71,6 +80,7 @@ class OrthancForwarder:
     The OrthancForwarder uses Orthanc metadata ranging between [4600, 4700[
     """
 
+    retry_intervals = [60, 120, 300, 1800, 3600]
 
     def __init__(self,
                  source: OrthancApiClient,
@@ -93,6 +103,7 @@ class OrthancForwarder:
         self._execution_thread = None
         self._instance_filter = instance_filter
         self._instance_processor = instance_processor
+        self._status = {}
 
     def wait_orthanc_started(self):
         retry = 0
@@ -195,36 +206,33 @@ class OrthancForwarder:
 
         return instances_set
 
-    def process(self, instances_set: InstancesSet) -> InstancesSet:
+    def process(self, instances_set: InstancesSet) -> bool:
         # this method can be overriden in a derived class.
 
         if self._instance_processor:
-            logger.info(f"{instances_set} Processing ...")
+            try:
+                logger.info(f"{instances_set} Processing ...")
 
-            # check the metadata of a random instance to detect if the set has already been processed (which would mean that we are retrying to process the set)
-            has_been_processed = self._source.instances.get_string_metadata(instances_set.instances_ids[0], metadata_name=str(ForwarderMetadata.INSTANCE_PROCESSED.value), default_value="false") == "true"
-
-            if not has_been_processed:
                 instances_set.process_instances(self._instance_processor)
 
-                # mark as processed in the metadata
-                self._set_string_metadata(instances_set, metadata_name=str(ForwarderMetadata.INSTANCE_PROCESSED.value), content="true")
                 logger.info(f"{instances_set} Processing ... done")
-            else:
-                logger.info(f"{instances_set} Processing ... already processed")
+            except Exception as ex:
+                logger.error(f"{instances_set} Error while processing: {ex}", exc_info=1)
+                return False
 
-        return instances_set
+        return True
 
-    def forward(self, instances_set):
+    def forward(self, instances_set, already_sent_to_destinations: List[str]) -> List[str]:  # returns a list of destinations where the data has been sent
         sent_to_destinations = []
-        try:
 
-            # check the metadata of a random instance to detect to which destinations it has already been sent (which would mean that we are retrying to process the set)
-            has_been_sent_to = self._source.instances.get_string_metadata(instances_set.instances_ids[0], metadata_name=str(ForwarderMetadata.SENT_TO_DESTINATIONS.value), default_value="").split(",")
+        # has_been_sent_to = self._status[instances_set.id].sent_to_destinations
+        # check the metadata of a random instance to detect to which destinations it has already been sent (which would mean that we are retrying to process the set)
+        #has_been_sent_to = self._source.instances.get_string_metadata(instances_set.instances_ids[0], metadata_name=str(ForwarderMetadata.SENT_TO_DESTINATIONS.value), default_value="").split(",")
 
-            for dest in self._destinations:
+        for dest in self._destinations:
+            try:
 
-                if dest.destination not in has_been_sent_to:
+                if dest.destination not in already_sent_to_destinations:
                     logger.info(f"{instances_set} Sending to {dest.destination} using {dest.forwarder_mode}")
                     self._forward_to_destination(
                         instances_set=instances_set,
@@ -235,12 +243,18 @@ class OrthancForwarder:
                     logger.info(f"{instances_set} Sending ... already sent to {dest.destination} using {dest.forwarder_mode}")
 
                 sent_to_destinations.append(dest.destination)
-        except Exception as ex:
-            logger.error(f"{instances_set} Error while forwarding: {ex}")
+            except Exception as ex:
+                logger.error(f"{instances_set} Error while forwarding to {dest.destination}: {ex}", exc_info=1)
+
+        return sent_to_destinations
+            # has_been_sent_to = self._source.instances.get_string_metadata(instances_set.instances_ids[0], metadata_name=str(ForwarderMetadata.SENT_TO_DESTINATIONS.value), default_value="").split(",")
+
 
         # only save the sent_to_destinations if there are multiple destinations and there has been a failure.  Otherwise, we'll delete the data anyway right after
-        if len(self._destinations) > 1 and len(sent_to_destinations) > 1:
-            self._set_string_metadata(instances_set, metadata_name=str(ForwarderMetadata.SENT_TO_DESTINATIONS.value), content=",".join(sent_to_destinations))
+        # if len(self._destinations) > 1 and len(sent_to_destinations) > 1:
+        #     self._set_string_metadata(instances_set, metadata_name=str(ForwarderMetadata.SENT_TO_DESTINATIONS.value), content=",".join(sent_to_destinations))
+        # self._status[instances_set.id].sent_to_destinations = sent_to_destinations
+
 
     def delete(self, instances_set):
         logger.info(f"{instances_set} Deleting ...")
@@ -249,19 +263,39 @@ class OrthancForwarder:
 
     def handle_instances_set(self, instances_set: InstancesSet):
 
+        if instances_set.id not in self._status:
+            self._status[instances_set.id] = ForwarderInstancesSetStatus()
+        else:  # this is a retry !
+            if datetime.datetime.now < self._status[instances_set.id].next_retry:
+                logger.debug(f"{instances_set} Skipping while waiting for retry")
+                return
+
         logger.info(f"{instances_set} Handling ...")
 
         # filter
         instances_set = self.filter(instances_set)
 
         # process
-        instances_set = self.process(instances_set)
+        if not self._status[instances_set.id].processed:
+            self._status[instances_set.id].processed = self.process(instances_set)
+        else:
+            logger.info(f"{instances_set} Skipping processing that has already been performed")
 
         # forward
-        self.forward(instances_set)
+        sent_to_destinations = self.forward(instances_set, self._status[instances_set.id].sent_to_destinations)
+        if len(sent_to_destinations) == len(self._destinations):
+            # delete
+            self.delete(instances_set)
+        else:
+            self._status[instances_set.id].sent_to_destinations = sent_to_destinations
 
-        # delete
-        self.delete(instances_set)
+            retry_count = self._status[instances_set.id].retry_count
+            next_retry = datetime.datetime.now() + datetime.timedelta(seconds=self.retry_intervals[min(retry_count, len(self.retry_intervals) - 1)])
+            logger.debug(f"{instances_set} Failed, will retry at {next_retry}")
+
+            self._status[instances_set.id].next_retry = next_retry
+            self._status[instances_set.id].retry_count = retry_count + 1
+            return
 
         logger.info(f"{instances_set} Handling ... Done")
 

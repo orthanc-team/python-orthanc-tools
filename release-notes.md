@@ -1,4 +1,7 @@
+v 0.8.0
+=======
 
+- added `OrthancForwarder` class
 - BREAKING_CHANGE: moved helpers classes into `helpers` package: `OldFilesDeleter`, `Scheduler`, `TimeOut`, `Timer`
 
 v 0.7.4

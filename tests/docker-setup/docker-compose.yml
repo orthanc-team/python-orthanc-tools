@@ -44,6 +44,8 @@ services:
         }
       ORTHANC__DICOM_AET: "ORTHANC-B"
       ORTHANC__OVERWRITE_INSTANCES: "true"
+      # because we sometimes want to forbid store from non declared modalities
+      ORTHANC__DICOM_ALWAYS_ALLOW_STORE: "false"
       ORTHANC__DICOM_MODALITIES: |
         {
           "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],

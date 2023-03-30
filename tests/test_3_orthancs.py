@@ -377,6 +377,12 @@ class Test3Orthancs(unittest.TestCase):
             r = api_client.upload(buffer=modified)
             self.assertEqual(r[0], instance_id)
 
+        # Tell the target to reject incoming instances.  Therefore, we will exercise the retries !
+        orthanc_a_config = self.ob.modalities.get_configuration(modality='orthanc-a')
+        self.ob.modalities.delete(modality='orthanc-a')
+
+        OrthancForwarder.retry_intervals = [1, 2, 3, 4, 5, 6]
+
         with OrthancForwarder(
             source=self.oa,
             destinations=[ForwarderDestination(destination="orthanc-b", forwarder_mode=mode)],
@@ -386,7 +392,15 @@ class Test3Orthancs(unittest.TestCase):
             instance_processor=process_instance
             ) as forwarder:
 
-            # wait until the the source is empty (= the forwarder has completed its job)
+            time.sleep(3)
+
+            # tell the target to accept incoming instances again
+            self.ob.modalities.configure(
+                modality='orthanc-a',
+                configuration=orthanc_a_config
+            )
+
+            # wait until the source is empty (= the forwarder has completed its job and deleted them)
             helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=3000)  # TODO: 30 s
 
             # check only the flair series has arrived on b

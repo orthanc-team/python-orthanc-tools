@@ -63,8 +63,6 @@ class OrthancForwarder:
     - or override filter() in a subclass
     Images that are filtered out are deleted from the forwarder.
 
-    To run correctly, an OrthancForwarder must have the UserMetadata 'ModifiedByOrthancForwarder' defined in its config file.
-
     An OrthancForwarder may be triggered by two 'events': the stable study or the 'instance received' event.
 
     You might define multiple destinations -> the Forwarder will send the study to all destinations and delete the study only once the study has been sent to all destinations.
@@ -123,14 +121,43 @@ class OrthancForwarder:
                 logger.error("Orthanc Forwarder: when providing an instance_processor, you should have OverwriteInstances set to true to replace the instance with the new one")
                 raise Exception("Invalid Orthanc configuration: OverwriteInstances is false")
 
-        # TODO: find a way to check that ModifiedByOrthancForwarder metadata is defined
-
     def execute(self):  # runs forever !
         self.wait_orthanc_started()
+
+        # Some "Stable" changes might be missing if Orthanc was stopped before the "Stable" event was generated.
+        # In this case, handle the content that is stored in Orthanc at startup
+        if self._trigger in [ChangeType.STABLE_STUDY, ChangeType.STABLE_SERIES, ChangeType.STABLE_PATIENT]:
+            self.handle_content_at_startup()
 
         while True:
             self._execute_once()
             time.sleep(self._polling_interval_in_seconds)
+
+    def handle_content_at_startup(self):
+        if self._trigger == ChangeType.STABLE_STUDY:
+            studies_ids = self._source.studies.get_all_ids()
+            if len(studies_ids) > 0:
+                logger.warning(f"Found {len(studies_ids)} studies in Orthanc at startup, handling them now")
+                for study_id in self._source.studies.get_all_ids():
+                    self._handle_study(change_id=None,
+                                       study_id=study_id,
+                                       api_client=self._source)
+            else:
+                logger.warning(f"No studies found in Orthanc at startup")
+
+        elif self._trigger == ChangeType.STABLE_SERIES:
+            series_ids = self._source.series.get_all_ids()
+            if len(series_ids) > 0:
+                logger.warning(f"Found {len(series_ids)} series in Orthanc at startup, handling them now")
+                for id in self._source.series_ids.get_all_ids():
+                    self._handle_series(change_id=None,
+                                       series_id=id,
+                                       api_client=self._source)
+            else:
+                logger.warning(f"No series found in Orthanc at startup")
+        else:
+            raise NotImplementedError()
+
 
     def _thread_execute(self):
         while self._is_running:

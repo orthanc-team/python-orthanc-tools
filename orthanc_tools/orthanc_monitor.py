@@ -161,7 +161,9 @@ class OrthancMonitor:
                 return
 
             done = False
-            while not done and self._is_running: # read as fast as you can while there are still events
+            has_logged_connection_error = False  # to avoid repeating errors
+
+            while not done and self._is_running:  # read as fast as you can while there are still events
 
                 if self._scheduler:
                     self._scheduler.wait_right_time_to_run(logger=logger)
@@ -172,8 +174,13 @@ class OrthancMonitor:
                         since=last_sequence_id,
                         limit=100
                     )
+                    if has_logged_connection_error:
+                        has_logged_connection_error = False
+                        logger.warning("Connected to Orthanc again")
                 except Exception as ex:
-                    logger.warning("Could not reach Orthanc, retrying ...")
+                    if not has_logged_connection_error:
+                        logger.warning("Could not reach Orthanc, retrying ...")
+                        has_logged_connection_error = True
                     break
 
                 # enqueue the events

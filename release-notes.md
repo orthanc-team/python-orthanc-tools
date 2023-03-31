@@ -1,4 +1,7 @@
+v 0.8.1
+=======
 
+- OrthancForwarder: handle content stored in Orthanc at start
 - uniformized logger names to `__name__`
 - BREAKING_CHANGE: do not pass logger between classes, always use the default module logger
 

@@ -332,12 +332,37 @@ class Test3Orthancs(unittest.TestCase):
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
     def test_all_instance_forwarder_modes(self):
+        # simple forwarder test without filtering or processing
 
-        for mode in [ForwarderMode.DICOM, ForwarderMode.DICOM_SERIES_BY_SERIES, ForwarderMode.DICOM_WEB, ForwarderMode.DICOM_SERIES_BY_SERIES, ForwarderMode.PEERING, ForwarderMode.TRANSFER]:
+        for mode in [ForwarderMode.DICOM, ForwarderMode.DICOM_SERIES_BY_SERIES, ForwarderMode.DICOM_WEB, ForwarderMode.DICOM_WEB_SERIES_BY_SERIES, ForwarderMode.PEERING, ForwarderMode.TRANSFER]:
             for trigger in [ChangeType.STABLE_STUDY, ChangeType.STABLE_SERIES, ChangeType.NEW_INSTANCE]:
                 self.ob.delete_all_content()  # destination
                 self.oa.delete_all_content()  # source
 
+                with OrthancForwarder(source=self.oa,
+                                      destinations=[ForwarderDestination(destination="orthanc-b", forwarder_mode=mode)],
+                                      trigger=trigger,
+                                      polling_interval_in_seconds=0.1) as forwarder:
+
+                    # upload once the forwarder is running
+                    instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
+
+                    # wait until the the source is empty (= the forwarder has completed its job)
+                    helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
+
+                    self.assertEqual(len(instances_ids), len(self.ob.instances.get_all_ids()))
+                    # check it has been removed from Orthanc A
+                    self.assertEqual(0, len(self.oa.instances.get_all_ids()))
+
+    def test_forwarder_when_orthanc_not_empty_at_startup(self):
+        # simple forwarder test without filtering or processing
+
+        for mode in [ForwarderMode.DICOM]:
+            for trigger in [ChangeType.STABLE_STUDY, ChangeType.STABLE_SERIES, ChangeType.NEW_INSTANCE]:
+                self.ob.delete_all_content()  # destination
+                self.oa.delete_all_content()  # source
+
+                # upload before the forwarder is running
                 instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
 
                 with OrthancForwarder(source=self.oa,

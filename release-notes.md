@@ -1,3 +1,8 @@
+v 0.8.2
+=======
+
+- OrthancForwarder: fix logging
+
 v 0.8.1
 =======
 

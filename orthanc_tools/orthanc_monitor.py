@@ -136,7 +136,7 @@ class OrthancMonitor:
             wt.start()
 
     def stop(self):
-        logger.info("Stopping Orthanc Monitor")
+        logger.debug("Stopping Orthanc Monitor")
 
         # first stop the monitoring thread so we don't produce events anymore
         self._is_running = False
@@ -154,6 +154,7 @@ class OrthancMonitor:
 
         last_sequence_id = self._start_at_sequence_id
         done = False
+        has_logged_connection_error = False  # to avoid repeating errors
 
         while self._is_running:
             if existing_changes_only and done:
@@ -161,7 +162,6 @@ class OrthancMonitor:
                 return
 
             done = False
-            has_logged_connection_error = False  # to avoid repeating errors
 
             while not done and self._is_running:  # read as fast as you can while there are still events
 
@@ -179,7 +179,7 @@ class OrthancMonitor:
                         logger.warning("Connected to Orthanc again")
                 except Exception as ex:
                     if not has_logged_connection_error:
-                        logger.warning("Could not reach Orthanc, retrying ...")
+                        logger.warning("Could not reach Orthanc, retrying silently...")
                         has_logged_connection_error = True
                     break
 

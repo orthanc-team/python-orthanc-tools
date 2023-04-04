@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 from enum import Enum
 
-from orthanc_api_client import OrthancApiClient, Study, Series, JobStatus, ResourceNotFound, InstancesSet, ResourceType
+from orthanc_api_client import OrthancApiClient, Study, Series, JobStatus, ResourceNotFound, InstancesSet, ResourceType, exceptions
 from .helpers.scheduler import Scheduler
 from .helpers.time_out import TimeOut
 from .orthanc_monitor import OrthancMonitor, ChangeType
@@ -124,35 +124,33 @@ class OrthancForwarder:
     def execute(self):  # runs forever !
         self.wait_orthanc_started()
 
-        # Some "Stable" changes might be missing if Orthanc was stopped before the "Stable" event was generated.
-        # In this case, handle the content that is stored in Orthanc at startup
-        if self._trigger in [ChangeType.STABLE_STUDY, ChangeType.STABLE_SERIES, ChangeType.STABLE_PATIENT]:
-            self.handle_content_at_startup()
-
         while True:
-            self._execute_once()
+            self.handle_all_content()
             time.sleep(self._polling_interval_in_seconds)
 
-    def handle_content_at_startup(self):
+    def handle_all_content(self):
         if self._trigger == ChangeType.STABLE_STUDY:
             studies_ids = self._source.studies.get_all_ids()
             if len(studies_ids) > 0:
-                logger.warning(f"Found {len(studies_ids)} studies in Orthanc at startup, handling them now")
-                for study_id in self._source.studies.get_all_ids():
-                    self._handle_study(change_id=None,
-                                       study_id=study_id,
+                for study_id in studies_ids:
+                    self._handle_study(study_id=study_id,
                                        api_client=self._source)
-            else:
-                logger.warning(f"No studies found in Orthanc at startup")
 
         elif self._trigger == ChangeType.STABLE_SERIES:
             series_ids = self._source.series.get_all_ids()
             if len(series_ids) > 0:
-                logger.warning(f"Found {len(series_ids)} series in Orthanc at startup, handling them now")
-                for id in self._source.series_ids.get_all_ids():
-                    self._handle_series(change_id=None,
-                                       series_id=id,
-                                       api_client=self._source)
+                for id in series_ids:
+                    self._handle_series(series_id=id,
+                                        api_client=self._source)
+            else:
+                logger.warning(f"No series found in Orthanc at startup")
+
+        elif self._trigger == ChangeType.NEW_INSTANCE:
+            instances_ids = self._source.instances.get_all_ids()
+            if len(instances_ids) > 0:
+                for id in instances_ids:
+                    self._handle_instance(instance_id=id,
+                                          api_client=self._source)
             else:
                 logger.warning(f"No series found in Orthanc at startup")
         else:
@@ -161,27 +159,8 @@ class OrthancForwarder:
 
     def _thread_execute(self):
         while self._is_running:
-            self._execute_once()
+            self.handle_all_content()
             time.sleep(self._polling_interval_in_seconds)
-
-    def _execute_once(self):
-
-        # Everytime we run the forwarder, we run an OrthancMonitor that tries to process all existing changes
-        # Therefore, failures will be reprocessed the next time
-        monitor = OrthancMonitor(api_client=self._source,
-                                 worker_threads_count=self._worker_threads_count,
-                                 max_retries=0,  # no retries, we will handle retries from here
-                                 polling_interval=0.1
-                                 )
-
-        if self._trigger == ChangeType.STABLE_STUDY:
-            monitor.add_handler(change_type=self._trigger, callback=self._handle_study)
-        elif self._trigger == ChangeType.STABLE_SERIES:
-            monitor.add_handler(change_type=self._trigger, callback=self._handle_series)
-        elif self._trigger == ChangeType.NEW_INSTANCE:
-            monitor.add_handler(change_type=self._trigger, callback=self._handle_instance)
-
-        monitor.execute(existing_changes_only=True)
 
     def start(self):
         logger.info("Starting Orthanc Forwarder")
@@ -211,15 +190,15 @@ class OrthancForwarder:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
 
-    def _handle_study(self, change_id: int, study_id: str, api_client):
+    def _handle_study(self, study_id: str, api_client):
         instances_set = InstancesSet.from_study(api_client=api_client, study_id=study_id)
         self.handle_instances_set(instances_set)
 
-    def _handle_series(self, change_id: int, series_id: str, api_client):
+    def _handle_series(self, series_id: str, api_client):
         instances_set = InstancesSet.from_series(api_client=api_client, series_id=series_id)
         self.handle_instances_set(instances_set)
 
-    def _handle_instance(self, change_id: int, instance_id: str, api_client):
+    def _handle_instance(self, instance_id: str, api_client):
         instances_set = InstancesSet.from_instance(api_client=api_client, instance_id=instance_id)
         self.handle_instances_set(instances_set)
 
@@ -243,6 +222,8 @@ class OrthancForwarder:
                 instances_set.process_instances(self._instance_processor)
 
                 logger.info(f"{instances_set} Processing ... done")
+            except exceptions.OrthancApiException as ex:
+                logger.error(f"{instances_set} Error while processing: {ex.msg}")
             except Exception as ex:
                 logger.error(f"{instances_set} Error while processing: {ex}", exc_info=1)
                 return False
@@ -270,6 +251,8 @@ class OrthancForwarder:
                     logger.info(f"{instances_set} Sending ... already sent to {dest.destination} using {dest.forwarder_mode}")
 
                 sent_to_destinations.append(dest.destination)
+            except exceptions.OrthancApiException as ex:
+                logger.error(f"{instances_set} Error while forwarding to {dest.destination}: {ex.msg}")
             except Exception as ex:
                 logger.error(f"{instances_set} Error while forwarding to {dest.destination}: {ex}", exc_info=1)
 
@@ -293,7 +276,7 @@ class OrthancForwarder:
         if instances_set.id not in self._status:
             self._status[instances_set.id] = ForwarderInstancesSetStatus()
         else:  # this is a retry !
-            if datetime.datetime.now < self._status[instances_set.id].next_retry:
+            if datetime.datetime.now() < self._status[instances_set.id].next_retry:
                 logger.debug(f"{instances_set} Skipping while waiting for retry")
                 return
 
@@ -318,7 +301,7 @@ class OrthancForwarder:
 
             retry_count = self._status[instances_set.id].retry_count
             next_retry = datetime.datetime.now() + datetime.timedelta(seconds=self.retry_intervals[min(retry_count, len(self.retry_intervals) - 1)])
-            logger.debug(f"{instances_set} Failed, will retry at {next_retry}")
+            logger.info(f"{instances_set} Failed, will retry at {next_retry}")
 
             self._status[instances_set.id].next_retry = next_retry
             self._status[instances_set.id].retry_count = retry_count + 1

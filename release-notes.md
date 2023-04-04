@@ -1,12 +1,18 @@
+v 0.8.3
+=======
+
+- `OrthancForwarder`: not using `OrthancMonitor` anymore
+- `OrthancForwarder`: fixed retries
+
 v 0.8.2
 =======
 
-- OrthancForwarder: fix logging
+- `OrthancForwarder`: fix logging
 
 v 0.8.1
 =======
 
-- OrthancForwarder: handle content stored in Orthanc at start
+- `OrthancForwarder`: handle content stored in Orthanc at start
 - uniformized logger names to `__name__`
 - BREAKING_CHANGE: do not pass logger between classes, always use the default module logger
 

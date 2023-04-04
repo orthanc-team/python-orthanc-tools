@@ -86,7 +86,6 @@ class OrthancForwarder:
                  trigger: ChangeType = ChangeType.STABLE_STUDY,
                  max_retry_count_at_startup: int = 5,
                  polling_interval_in_seconds: int = 1,
-                 worker_threads_count: int = 1,
                  instance_filter = None,    # a method to filter instances.  Signature: Filter(api_client, instance_id) -> bool (returns True to keep an instance, returns False to delete it)
                  instance_processor = None  # a method to process instances before forwarding them.  Signature: Process(api_client, instance_id)
                  ):
@@ -97,7 +96,6 @@ class OrthancForwarder:
         self._max_retry_count_at_startup = max_retry_count_at_startup
         self._polling_interval_in_seconds = polling_interval_in_seconds
         self._is_running = False
-        self._worker_threads_count = worker_threads_count
         self._execution_thread = None
         self._instance_filter = instance_filter
         self._instance_processor = instance_processor

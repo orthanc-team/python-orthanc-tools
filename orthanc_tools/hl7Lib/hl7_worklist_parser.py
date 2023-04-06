@@ -6,8 +6,10 @@ from .hl7_message_parser import Hl7MessageParser
 
 class Hl7WorklistParser(Hl7MessageParser):
 
-    def __init__(self, specific_fields: dict = None):
+    def __init__(self, specific_fields: dict = None, patient_name_components_count: int = 5):
         super(Hl7WorklistParser, self).__init__()
+
+        self._patient_name_components_count = patient_name_components_count
 
         # Let's add "standards" field
         self.add_fields_definitions({
@@ -35,6 +37,7 @@ class Hl7WorklistParser(Hl7MessageParser):
             '_ambulatoryStatus' : 'PV1.F15',
             'ReferringPhysicianName' : 'PV1.F8',
             'ConfidentialityConstraintOnPatientDataDescription' : 'PV1.F16',
+            '_consultingDoctor' : 'PV1.F9',
 
             # --- ORC segment
             'OrderPlacerIdentifierSequence' : 'ORC.F2.R1.C1',
@@ -66,6 +69,7 @@ class Hl7WorklistParser(Hl7MessageParser):
         values['ScheduledStationName'] = None
         values['ScheduledProcedureStepID'] = 'UNKNOWN'
         values['RequestedProcedureID'] = 'UNKNOWN'
+        values['SpecificCharacterSet'] = 'ASCII'
 
         # extract field the default way
         values_from_hl7 = super(Hl7WorklistParser, self).parse(hl7_message, strict = False)
@@ -73,7 +77,7 @@ class Hl7WorklistParser(Hl7MessageParser):
         values.update(values_from_hl7)
 
         # keep only the first 5 components of the name according to http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_6.2.html (check PN VR definition)
-        values['PatientName'] = '^'.join(values['PatientName'].split('^')[:5])
+        values['PatientName'] = '^'.join(values['PatientName'].split('^')[:self._patient_name_components_count])
 
         sex = values['_sex']
         if sex is None or sex in ['M', 'F']:
@@ -113,6 +117,8 @@ class Hl7WorklistParser(Hl7MessageParser):
             values['RequestingPhysician'] = values.get('_requestingPhysicianOBR')
         elif values.get('_requestingPhysicianORC') is not None:
             values['RequestingPhysician'] = values.get('_requestingPhysicianORC')
+        elif values.get('_consultingDoctor') is not None:
+            values['RequestingPhysician'] = '^'.join(values.get('_consultingDoctor').split('^')[1:])
 
         return values
 

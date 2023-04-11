@@ -210,6 +210,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 # --- PID segment
                 'OtherPatientIDs': 'PID.F4.R1.C1',
                 'AccessionNumber': 'PV1.F19.R1.C1',
+                'ReferringPhysicianName': 'PV1.F7',
                 'RequestingPhysician': 'PV1.F9'
             }
 
@@ -229,7 +230,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 # validate that ADT messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
-                        "\x0bMSH|^~\&|OAZIS||||20230404090644||ADT^A04|01370309|P|2.3||||||ASCII\r"
+                        "\x0bMSH|^~\&|OAZIS||||20230404090644||ADT^A04|01370309|P|2.3||||||8859/1\r"
                         "EVN|A04|20230404090644|||AGIRMANSPOL|202304040906\r"
                         "PID|1||341410|91041739368^^^^NN|Moraloa^Salva Bernard^^^Monsieur||19910417|M|||Rue No\xe9 11^^VISE^^4200^BE^H||0499/244732^^CP||FR|U||20624682|0000000000|91041739368||||||BE||||N\r"
                         "PD1||||16409914^GILON^PIERRE||||||||N\r"
@@ -237,7 +238,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                         "NK1|2|BALLROS MARIA|OTH^Autre|AV.G.TRUFFEE,21/009 ^^LIEGE^^4020^BE|||CP^2|19900101\r"
                         "NK1|3|BALLROS MARIA|OTH^Autre|AV.G.TRUFFEE,21/009 ^^LIEGE^^4020^BE|||CP^3|19900101\r"
                         "NK1|4|BALLROS MARIA|F_A^Adresse de facturation|av.G.TRUFFEE,17/009 ^^LIEGE^^4020^BE|||BP^4|19000101\r"
-                        "PV1|1|O|POLY^001^048^310^0^2^^POLY|POLY31|||16409914^GILON^PIERRE||16371009^THISO^DANILO|1950|||||||16371009^THISO^DANILO|0|23016738^^^^VN|1^20230404|||||||||||||||||||O|||||202304040906\r"
+                        "PV1|1|O|POLY^001^048^310^0^2^^POLY|POLY31|||16409914^GILSON^MARC||16371009^THISO^DANILO|1950|||||||16371009^THISO^DANILO|0|23016738^^^^VN|1^20230404|||||||||||||||||||O|||||202304040906\r"
                         "PV2|||NULL||||||202304042106|0|||||||||||0|N||||||||T||||||||0///09/\r"
                         "IN1|1|1|319000|Mutualit\xe9 Solidaris Wallonie|Rue des Dominicaines 35 ^^SAINT-SERVAIS^^5002^BE||078/05 13 19|||||20110401|||||0|| ||||||||||||||||||||||||||||111/111||91041739368\r"
                         "\x1c\x0d"
@@ -254,14 +255,14 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 wl = pydicom.read_file(worklist_file_path)
                 self.assertEqual("Moraloa^Salva Bernard^^", wl.PatientName)
                 self.assertEqual("19910417", wl.PatientBirthDate)
-                # TODO: check the characterSet with the customer
-                self.assertEqual("ASCII", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
-                self.assertEqual("THISO^DANILO", wl.RequestingPhysician)
+                # TODO: check the characterSet with the customer !
+                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+                self.assertEqual("16371009^THISO^DANILO", wl.RequestingPhysician)
 
                 # make sure all 'mandatory' fields are there
                 self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
                 self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
-                #self.assertEqual("Docteur^Traitant", wl.ReferringPhysicianName)
+                self.assertEqual("16409914^GILSON^MARC", wl.ReferringPhysicianName)
                 self.assertEqual("UNKNOWN", wl.RequestedProcedureID)
                 self.assertEqual("Rue Noé 11^^VISE^^4200^BE^H", wl.PatientAddress)
                 self.assertEqual("23016738", wl.AccessionNumber)

@@ -37,7 +37,8 @@ class Hl7WorklistParser(Hl7MessageParser):
             '_ambulatoryStatus' : 'PV1.F15',
             'ReferringPhysicianName' : 'PV1.F8',
             'ConfidentialityConstraintOnPatientDataDescription' : 'PV1.F16',
-            '_consultingDoctor' : 'PV1.F9',
+            '_consultingDoctorPV1' : 'PV1.F9',
+            ''
 
             # --- ORC segment
             'OrderPlacerIdentifierSequence' : 'ORC.F2.R1.C1',
@@ -117,8 +118,10 @@ class Hl7WorklistParser(Hl7MessageParser):
             values['RequestingPhysician'] = values.get('_requestingPhysicianOBR')
         elif values.get('_requestingPhysicianORC') is not None:
             values['RequestingPhysician'] = values.get('_requestingPhysicianORC')
-        elif values.get('_consultingDoctor') is not None:
-            values['RequestingPhysician'] = '^'.join(values.get('_consultingDoctor').split('^')[1:])
+        elif values.get('_consultingDoctorPV1') is not None:
+            values['RequestingPhysician'] = values.get('_consultingDoctorPV1')
+
+
 
         return values
 

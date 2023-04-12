@@ -1,3 +1,7 @@
+v 0.8.4
+=======
+
+- `OrthancForwarder`: added error logs + retry in case of ConnectionError
 - `OrthancForwarder`: removed `worker_threads_count` that was not used anymore
 
 v 0.8.3

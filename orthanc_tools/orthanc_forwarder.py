@@ -127,33 +127,37 @@ class OrthancForwarder:
             time.sleep(self._polling_interval_in_seconds)
 
     def handle_all_content(self):
-        if self._trigger == ChangeType.STABLE_STUDY:
-            studies_ids = self._source.studies.get_all_ids()
-            if len(studies_ids) > 0:
-                for study_id in studies_ids:
-                    self._handle_study(study_id=study_id,
-                                       api_client=self._source)
+        try:
+            if self._trigger == ChangeType.STABLE_STUDY:
+                studies_ids = self._source.studies.get_all_ids()
+                if len(studies_ids) > 0:
+                    for study_id in studies_ids:
+                        self._handle_study(study_id=study_id,
+                                           api_client=self._source)
 
-        elif self._trigger == ChangeType.STABLE_SERIES:
-            series_ids = self._source.series.get_all_ids()
-            if len(series_ids) > 0:
-                for id in series_ids:
-                    self._handle_series(series_id=id,
-                                        api_client=self._source)
+            elif self._trigger == ChangeType.STABLE_SERIES:
+                series_ids = self._source.series.get_all_ids()
+                if len(series_ids) > 0:
+                    for id in series_ids:
+                        self._handle_series(series_id=id,
+                                            api_client=self._source)
+                else:
+                    logger.warning(f"No series found in Orthanc at startup")
+
+            elif self._trigger == ChangeType.NEW_INSTANCE:
+                instances_ids = self._source.instances.get_all_ids()
+                if len(instances_ids) > 0:
+                    for id in instances_ids:
+                        self._handle_instance(instance_id=id,
+                                              api_client=self._source)
+                else:
+                    logger.warning(f"No series found in Orthanc at startup")
             else:
-                logger.warning(f"No series found in Orthanc at startup")
-
-        elif self._trigger == ChangeType.NEW_INSTANCE:
-            instances_ids = self._source.instances.get_all_ids()
-            if len(instances_ids) > 0:
-                for id in instances_ids:
-                    self._handle_instance(instance_id=id,
-                                          api_client=self._source)
-            else:
-                logger.warning(f"No series found in Orthanc at startup")
-        else:
-            raise NotImplementedError()
-
+                raise NotImplementedError()
+        except exceptions.ConnectionError as ex:
+            logger.info(f"Connection error while handling all content: {ex.msg}")
+        except Exception as ex:
+            logger.exception("Error while handling all content", ex)
 
     def _thread_execute(self):
         while self._is_running:

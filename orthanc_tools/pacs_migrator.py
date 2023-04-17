@@ -118,8 +118,7 @@ class PacsMigrator:
                     # move the study from orthanc to the target modality
                     self._api_client.modalities.send(
                         target_modality=self._destination_modality,
-                        resources_ids=message.orthanc_id,
-                        synchronous=True
+                        resources_ids=message.orthanc_id
                     )
 
                     if self._delete_from_source:

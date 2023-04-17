@@ -93,10 +93,9 @@ class OrthancComparator:
                         logger.warning(f"WARNING {str(current_date)}, study missing on modality: {study_summary}")
                         if self._transfer_missing_to_modality:
                             logger.warning(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
-                            self._api_client.modalities.store(
+                            self._api_client.modalities.send(
                                 target_modality=self._modality,
-                                resources_ids=local_study.orthanc_id,
-                                synchronous=True
+                                resources_ids=local_study.orthanc_id
                             )
                     elif len(remote_match) > 1:
                         logger.warning(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
@@ -155,10 +154,9 @@ class OrthancComparator:
                     logger.warning(f"WARNING STUDY {study_summary}, series missing from modality: {local_dicom_id}")
                     if self._transfer_missing_to_modality:
                         logger.warning(f"WARNING STUDY {study_summary}, transferring series to modality: {local_dicom_id}")
-                        self._api_client.modalities.store(
+                        self._api_client.modalities.send(
                             target_modality=self._modality,
-                            resources_ids=local_serie.get('ID'),
-                            synchronous=True
+                            resources_ids=local_serie.get('ID')
                         )
                 elif len(remote_match) > 1:
                     logger.warning(f"WARNING STUDY {study_summary}, series found multiple times on modality: {local_dicom_id}")
@@ -216,10 +214,9 @@ class OrthancComparator:
                         logger.warning(f"WARNING SERIES {series_summary}, instance missing from modality: {local_dicom_id}")
                         if self._transfer_missing_to_modality:
                             logger.warning(f"WARNING SERIES {series_summary}, transferring instance to modality: {local_dicom_id}")
-                            self._api_client.modalities.store(
+                            self._api_client.modalities.send(
                                 target_modality=self._modality,
-                                resources_ids=local_instance.get('ID'),
-                                synchronous=True
+                                resources_ids=local_instance.get('ID')
                             )
                             success_count += 1
                     elif len(remote_match) > 1:

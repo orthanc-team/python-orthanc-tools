@@ -321,8 +321,7 @@ class OrthancForwarder:
             for s in instances_set.series_ids:
                 self._source.modalities.send(
                     target_modality=destination.destination,
-                    resources_ids=instances_set.get_instances_ids(series_id=s),
-                    synchronous=True
+                    resources_ids=instances_set.get_instances_ids(series_id=s)
                 )
         elif destination.forwarder_mode == ForwarderMode.DICOM_WEB:
             for s in instances_set.series_ids:

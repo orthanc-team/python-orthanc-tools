@@ -157,7 +157,7 @@ class PacsMigrator:
 
     def push_message(self, message: Message):
         if self._scheduler:
-            self._scheduler.wait_right_time_to_run(logger=logger)
+            self._scheduler.wait_right_time_to_run()
 
         self._messages.put(message)
 

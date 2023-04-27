@@ -1,3 +1,8 @@
+v 0.8.5
+=======
+
+- `PacsMigrator`: fix push_message method
+
 v 0.8.4
 =======
 

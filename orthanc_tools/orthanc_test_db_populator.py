@@ -45,6 +45,8 @@ class OrthancTestDbPopulator:
     def __init__(self,
                  api_client: OrthancApiClient,
                  studies_count: int,
+                 series_count: int = None,                  # to force the number of series in a study
+                 instances_count: int = None,               # to force the number of instances in a study
                  random_seed: int = None,                   # to make the generation repeatable
                  from_study_date: datetime.date = datetime.date(2000, 1, 1),     # StudyDate for generated studies
                  to_study_date: datetime.date = datetime.date(2022, 4, 21)        # StudyDate for generated studies
@@ -52,6 +54,8 @@ class OrthancTestDbPopulator:
 
         self._api_client = api_client
         self._studies_count = studies_count
+        self._series_count = series_count
+        self._instances_count = instances_count
         self._random_seed = random_seed
         self._patient_counter = 1
         self._from_study_date = from_study_date
@@ -115,12 +119,18 @@ class OrthancTestDbPopulator:
 
             logger.info(f"-created study {tags['StudyDescription']}")
 
-            series_count = random.randint(1, 6)
+            if self._series_count is not None:
+                series_count = self._series_count
+            else:
+                series_count = random.randint(1, 6)
             for series_counter in range(0, series_count):
                 tags = self.generate_series_tags(tags, series_counter, study_counter)
 
                 if tags["Modality"] in ["MR", "CT"]:
-                    instances_count = random.randint(50, 150)
+                    if self._instances_count is not None:
+                        instances_count = self._instances_count
+                    else:
+                        instances_count = random.randint(50, 150)
                 else:
                     instances_count = 1
 

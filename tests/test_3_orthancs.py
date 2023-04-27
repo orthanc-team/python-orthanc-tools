@@ -115,6 +115,21 @@ class Test3Orthancs(unittest.TestCase):
 
         self.assertEqual(self.oa.instances.get_all_ids(), self.ob.instances.get_all_ids())
 
+    def test_populator_repeatability_with_forced_quantities(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        populator_a = OrthancTestDbPopulator(api_client=self.oa, studies_count=2, random_seed=42, series_count=1, instances_count=1)
+        populator_b = OrthancTestDbPopulator(api_client=self.ob, studies_count=2, random_seed=42, series_count=1, instances_count=1)
+
+        populator_a.execute()
+        populator_b.execute()
+
+        a_ids = self.oa.instances.get_all_ids()
+        b_ids = self.ob.instances.get_all_ids()
+        self.assertEqual(a_ids, b_ids)
+        self.assertEqual(len(a_ids), 2)
+
 
     def test_monitor_recovery(self):
         with tempfile.TemporaryDirectory() as temp_dir:

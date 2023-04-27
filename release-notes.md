@@ -1,3 +1,8 @@
+v 0.8.6
+=======
+
+- `OrthancTestDbPopulator`: new feature: number of series/instances
+
 v 0.8.5
 =======
 

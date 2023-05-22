@@ -166,7 +166,7 @@ class OrthancMonitor:
             while not done and self._is_running:  # read as fast as you can while there are still events
 
                 if self._scheduler:
-                    self._scheduler.wait_right_time_to_run(logger=logger)
+                    self._scheduler.wait_right_time_to_run()
 
                 # get the list of changes from orthanc
                 try:

@@ -1,3 +1,13 @@
+v 0.8.8
+=======
+
+- `OrthancMonitor`: fixed monitor
+
+v 0.8.7
+=======
+
+- Forget it
+
 v 0.8.6
 =======
 

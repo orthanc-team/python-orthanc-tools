@@ -1,3 +1,7 @@
+v 0.8.9
+=======
+- `OrthancTestDbPopulator`: now labelling studies
+
 v 0.8.8
 =======
 

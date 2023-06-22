@@ -37,6 +37,8 @@ last_names = ['Abraham', 'Allan', 'Alsop', 'Anderson', 'Arnold', 'Avery', 'Baile
     'Welch', 'White', 'Wilkins', 'Wilson', 'Wright', 'Young']
 
 
+labels = ['Label1', "Label2", "Label3", "Label4", "Label5", "Label6", "Label7", "Label8", "Label9"]
+
 class OrthancTestDbPopulator:
     """
     Populates an Orthanc with a test DB
@@ -123,6 +125,7 @@ class OrthancTestDbPopulator:
                 series_count = self._series_count
             else:
                 series_count = random.randint(1, 6)
+
             for series_counter in range(0, series_count):
                 tags = self.generate_series_tags(tags, series_counter, study_counter)
 
@@ -140,8 +143,12 @@ class OrthancTestDbPopulator:
                     tags = self.generate_instance_tags(tags, instance_counter, series_counter, study_counter)
 
                     dicom = helpers.generate_test_dicom_file(width=2, height=2, tags=tags)
-                    self._api_client.upload(buffer=dicom)
+                    instance_id = self._api_client.upload(buffer=dicom)[0]
 
+            study_id = self._api_client.instances.get_parent_study_id(instance_id)
+            for labels_count in range(0, random.randint(0, 3)):
+                label = labels[random.randint(0, len(labels) - 1)]
+                self._api_client.studies.add_label(study_id, label)
 
 # examples:
 # python orthanc_tools/orthanc_test_db_populator.py --url=http://192.168.0.10:8042 --user=user --password=pwd --studies=50 --seed=42

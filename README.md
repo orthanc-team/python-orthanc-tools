@@ -123,7 +123,7 @@ $ docker run -d --name comparator --network=mysetup_default python:3.9 bash -c "
 
 The OrthancTestDbPopulator generates test images and uploads them in Orthanc.
 All images have only 4 pixels and take a minimum amount of space on disk. 
-By default, the generator always generates the same date, use a different seed if you need variation.
+By default, the generator always generates the same data, use a different seed if you need variation.
 
 From a shell:
 

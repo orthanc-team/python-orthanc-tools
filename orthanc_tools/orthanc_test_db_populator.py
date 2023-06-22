@@ -166,6 +166,8 @@ if __name__ == '__main__':
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
     parser.add_argument('--password', type=str, default=None, help='Orthanc password')
     parser.add_argument('--studies', type=int, default=100, help='Number of studies to push')
+    parser.add_argument('--series', type=int, default=None, help='Number of series in each study')
+    parser.add_argument('--instances', type=int, default=None, help='Number of instances in each series')
     parser.add_argument('--seed', type=int, default=42, help='Random seed (to make generation repeatable)')
     args = parser.parse_args()
 
@@ -176,6 +178,8 @@ if __name__ == '__main__':
     populator = OrthancTestDbPopulator(
         api_client=OrthancApiClient(url, user=user, pwd=pwd),
         studies_count=args.studies,
+        series_count=args.series,
+        instances_count=args.instances,
         random_seed=args.seed
     )
 

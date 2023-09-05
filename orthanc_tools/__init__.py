@@ -5,6 +5,7 @@ from .orthanc_monitor import OrthancMonitor
 from .orthanc_test_db_populator import OrthancTestDbPopulator
 from .pacs_migrator import PacsMigrator
 from .orthanc_comparator import OrthancComparator
+from .orthanc_cleaner import OrthancCleaner
 
 from .hl7Lib import *
 from .helpers import *

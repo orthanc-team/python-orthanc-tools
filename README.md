@@ -130,3 +130,19 @@ From a shell:
 ```shell
 python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --password=pwd --studies=5000 --seed=42
 ```
+
+## purge old studies from an Orthanc
+Allows to clean the Orthanc by deleting the oldest studies according to the labels applied on them.
+
+With that sample, all studies with the LABEL1 and older than 6 weeks will be deleted
+all studies with the LABEL2 and older than 12 weeks will be deleted.
+
+```
+LABEL1,6
+LABEL2,12
+```
+The script will be executed every day at 2:30 (24 format!)
+
+```shell
+python3 -m orthanc_tools.orthanc_cleaner --url=http://localhost:8042 --user=orthanc --password=orthanc --execution_time=2:30 --labels_file_path=./tests/stimuli/labels.csv
+```

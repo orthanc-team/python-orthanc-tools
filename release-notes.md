@@ -1,3 +1,7 @@
+v 0.9.0
+=======
+- `OrthancCleaner`: added OrthancCleaner
+
 v 0.8.9
 =======
 - `OrthancTestDbPopulator`: now labelling studies

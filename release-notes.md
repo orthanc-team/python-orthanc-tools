@@ -1,3 +1,7 @@
+v 0.9.1
+=======
+- `OrthancCleaner`: no longer deletes old studies if they were uploaded during the retention period
+
 v 0.9.0
 =======
 - `OrthancCleaner`: added OrthancCleaner

@@ -453,7 +453,7 @@ class Test3Orthancs(unittest.TestCase):
             # check it has been removed from Orthanc A
             self.assertEqual(0, len(self.oa.instances.get_all_ids()))
 
-    def test_orthanc_cleaner(self):
+    def test_orthanc_cleaner_with_past_studies(self):
         self.oa.delete_all_content()
 
         # populate Orthanc with and old study...
@@ -482,7 +482,7 @@ class Test3Orthancs(unittest.TestCase):
 
         # apply a label to one of the 2 studies. This label is NOT in the csv file
         studies_ids = self.oa.studies.get_all_ids()
-        self.oa.studies.add_label(studies_ids[0], "LABEL3")
+        self.oa.studies.add_label(studies_ids[0], "LABEL5")
 
         cleaner = OrthancCleaner(api_client=self.oa, execution_time=None, labels_file_path=here / "stimuli/labels.csv")
         cleaner.execute()
@@ -496,7 +496,52 @@ class Test3Orthancs(unittest.TestCase):
 
         cleaner.execute()
 
-        # check that the recent study is still there and the old one is gone
+        # we would like to check that the recent study is still there and the old one is gone,
+        # but given the fact that they have just been uploaded, they should be kept
+        self.assertEqual(len(self.oa.studies.get_all_ids()), 2)
+
+    def test_orthanc_cleaner_with_future_studies(self):
+        self.oa.delete_all_content()
+
+        # We are not able to trick Orthanc to modify the `LastUpdate` value
+        # so let's create studies with dates in the future and
+        # a negative retention period
+
+        # populate Orthanc with and "old" future study...
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=3),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=4)
+        )
+        populator.execute()
+
+        old_study_id = self.oa.studies.get_all_ids()[0]
+
+        # ...and a "recent" future study
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=14),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=16)
+        )
+        populator.execute()
+
+        studies_ids = self.oa.studies.get_all_ids()
+
+        self.oa.studies.add_label(studies_ids[0], "LABEL3")
+        self.oa.studies.add_label(studies_ids[1], "LABEL4")
+
+        cleaner = OrthancCleaner(api_client=self.oa, execution_time=None,
+                                 labels_file_path=here / "stimuli/labels.csv")
+
+        cleaner.execute()
+
+        # we would like to check that the recent study is still there and the old one is gone,
         self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
         self.assertNotEqual(old_study_id, self.oa.studies.get_all_ids()[0])
 

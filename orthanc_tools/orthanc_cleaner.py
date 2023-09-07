@@ -11,6 +11,8 @@ LABEL2,12
 
 With that sample, all studies with the LABEL1 and older than 6 weeks will be deleted
 all studies with the LABEL2 and older than 12 weeks will be deleted.
+
+Note: studies are deleted only if they were uploaded/modified in Orthanc before the retention period
 '''
 
 import datetime
@@ -68,31 +70,34 @@ class OrthancCleaner:
         # Query Orthanc and delete the studies for each label rule
         for label_rule in labels_rules:
 
-            # let's compute the date
+            # Let's compute the date
             limit_date = self.compute_limit_date(label_rule.retention_duration)
 
             # Query Orthanc based on the date and the label
-            studies_to_delete.extend(self._api_client.studies.find(
-                query={'StudyDate': f'-{limit_date}'},
+            studies_to_delete_by_study_date = self._api_client.studies.find(
+                query={'StudyDate': f'-{helpers.to_dicom_date(limit_date)}'},
                 labels=[label_rule.label_name]
                 )
-            )
 
-        logger.info(f"Found {str(len(studies_to_delete))} studies to delete, deleting them...")
+            # Filter the old studies which were recently stored in Orthanc
+            for s in studies_to_delete_by_study_date:
+                if limit_date > s.last_update.date():
+                    studies_to_delete.append(s)
 
         # Delete the found studies
         for s in studies_to_delete:
             try:
                 self._api_client.studies.delete(s.orthanc_id)
+                logger.info(f"Deleting study {s.dicom_id} from {s.main_dicom_tags.get('StudyDate')}...")
             except Exception as ex:
                 logger.error(f"ERROR: {str(ex)}")
 
         logger.info("Clean up done!")
 
 
-    def compute_limit_date(self, number_of_weeks) -> str:
+    def compute_limit_date(self, number_of_weeks) -> datetime.date:
         limit_date = datetime.date.today() - datetime.timedelta(weeks=number_of_weeks)
-        return helpers.to_dicom_date(limit_date)
+        return limit_date
 
     def parse_csv_file(self) -> List[LabelRule]:
         '''

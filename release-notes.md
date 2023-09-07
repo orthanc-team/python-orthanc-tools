@@ -1,3 +1,7 @@
+v 0.9.2
+=======
+- `OrthancCleaner`: updated setup.py
+
 v 0.9.1
 =======
 - `OrthancCleaner`: no longer deletes old studies if they were uploaded during the retention period

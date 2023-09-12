@@ -1,3 +1,7 @@
+v 0.9.3
+=======
+- `OrthancCleaner` and `OrthancComparator`: fixed required arg bug
+
 v 0.9.2
 =======
 - `OrthancCleaner`: updated setup.py

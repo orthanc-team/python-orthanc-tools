@@ -131,6 +131,8 @@ class PacsMigrator:
                 except Exception as ex:
                     logger.error(f"Error while transferring {message.orthanc_id} {str(ex)}")
                     if self._exit_on_error:
+                        logger.info("exiting due to an error...")
+                        self.stop_threads()
                         sys.exit(1)
 
 
@@ -151,6 +153,8 @@ class PacsMigrator:
                         if retry_count == 5:
                             logger.error(f"Error (retried 5 times) while transferring {message.dicom_id} {str(ex)}")
                             if self._exit_on_error:
+                                logger.info("exiting due to an error...")
+                                self.stop_threads()
                                 sys.exit(1)
                         else:
                             logger.warning(f"Error while transferring, retrying... {message.dicom_id} {str(ex)}")
@@ -168,6 +172,17 @@ class PacsMigrator:
 
         self._messages.put(message)
 
+    def stop_threads(self):
+        logger.info("Waiting for worker threads to complete")
+        # post one 'empty' exit message per thread to unlock the threads from waiting on the process queue
+        for i in range(0, self._worker_threads_count):
+            self._messages.put(Message(should_stop=True))
+
+        for worker_thread in self._worker_threads:
+            worker_thread.join()
+
+        self._is_running = False
+        self._worker_threads = []
 
     def execute(self):
         if self._is_running:
@@ -245,6 +260,8 @@ class PacsMigrator:
                         if retry_count == 5:
                             logger.error("Could not query the modality (retried 5 times), aborting")
                             if self._exit_on_error:
+                                logger.info("exiting due to an error...")
+                                self.stop_threads()
                                 sys.exit(1)
                             return
 
@@ -253,6 +270,8 @@ class PacsMigrator:
                 if self._max_cfind_study_count and len(remote_modality_studies) == self._max_cfind_study_count:
                     logger.error(f"Too many studies in a single request: {len(remote_modality_studies)}, you'll probably miss some studies")
                     if self._exit_on_error:
+                        logger.info("exiting due to an error...")
+                        self.stop_threads()
                         sys.exit(1)
 
                 for study in remote_modality_studies:
@@ -260,16 +279,7 @@ class PacsMigrator:
 
             current_date += datetime.timedelta(days=inc_date)
 
-        logger.info("Waiting for worker threads to complete")
-        # post one 'empty' exit message per thread to unlock the threads from waiting on the process queue
-        for i in range(0, self._worker_threads_count):
-            self._messages.put(Message(should_stop=True))
-
-        for worker_thread in self._worker_threads:
-            worker_thread.join()
-
-        self._is_running = False
-        self._worker_threads = []
+        self.stop_threads()
 
         logger.info("--------------------------------------------------------------------")
         logger.info("Migration completed")

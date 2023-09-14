@@ -294,17 +294,20 @@ class Test3Orthancs(unittest.TestCase):
 
         self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
-        migrator = PacsMigrator(
-            api_client=self.ob,
-            source_modality="orthanc-z",
-            destination_aet="ORTHANC-B",
-            from_study_date=datetime.date(2004, 1, 18),
-            to_study_date=datetime.date(2004, 1, 20),
-            exit_on_error=True
-        )
+        with self.assertRaises(SystemExit) as cm:
+            migrator = PacsMigrator(
+                api_client=self.ob,
+                source_modality="orthanc-z",
+                destination_aet="ORTHANC-B",
+                from_study_date=datetime.date(2004, 1, 18),
+                to_study_date=datetime.date(2004, 1, 20),
+                exit_on_error=True
+            )
 
-        with self.assertRaises(SystemExit):
             migrator.execute()
+
+        self.assertEqual(cm.exception.code, 1)
+
 
 
     def test_orthanc_comparator_as_a_migrator(self):

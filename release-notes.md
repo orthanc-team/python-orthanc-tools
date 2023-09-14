@@ -1,6 +1,10 @@
-v 0.9.4
+v 0.9.5
 =======
 - `PacsMigrator`: added `exit_on_error` parameter
+
+v 0.9.4
+=======
+- Forget it
 
 v 0.9.3
 =======

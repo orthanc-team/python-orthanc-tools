@@ -322,7 +322,7 @@ if __name__ == '__main__':
     parser.add_argument('--to_study_date', type=str, required='TO_STUDY_DATE' not in os.environ, help='To Study Date (format 20190225)')
     parser.add_argument('--delete_from_source', default=False, action='store_true', help='delete data from source (only if source is an Orthanc)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Worker threads count')
-    parser.add_argument('--exit_on_error', type=bool, default=False,  action='store_true', help='if True, the script will exit in case of error')
+    parser.add_argument('--exit_on_error', default=False, action='store_true', help='if True, the script will exit in case of error')
 
     Scheduler.add_parser_arguments(parser)
 

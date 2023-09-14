@@ -1,3 +1,7 @@
+v 0.9.6
+=======
+- `PacsMigrator`: fixed arg bug
+
 v 0.9.5
 =======
 - `PacsMigrator`: added `exit_on_error` parameter

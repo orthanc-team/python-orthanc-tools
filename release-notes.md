@@ -1,3 +1,7 @@
+v 0.9.4
+=======
+- `PacsMigrator`: added `exit_on_error` parameter
+
 v 0.9.3
 =======
 - `OrthancCleaner` and `OrthancComparator`: fixed required arg bug

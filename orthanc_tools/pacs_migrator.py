@@ -1,4 +1,5 @@
 import queue
+import sys
 import threading
 import time
 import os
@@ -63,7 +64,8 @@ class PacsMigrator:
                  destination_aet: str = None,           # Destination AET
                  delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only vali
                  scheduler: Scheduler = None,
-                 worker_threads_count: int = multiprocessing.cpu_count() - 1  # by default, use all CPUs but one for compression
+                 worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
+                 exit_on_error: bool = False
                  ):
 
         if (destination_aet is not None and destination_modality is not None):
@@ -78,6 +80,7 @@ class PacsMigrator:
         self._destination_aet = destination_aet
         self._delete_from_source = delete_from_source
         self._scheduler = scheduler
+        self._exit_on_error = exit_on_error
 
         self._worker_threads_count = worker_threads_count
         self._worker_threads = []
@@ -127,6 +130,8 @@ class PacsMigrator:
                         )
                 except Exception as ex:
                     logger.error(f"Error while transferring {message.orthanc_id} {str(ex)}")
+                    if self._exit_on_error:
+                        sys.exit(1)
 
 
             elif self._source_modality and self._destination_aet:
@@ -145,6 +150,8 @@ class PacsMigrator:
                         retry_count += 1
                         if retry_count == 5:
                             logger.error(f"Error (retried 5 times) while transferring {message.dicom_id} {str(ex)}")
+                            if self._exit_on_error:
+                                sys.exit(1)
                         else:
                             logger.warning(f"Error while transferring, retrying... {message.dicom_id} {str(ex)}")
 
@@ -237,12 +244,16 @@ class PacsMigrator:
                         retry_count += 1
                         if retry_count == 5:
                             logger.error("Could not query the modality (retried 5 times), aborting")
+                            if self._exit_on_error:
+                                sys.exit(1)
                             return
 
                 logger.info(f"Found {len(remote_modality_studies)} studies")
 
                 if self._max_cfind_study_count and len(remote_modality_studies) == self._max_cfind_study_count:
                     logger.error(f"Too many studies in a single request: {len(remote_modality_studies)}, you'll probably miss some studies")
+                    if self._exit_on_error:
+                        sys.exit(1)
 
                 for study in remote_modality_studies:
                     self.push_message(Message(dicom_id=study.dicom_id))
@@ -301,6 +312,8 @@ if __name__ == '__main__':
     parser.add_argument('--to_study_date', type=str, required='TO_STUDY_DATE' not in os.environ, help='To Study Date (format 20190225)')
     parser.add_argument('--delete_from_source', default=False, action='store_true', help='delete data from source (only if source is an Orthanc)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Worker threads count')
+    parser.add_argument('--exit_on_error', type=bool, default=False,  action='store_true', help='if True, the script will exit in case of error')
+
     Scheduler.add_parser_arguments(parser)
 
     args = parser.parse_args()
@@ -314,6 +327,7 @@ if __name__ == '__main__':
     from_study_date = helpers.from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))
     to_study_date = helpers.from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
+    exit_on_error = os.environ.get("EXIT_ON_ERROR", args.exit_on_error)
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 
@@ -331,7 +345,8 @@ if __name__ == '__main__':
         source_modality=source_modality,
         delete_from_source=delete_from_source,
         scheduler=scheduler,
-        worker_threads_count=worker_threads_count
+        worker_threads_count=worker_threads_count,
+        exit_on_error=exit_on_error
     )
 
     migrator.execute()

@@ -337,7 +337,6 @@ if __name__ == '__main__':
     from_study_date = helpers.from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))
     to_study_date = helpers.from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
-    exit_on_error = os.environ.get("EXIT_ON_ERROR", args.exit_on_error)
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 
@@ -345,6 +344,11 @@ if __name__ == '__main__':
         delete_from_source = os.environ.get("DELETE_FROM_SOURCE") == "true"
     else:
         delete_from_source = args.delete_from_source
+
+    if os.environ.get("EXIT_ON_ERROR", None) is not None:
+        exit_on_error = os.environ.get("EXIT_ON_ERROR") == "true"
+    else:
+        exit_on_error = args.exit_on_error
 
     migrator = PacsMigrator(
         api_client=OrthancApiClient(url, user=user, pwd=pwd),

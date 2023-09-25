@@ -1,3 +1,7 @@
+v 0.9.7
+=======
+- `PacsMigrator`: fixed arg bug (exit_on_error)
+
 v 0.9.6
 =======
 - `PacsMigrator`: fixed arg bug

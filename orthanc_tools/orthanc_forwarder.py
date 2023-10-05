@@ -63,6 +63,10 @@ class OrthancForwarder:
     - or override filter() in a subclass
     Images that are filtered out are deleted from the forwarder.
 
+    You may also provide a few callbacks e.g to log events:
+    - on_instances_set_forwarded()
+    - on_instances_set_forward_error()
+
     An OrthancForwarder may be triggered by two 'events': the stable study or the 'instance received' event.
 
     You might define multiple destinations -> the Forwarder will send the study to all destinations and delete the study only once the study has been sent to all destinations.
@@ -86,8 +90,10 @@ class OrthancForwarder:
                  trigger: ChangeType = ChangeType.STABLE_STUDY,
                  max_retry_count_at_startup: int = 5,
                  polling_interval_in_seconds: int = 1,
-                 instance_filter = None,    # a method to filter instances.  Signature: Filter(api_client, instance_id) -> bool (returns True to keep an instance, returns False to delete it)
-                 instance_processor = None  # a method to process instances before forwarding them.  Signature: Process(api_client, instance_id)
+                 instance_filter = None,                    # a method to filter instances.  Signature: Filter(api_client, instance_id) -> bool (returns True to keep an instance, returns False to delete it)
+                 instance_processor = None,                 # a method to process instances before forwarding them.  Signature: Process(api_client, instance_id)
+                 on_instances_set_forwarded = None,         # a method that is called each time an InstancesSet has been forwarded to a destination.  Signature: forwarded(instances_set, destination)
+                 on_instances_set_forward_error = None      # a method that is called each time an InstancesSet has failed to be forwarded to a destination.  Signature: forward_error(instances_set, destination, error)
                  ):
 
         self._source = source
@@ -99,6 +105,8 @@ class OrthancForwarder:
         self._execution_thread = None
         self._instance_filter = instance_filter
         self._instance_processor = instance_processor
+        self._on_instances_set_forwarded = on_instances_set_forwarded
+        self._on_instances_set_forward_error = on_instances_set_forward_error
         self._status = {}
 
     def wait_orthanc_started(self):
@@ -253,10 +261,22 @@ class OrthancForwarder:
                     logger.info(f"{instances_set} Sending ... already sent to {dest.destination} using {dest.forwarder_mode}")
 
                 sent_to_destinations.append(dest.destination)
+                if self._on_instances_set_forwarded:
+                    self._on_instances_set_forwarded(instances_set=instances_set,
+                                                     destination=dest.destination)
+
             except exceptions.OrthancApiException as ex:
                 logger.error(f"{instances_set} Error while forwarding to {dest.destination}: {ex.msg}")
+                if self._on_instances_set_forward_error:
+                    self._on_instances_set_forward_error(instances_set=instances_set,
+                                                         destination=dest.destination,
+                                                         error=ex.msg)
             except Exception as ex:
                 logger.error(f"{instances_set} Error while forwarding to {dest.destination}: {ex}", exc_info=1)
+                if self._on_instances_set_forward_error:
+                    self._on_instances_set_forward_error(instances_set=instances_set,
+                                                         destination=dest.destination,
+                                                         error=str(ex))
 
         return sent_to_destinations
             # has_been_sent_to = self._source.instances.get_string_metadata(instances_set.instances_ids[0], metadata_name=str(ForwarderMetadata.SENT_TO_DESTINATIONS.value), default_value="").split(",")
@@ -366,3 +386,9 @@ class OrthancForwarder:
                 metadata_name=metadata_name,
                 content=content
             ))
+
+    def on_instances_set_forwarded(self, instances_set: InstancesSet, destination: str):
+        pass
+
+    def on_instances_set_forward_error(self, instances_set: InstancesSet, destination: str, error: str):
+        pass

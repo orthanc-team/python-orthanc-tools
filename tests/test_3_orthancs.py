@@ -29,6 +29,9 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
+forwarder_count_failed = 0
+forwarder_count_success = 0
+
 class Test3Orthancs(unittest.TestCase):
 
     @classmethod
@@ -424,7 +427,6 @@ class Test3Orthancs(unittest.TestCase):
         mode = ForwarderMode.DICOM_SERIES_BY_SERIES
         trigger = ChangeType.STABLE_STUDY
 
-
         instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
 
         # keep only the sT2W/FLAIR series, delete other series
@@ -441,6 +443,14 @@ class Test3Orthancs(unittest.TestCase):
             r = api_client.upload(buffer=modified)
             self.assertEqual(r[0], instance_id)
 
+        def on_forwarded(instances_set, destination):
+            global forwarder_count_success
+            forwarder_count_success = forwarder_count_success + 1
+
+        def on_forward_failed(instances_set, destination, error):
+            global forwarder_count_failed
+            forwarder_count_failed = forwarder_count_failed + 1
+
         # Tell the target to reject incoming instances.  Therefore, we will exercise the retries !
         orthanc_a_config = self.ob.modalities.get_configuration(modality='orthanc-a')
         self.ob.modalities.delete(modality='orthanc-a')
@@ -453,7 +463,9 @@ class Test3Orthancs(unittest.TestCase):
             trigger=trigger,
             polling_interval_in_seconds=0.1,
             instance_filter=filter_instance,
-            instance_processor=process_instance
+            instance_processor=process_instance,
+            on_instances_set_forwarded=on_forwarded,
+            on_instances_set_forward_error=on_forward_failed
             ) as forwarder:
 
             time.sleep(3)
@@ -476,6 +488,10 @@ class Test3Orthancs(unittest.TestCase):
 
             # check it has been removed from Orthanc A
             self.assertEqual(0, len(self.oa.instances.get_all_ids()))
+
+            # check the callbacks have been called
+            self.assertNotEqual(0, forwarder_count_success)
+            self.assertNotEqual(0, forwarder_count_failed)
 
     def test_orthanc_cleaner_with_past_studies(self):
         self.oa.delete_all_content()

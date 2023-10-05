@@ -1,3 +1,7 @@
+v 0.9.8
+=======
+- `OrthancForwarder`: added 2 callbacks `on_instances_set_forwarded` and `on_instances_set_forward_error`
+
 v 0.9.7
 =======
 - `PacsMigrator`: fixed arg bug (exit_on_error)

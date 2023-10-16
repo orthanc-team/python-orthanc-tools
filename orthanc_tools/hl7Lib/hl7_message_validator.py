@@ -1,10 +1,7 @@
 import typing
-import socketserver, subprocess, sys, re, socket
-from threading import Thread
-import hl7
+import re
 
-
-class Hl7MessageValidator():
+class Hl7MessageValidator:
     """
     This class validates the structure of HL7 message (it actually only checks the start/end chars and line splits)
     and returns a string with the real message.

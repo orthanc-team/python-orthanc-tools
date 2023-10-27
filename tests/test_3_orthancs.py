@@ -33,8 +33,8 @@ class Test3Orthancs(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        subprocess.run(["docker-compose", "down", "-v"], cwd=here/"docker-setup")
-        subprocess.run(["docker-compose", "up", "-d"], cwd=here/"docker-setup")
+        subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup")
+        subprocess.run(["docker", "compose", "up", "-d"], cwd=here/"docker-setup")
 
         cls.oa = OrthancApiClient('http://localhost:10042', user='test', pwd='test')
         cls.oa.wait_started()
@@ -45,7 +45,7 @@ class Test3Orthancs(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        subprocess.run(["docker-compose", "down", "-v"], cwd=here/"docker-setup")
+        subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup")
 
     def test_cloner_default(self):
         self.oa.delete_all_content()

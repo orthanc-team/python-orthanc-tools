@@ -28,7 +28,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/guides/single-sourcing-package-version/
-    version='0.9.7',  # Required
+    version='0.9.8',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -134,7 +134,8 @@ setup(
         'pydicom>=2.3.1',
         'hl7==0.4.2',
         'six',
-        'schedule==1.2.0'
+        'schedule==1.2.0',
+        'pika'
     ],
 
     # List additional groups of dependencies here (e.g. development

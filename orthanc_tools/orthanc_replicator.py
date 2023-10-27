@@ -189,17 +189,54 @@ class OrthancReplicator:
         channel.queue_bind(exchange="orthanc-exchange", queue="standby-delete-queue", routing_key="standby-delete-queue")
         channel.queue_bind(exchange="orthanc-exchange", queue="standby-forward-queue", routing_key="standby-forward-queue")
 
+        ###### initial way (no clean stop possible):
+        # channel.basic_consume(queue='to-forward-queue', on_message_callback=self.to_forward_callback)
+        # channel.basic_consume(queue='to-delete-queue', on_message_callback=self.to_delete_callback)
+        #
+        # logger.info("Broker connection configured, waiting for messages...")
+        # channel.start_consuming() # this never ends
+
+        ###### first way:
+        # self._is_running = True
+        #
+        # while self._is_running:
+        #     for message in channel.consume("to-forward-queue", inactivity_timeout=1):
+        #         if not self._is_running:
+        #             break
+        #         if not all(message):
+        #             continue
+        #         method, properties, body = message
+        #         self.to_forward_callback(channel=channel, method=method, properties=properties, body=body)
+
+        ###### second way:
+        channel.queue_declare(queue='stop-queue')
+        channel.queue_bind(exchange="orthanc-exchange", queue="stop-queue", routing_key="stop-queue")
+        channel.basic_consume(queue='stop-queue', on_message_callback=self.stop_callback)
+
         channel.basic_consume(queue='to-forward-queue', on_message_callback=self.to_forward_callback)
         channel.basic_consume(queue='to-delete-queue', on_message_callback=self.to_delete_callback)
 
         logger.info("Broker connection configured, waiting for messages...")
         channel.start_consuming() # this never ends
 
+    def stop_callback(self, channel, method, properties, body):
+        channel.stop_consuming()
+
+        logger.info("Broker connection requested...")
+
     def stop(self):
         logger.info("Stopping Replicator...")
+        self._is_running = False
+
         connection = pika.BlockingConnection(self._broker_params)
         channel = connection.channel()
-        channel.stop_consuming()
+
+        channel.basic_publish(exchange='orthanc-exchange', routing_key='stop-queue', body="nawak")
+
+        ##### old way:
+        # connection = pika.BlockingConnection(self._broker_params)
+        # channel = connection.channel()
+        # channel.stop_consuming()
         #TODO: would be nice to stop in a cleaner way
 
     def execute(self):

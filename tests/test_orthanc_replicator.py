@@ -66,6 +66,7 @@ class TestOrthancReplicator(unittest.TestCase):
             }
 
         queue_to_count = channel.queue_declare(queue=queue_name, durable=True, arguments=arguments)
+        connection.close()
         return queue_to_count.method.message_count
 
     def get_number_of_running_containers(self):

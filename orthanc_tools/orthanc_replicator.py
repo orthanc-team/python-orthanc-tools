@@ -221,6 +221,7 @@ class OrthancReplicator:
 
     def stop_callback(self, channel, method, properties, body):
         channel.stop_consuming()
+        channel.close()
 
         logger.info("Broker connection requested...")
 

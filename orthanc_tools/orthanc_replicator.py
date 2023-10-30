@@ -69,11 +69,6 @@ class OrthancReplicator:
         self._destination = destination
         self._broker_params = broker_params
         self._consuming_thread = None
-        self._is_running = False
-        #logger.info("Starting replicator with {n} threads".format(n=self._worker_threads_count))
-
-    def broker_parameters(self):
-        return self._broker_params
 
     def to_delete_callback(self, channel, method, properties, body):
         orthanc_id = body.decode('utf8')
@@ -103,7 +98,7 @@ class OrthancReplicator:
         except ResourceNotFound as ex:
             # The instance may have been deleted (by a user, a script,...) from the source between the moment
             # it has been received in the source (and the id pushed into rabbitmq)
-            # and the moment we try to handle it. So, the destination will return a 404 http error.
+            # and the moment we try to handle it. So, the source will return a 404 http error.
             # In this case, simply log the error and ack the message (don't raise the Exception)
             logger.warning(f"Unable (404) to get instance instance from source ({orthanc_id}), probably already deleted...")
             channel.basic_ack(delivery_tag=method.delivery_tag)
@@ -192,40 +187,19 @@ class OrthancReplicator:
         channel.queue_bind(exchange="orthanc-exchange", queue="standby-delete-queue", routing_key="standby-delete-queue")
         channel.queue_bind(exchange="orthanc-exchange", queue="standby-forward-queue", routing_key="standby-forward-queue")
 
-        ###### initial way (no clean stop possible):
-        # channel.basic_consume(queue='to-forward-queue', on_message_callback=self.to_forward_callback)
-        # channel.basic_consume(queue='to-delete-queue', on_message_callback=self.to_delete_callback)
-        #
-        # logger.info("Broker connection configured, waiting for messages...")
-        # channel.start_consuming() # this never ends
-
-        ###### first way:
-        # self._is_running = True
-        #
-        # while self._is_running:
-        #     for message in channel.consume("to-forward-queue", inactivity_timeout=1):
-        #         if not self._is_running:
-        #             break
-        #         if not all(message):
-        #             continue
-        #         method, properties, body = message
-        #         self.to_forward_callback(channel=channel, method=method, properties=properties, body=body)
-
-        ###### second way:
-        channel.queue_declare(queue='stop-queue')
-        channel.queue_bind(exchange="orthanc-exchange", queue="stop-queue", routing_key="stop-queue")
-        channel.basic_consume(queue='stop-queue', on_message_callback=self.stop_callback)
-
         channel.basic_consume(queue='to-forward-queue', on_message_callback=self.to_forward_callback)
         channel.basic_consume(queue='to-delete-queue', on_message_callback=self.to_delete_callback)
 
+        # we declare a "stop-queue" which allows to gracefully stop the connection with rabbitmq
+        channel.queue_declare(queue='stop-queue')
+        channel.queue_bind(exchange="orthanc-exchange", queue="stop-queue", routing_key="stop-queue")
+        channel.basic_consume(queue='stop-queue', on_message_callback=self.stop_callback, auto_ack=True)
+
         logger.info("Broker connection configured, waiting for messages...")
         channel.start_consuming() # this never ends
-        logger.info("Consuming ended -----")
 
         channel.stop_consuming()
         connection.close()
-
 
         logger.info("Connection closed -----")
 
@@ -233,7 +207,7 @@ class OrthancReplicator:
         channel.stop_consuming()
         channel.close()
 
-        logger.info("Broker connection requested...")
+        logger.info("Broker connection stop requested...")
 
     def stop(self):
         logger.info("Stopping Replicator...")
@@ -241,16 +215,11 @@ class OrthancReplicator:
         connection = pika.BlockingConnection(self._broker_params)
         channel = connection.channel()
 
-        channel.basic_publish(exchange='orthanc-exchange', routing_key='stop-queue', body="nawak")
+        channel.basic_publish(exchange='orthanc-exchange', routing_key='stop-queue', body="stop")
 
-        ##### old way:
-        # connection = pika.BlockingConnection(self._broker_params)
-        # channel = connection.channel()
-        # channel.stop_consuming()
-        #TODO: would be nice to stop in a cleaner way
+        connection.close()
 
     def execute(self):
-        self._is_running = True
         self._consuming_thread = threading.Thread(target=self._consume)
         self._consuming_thread.start()
 

@@ -98,7 +98,7 @@ class TestOrthancReplicator(unittest.TestCase):
         broker_connection_parameters = pika.ConnectionParameters(
             "localhost", 5672,
             credentials=pika.PlainCredentials("rabbit", "123456"),
-            heartbeat=10
+            heartbeat=60
         )
         replicator = OrthancReplicator(
             source=self.oa,

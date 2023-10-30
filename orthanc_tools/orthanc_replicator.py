@@ -72,6 +72,9 @@ class OrthancReplicator:
         self._is_running = False
         #logger.info("Starting replicator with {n} threads".format(n=self._worker_threads_count))
 
+    def broker_parameters(self):
+        return self._broker_params
+
     def to_delete_callback(self, channel, method, properties, body):
         orthanc_id = body.decode('utf8')
         try:
@@ -218,6 +221,13 @@ class OrthancReplicator:
 
         logger.info("Broker connection configured, waiting for messages...")
         channel.start_consuming() # this never ends
+        logger.info("Consuming ended -----")
+
+        channel.stop_consuming()
+        connection.close()
+
+
+        logger.info("Connection closed -----")
 
     def stop_callback(self, channel, method, properties, body):
         channel.stop_consuming()
@@ -227,7 +237,6 @@ class OrthancReplicator:
 
     def stop(self):
         logger.info("Stopping Replicator...")
-        self._is_running = False
 
         connection = pika.BlockingConnection(self._broker_params)
         channel = connection.channel()
@@ -241,10 +250,9 @@ class OrthancReplicator:
         #TODO: would be nice to stop in a cleaner way
 
     def execute(self):
+        self._is_running = True
         self._consuming_thread = threading.Thread(target=self._consume)
         self._consuming_thread.start()
-
-
 
 # example:
 # python orthanc_tools/orthanc_replicator.py --source_url=http://localhost:8042 --dest_url=http://localhost:8044 --broker_url=http://localhost

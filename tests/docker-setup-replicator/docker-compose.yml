@@ -40,7 +40,6 @@ services:
 
   broker:
     image: rabbitmq:3-management
-    restart: unless-stopped
     ports: ["15672:15672", "5672:5672"]
     environment:
       - RABBITMQ_DEFAULT_USER=rabbit

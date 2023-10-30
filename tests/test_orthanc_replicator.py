@@ -47,8 +47,9 @@ class TestOrthancReplicator(unittest.TestCase):
 
     def get_rabbitmq_connection_params(self):
         broker_connection_parameters = pika.ConnectionParameters(
-            "localhost", 10672,
-            credentials=pika.PlainCredentials("rabbit", "123456")
+            "localhost", 5672,
+            credentials=pika.PlainCredentials("rabbit", "123456"),
+            heartbeat=10
         )
         return broker_connection_parameters
 
@@ -95,8 +96,9 @@ class TestOrthancReplicator(unittest.TestCase):
         self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
         broker_connection_parameters = pika.ConnectionParameters(
-            "localhost", 10672,
-            credentials=pika.PlainCredentials("rabbit", "123456")
+            "localhost", 5672,
+            credentials=pika.PlainCredentials("rabbit", "123456"),
+            heartbeat=10
         )
         replicator = OrthancReplicator(
             source=self.oa,

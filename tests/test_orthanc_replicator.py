@@ -93,7 +93,7 @@ class TestOrthancReplicator(unittest.TestCase):
         self.ob.delete_all_content()
 
         self.oa.upload_file(here / "stimuli/CT_small.dcm")
-
+        time.sleep(10)
         broker_connection_parameters = pika.ConnectionParameters(
             "localhost", 5672,
             credentials=pika.PlainCredentials("rabbit", "123456")

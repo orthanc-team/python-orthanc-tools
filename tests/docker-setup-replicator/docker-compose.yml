@@ -31,6 +31,7 @@ services:
       VERBOSE_ENABLED: "true"
       TRANSFERS_PLUGIN_ENABLED: "true"
       ORTHANC__KEEP_ALIVE_TIMEOUT: "5"
+      ORTHANC__EXECUTE_LUA_ENABLED: "true"
       ORTHANC__REGISTERED_USERS: |
         {
           "test": "test"

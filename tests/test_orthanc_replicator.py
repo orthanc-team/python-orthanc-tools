@@ -139,40 +139,41 @@ class TestOrthancReplicator(unittest.TestCase):
 
         replicator.stop()
 
-    # def test_retry_if_upload_fails(self):
-    #     self.oa.delete_all_content()
-    #     self.ob.delete_all_content()
-    #     self.purge_all_queues()
-    #
-    #     broker_connection_parameters = self.get_rabbitmq_connection_params()
-    #     replicator = OrthancReplicator(
-    #         source=self.oa,
-    #         destination=self.ob,
-    #         broker_params=broker_connection_parameters
-    #     )
-    #
-    #     replicator.execute()
-    #
-    #     # let's stop the destination, so that the replicator won't be able to forward the instance we will upload
-    #     subprocess.run(["docker", "compose", "stop", "orthanc-b"], cwd=here / "docker-setup-replicator")
-    #
-    #     # let's wait until it is actually stopped (only source and rabbitmq are up)
-    #     helpers.wait_until(lambda: self.get_number_of_running_containers() == 2, 20)
-    #
-    #     self.oa.upload_file(here / "stimuli/CT_small.dcm")
-    #
-    #     # let's check until the message is in the standby queue
-    #     helpers.wait_until(lambda: self.get_queue_length("forward", True) == 1, 5)
-    #
-    #     # let's restart the destination and wait till the end of startup seq
-    #     subprocess.run(["docker", "compose", "start", "orthanc-b"], cwd=here / "docker-setup-replicator")
-    #     helpers.wait_until(lambda: self.get_number_of_running_containers() == 3, 20)
-    #
-    #     # Let's check that there is now an instance in the destination
-    #     helpers.wait_until(lambda: len(self.ob.studies.get_all_ids()) == 1, 12)
-    #     self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
-    #
-    #     replicator.stop()
+    def test_retry_if_upload_fails(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+        self.purge_all_queues()
+
+        broker_connection_parameters = self.get_rabbitmq_connection_params()
+        replicator = OrthancReplicator(
+            source=self.oa,
+            destination=self.ob,
+            broker_params=broker_connection_parameters
+        )
+
+        replicator.execute()
+
+        # let's inhibit the destination, so that the replicator won't be able to forward the instance we will upload
+        with open(here / "docker-setup-replicator/inhibit.lua", 'rb') as f:
+            lua_script = f.read()
+        self.ob.execute_lua_script(lua_script)
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        # let's check until the message is in the standby queue
+        helpers.wait_until(lambda: self.get_queue_length("forward", True) == 1, 5)
+
+        # let's uninhibit the destination
+
+        with open(here / "docker-setup-replicator/uninhibit.lua", 'rb') as f:
+            lua_script = f.read()
+        self.ob.execute_lua_script(lua_script)
+
+        # Let's check that there is now an instance in the destination
+        helpers.wait_until(lambda: len(self.ob.studies.get_all_ids()) == 1, 12)
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+
+        replicator.stop()
 
     def test_already_deleted_instance(self):
         self.oa.delete_all_content()

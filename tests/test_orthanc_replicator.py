@@ -116,7 +116,9 @@ class TestOrthancReplicator(unittest.TestCase):
         replicator = OrthancReplicator(
             source=self.oa,
             destination=self.ob,
-            broker_params=broker_connection_parameters
+            broker_params=broker_connection_parameters,
+            socket_timeout=None,
+            stack_timeout=None
         )
 
         replicator.execute()

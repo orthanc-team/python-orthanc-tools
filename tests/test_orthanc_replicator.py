@@ -40,7 +40,10 @@ class TestOrthancReplicator(unittest.TestCase):
             "localhost", 5672,
             credentials=pika.PlainCredentials("rabbit", "123456"),
             connection_attempts=3,
-            heartbeat=0
+            heartbeat=0,
+            socket_timeout=None,
+            stack_timeout=None,
+            blocked_connection_timeout=None
         )
         return broker_connection_parameters
 
@@ -116,10 +119,7 @@ class TestOrthancReplicator(unittest.TestCase):
         replicator = OrthancReplicator(
             source=self.oa,
             destination=self.ob,
-            broker_params=broker_connection_parameters,
-            socket_timeout=None,
-            stack_timeout=None,
-            blocked_connection_timeout=None
+            broker_params=broker_connection_parameters
         )
 
         replicator.execute()

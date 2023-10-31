@@ -39,7 +39,8 @@ class TestOrthancReplicator(unittest.TestCase):
         broker_connection_parameters = pika.ConnectionParameters(
             "localhost", 5672,
             credentials=pika.PlainCredentials("rabbit", "123456"),
-            connection_attempts=3
+            connection_attempts=3,
+            heartbeat=0
         )
         return broker_connection_parameters
 

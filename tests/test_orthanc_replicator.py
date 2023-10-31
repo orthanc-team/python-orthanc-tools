@@ -118,7 +118,8 @@ class TestOrthancReplicator(unittest.TestCase):
             destination=self.ob,
             broker_params=broker_connection_parameters,
             socket_timeout=None,
-            stack_timeout=None
+            stack_timeout=None,
+            blocked_connection_timeout=None
         )
 
         replicator.execute()

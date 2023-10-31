@@ -38,7 +38,8 @@ class TestOrthancReplicator(unittest.TestCase):
     def get_rabbitmq_connection_params(self):
         broker_connection_parameters = pika.ConnectionParameters(
             "localhost", 5672,
-            credentials=pika.PlainCredentials("rabbit", "123456")
+            credentials=pika.PlainCredentials("rabbit", "123456"),
+            connection_attempts=3
         )
         return broker_connection_parameters
 

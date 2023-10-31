@@ -112,10 +112,7 @@ class TestOrthancReplicator(unittest.TestCase):
         self.oa.upload_file(here / "stimuli/CT_small.dcm")
 
         # let's configure the replicator
-        broker_connection_parameters = pika.ConnectionParameters(
-            "localhost", 5672,
-            credentials=pika.PlainCredentials("rabbit", "123456")
-        )
+        broker_connection_parameters = self.get_rabbitmq_connection_params()
         replicator = OrthancReplicator(
             source=self.oa,
             destination=self.ob,

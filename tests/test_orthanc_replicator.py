@@ -40,7 +40,7 @@ class TestOrthancReplicator(unittest.TestCase):
             "localhost", 5672,
             credentials=pika.PlainCredentials("rabbit", "123456"),
             connection_attempts=3,
-            heartbeat=0,
+            heartbeat=300,
             socket_timeout=None,
             stack_timeout=None,
             blocked_connection_timeout=None

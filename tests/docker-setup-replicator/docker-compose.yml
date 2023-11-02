@@ -1,0 +1,52 @@
+version: "3"
+services:
+  orthanc-a:
+    image: osimis/orthanc:23.9.0
+    depends_on:
+      broker:
+        condition: service_healthy
+    ports: ["10042:8042"]
+    environment:
+      VERBOSE_STARTUP: "true"
+      VERBOSE_ENABLED: "true"
+      TRANSFERS_PLUGIN_ENABLED: "true"
+      ORTHANC__STABLE_AGE: "1"
+      ORTHANC__KEEP_ALIVE_TIMEOUT: "5"
+      ORTHANC__REGISTERED_USERS: |
+        {"test": "test"}
+      ORTHANC__DICOM_AET: "ORTHANC-A"
+      ORTHANC__OVERWRITE_INSTANCES: "true"
+      ORTHANC__LUA_SCRIPTS: |
+        ["/var/lib/orthanc/lua/forward.lua"]
+      BROKER_USER: rabbit
+      BROKER_PASSWORD: "123456"
+    volumes: ["./lua:/var/lib/orthanc/lua"]
+
+
+  orthanc-b:
+    image: osimis/orthanc:23.9.0
+    ports: ["10043:8042"]
+    environment:
+      VERBOSE_STARTUP: "true"
+      VERBOSE_ENABLED: "true"
+      TRANSFERS_PLUGIN_ENABLED: "true"
+      ORTHANC__KEEP_ALIVE_TIMEOUT: "5"
+      ORTHANC__EXECUTE_LUA_ENABLED: "true"
+      ORTHANC__REGISTERED_USERS: |
+        {
+          "test": "test"
+        }
+      ORTHANC__DICOM_AET: "ORTHANC-B"
+      ORTHANC__OVERWRITE_INSTANCES: "true"
+
+  broker:
+    image: rabbitmq:3-management
+    ports: ["15672:15672", "5672:5672"]
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbit
+      - RABBITMQ_DEFAULT_PASS=123456
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 3s
+      timeout: 2s
+      retries: 5

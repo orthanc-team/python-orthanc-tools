@@ -29,11 +29,13 @@ jobs:
 
     - name: Run python tests
       run: |
+        pip install setuptools
         python setup.py egg_info
         pip install -r requirements.txt
         python -m unittest discover -s orthanc_tools/hl7Lib/tests
         python -m unittest tests/test_3_orthancs.py
         python -m unittest tests/test_old_files_deleter.py
+        python -m unittest tests/test_orthanc_replicator.py
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v2

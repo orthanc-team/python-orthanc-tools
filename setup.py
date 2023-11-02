@@ -130,11 +130,12 @@ setup(
     # https://packaging.python.org/discussions/install-requires-vs-requirements/
     install_requires=[
         'requests',
-        'orthanc-api-client>=0.13.7',
+        'orthanc-api-client>=0.14.2',
         'pydicom>=2.3.1',
         'hl7==0.4.2',
         'six',
-        'schedule==1.2.0'
+        'schedule==1.2.0',
+        'pika'
     ],
 
     # List additional groups of dependencies here (e.g. development

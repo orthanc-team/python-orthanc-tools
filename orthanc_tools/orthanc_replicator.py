@@ -5,7 +5,6 @@ import time
 import pika
 import logging
 import os
-from strenum import StrEnum
 
 from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus, ResourceNotFound
 

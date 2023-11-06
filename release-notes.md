@@ -1,3 +1,5 @@
+v 0.9.9
+=======
 - added `OrthancReplicator`
 
 v 0.9.8

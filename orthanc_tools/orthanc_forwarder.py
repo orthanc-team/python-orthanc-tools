@@ -290,6 +290,7 @@ class OrthancForwarder:
 
     def delete(self, instances_set):
         logger.info(f"{instances_set} Deleting ...")
+        del self._status[instances_set.id]
         instances_set.delete()
         logger.info(f"{instances_set} Deleting ... Done")
 

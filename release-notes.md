@@ -1,3 +1,7 @@
+v 0.9.10
+========
+- `OrthancForwarder`: fixed retry bug
+
 v 0.9.9
 =======
 - added `OrthancReplicator`

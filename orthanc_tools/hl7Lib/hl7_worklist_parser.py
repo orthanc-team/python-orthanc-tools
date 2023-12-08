@@ -16,10 +16,13 @@ class Hl7WorklistParser(Hl7MessageParser):
             # --- PID segment
             'PatientID': 'PID.F3.R1.C1',
             'IssuerOfPatientID': 'PID.F3.R1.C4',
+            'OtherPatientIDs': 'PID.F4.R1.C1',
             'PatientName': 'PID.F5',  # IHE recommend to use the whole Field 5 as the patient name (it's usually full of ^ that is a separator in HL7 so we must take it as is without trying to parse it !
             'PatientMotherBirthName': 'PID.F6',
             'PatientBirthDate': 'PID.F7',
             '_sex': 'PID.F8',
+            'PatientSpeciesDescription': 'PID.F9',
+            'PatientBreedDescription': 'PID.F10',
             'PatientAddress': 'PID.F11',
 
             # --- OBR segment
@@ -120,7 +123,6 @@ class Hl7WorklistParser(Hl7MessageParser):
             values['RequestingPhysician'] = values.get('_requestingPhysicianORC')
         elif values.get('_consultingDoctorPV1') is not None:
             values['RequestingPhysician'] = values.get('_consultingDoctorPV1')
-
 
 
         return values

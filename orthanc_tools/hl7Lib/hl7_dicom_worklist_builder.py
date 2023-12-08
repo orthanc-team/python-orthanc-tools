@@ -54,6 +54,7 @@ class DicomWorklistBuilder:
                                         ('InstitutionName', DicomElementType.OPTIONAL),
                                         ('InstitutionAddress', DicomElementType.OPTIONAL),
                                         ('PatientID', DicomElementType.MANDATORY),
+                                        ('OtherPatientIDs', DicomElementType.OPTIONAL),
                                         ('IssuerOfPatientID', DicomElementType.OPTIONAL),
                                         ('PatientName', DicomElementType.MANDATORY),
                                         ('PatientMotherBirthName', DicomElementType.OPTIONAL),
@@ -67,7 +68,10 @@ class DicomWorklistBuilder:
                                         ('RequestedProcedureDescription', DicomElementType.REQUIRED),
                                         ('RequestedProcedureID', DicomElementType.MANDATORY),
                                         ('SpecificCharacterSet', DicomElementType.MANDATORY),
-                                        ('ConfidentialityConstraintOnPatientDataDescription', DicomElementType.OPTIONAL)
+                                        ('ConfidentialityConstraintOnPatientDataDescription', DicomElementType.OPTIONAL),
+                                        ('PatientWeight', DicomElementType.OPTIONAL),
+                                        ('PatientSpeciesDescription', DicomElementType.OPTIONAL),
+                                        ('PatientBreedDescription', DicomElementType.OPTIONAL)
                           ]:
             self._add_field(ds, values, field_name, element_type)
 

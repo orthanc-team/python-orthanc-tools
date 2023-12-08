@@ -266,3 +266,60 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 self.assertEqual("UNKNOWN", wl.RequestedProcedureID)
                 self.assertEqual("Rue Noé 11^^VISE^^4200^BE^H", wl.PatientAddress)
                 self.assertEqual("23016738", wl.AccessionNumber)
+
+    def test_assistovet_worklists(self):
+        port_number = 2007  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+        with tempfile.TemporaryDirectory() as temporary_dir:
+
+            parser = Hl7WorklistParser()
+            builder = DicomWorklistBuilder(folder = temporary_dir)
+            orm_handler = Hl7OrmWorklistMsgHandler(parser=parser, builder=builder)
+
+            mllp_server = MLLPServer(
+                    host='localhost',
+                    port=port_number,
+                    handlers={
+                    'ORM^O01': (orm_handler.handle_orm_message,)
+                    }
+            )
+
+            with mllp_server as server:
+                # validate that ADT messages do create worklist files
+                with MLLPClient('localhost', port_number) as client:
+                    hl7_request = hl7.parse(
+                        "\x0bMSH|^~\&|AssistoVetMaestro|AssistoVetSystems|Echographie|Philips|20231109114936||ORM^O01|20231109114936-111717488|P|2.3.1|\r"
+                        "PID|||3951-1^^^MYPACS|250268731025243^|BENARD^HORUS|Maverick|20120824|M|Chien|Berger belge malinois|20 Rue des Moulins - 45430 MARDIE|||||||||\r"
+                        "PV1||O||||||M^Alfred Canard^rue des Sorbiers - 4800 Verviers|||||||||||||||||||||||\r"
+                        "ORC|NW|181416|181416||SC||^^^20231109114936||||||||||\r"
+                        "OBR|1|181416|181416|DX1^RADIO||||||||||||||20231109114936|ECHO2|20231109114936-111717488||||US\r"
+                        "OBX|1|ST|1010.1^BODY WEIGHT||36.000|kg|||||F\r"
+                        "ZDS|1.2.4.0.13.1.4.2252867.20231109114936|MYLAB||||\r"
+                        "\x1c\x0d"
+                    )
+                    response = client.send(hl7_request)
+                    hl7Response = hl7.parse(response)
+
+                # make sure a file has been created
+                files = glob.glob('{path}/*.wl'.format(path = temporary_dir))
+                self.assertEqual(1, len(files))
+                worklist_file_path = files[0]
+
+                # check the content of the file
+                wl = pydicom.read_file(worklist_file_path)
+                self.assertEqual("BENARD^HORUS", wl.PatientName)
+                self.assertEqual("20120824", wl.PatientBirthDate)
+                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+
+                # make sure all 'mandatory' fields are there
+                self.assertEqual("181416", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
+                self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
+                self.assertEqual("M^Alfred Canard^rue des Sorbiers - 4800 Verviers", wl.ReferringPhysicianName)
+                self.assertEqual("181416", wl.RequestedProcedureID)
+                self.assertEqual("20 Rue des Moulins - 45430 MARDIE", wl.PatientAddress)
+                self.assertEqual("181416", wl.AccessionNumber)
+                self.assertEqual(36.000, wl.PatientWeight)
+                self.assertEqual("Chien", wl.PatientSpeciesDescription)
+                self.assertEqual("Berger belge malinois", wl.PatientBreedDescription)
+                self.assertEqual("250268731025243", wl.OtherPatientIDs)
+                self.assertEqual("M", wl.PatientSex)
+

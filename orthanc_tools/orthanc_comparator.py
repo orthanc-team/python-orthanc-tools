@@ -114,10 +114,7 @@ class OrthancComparator:
                             logger.warning(f"WARNING {str(current_date)}, study missing from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
                             if self._retrieve_missing_from_orthanc:
                                 logger.warning(f"WARNING {str(current_date)}, retrieving missing study from Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
-                                self._api_client.modalities.move_study(
-                                    from_modality=self._modality,
-                                    dicom_id=remote_study.dicom_id
-                                )
+                                self.move_resource(from_modality=self._modality, dicom_id=remote_study.dicom_id)
                         elif len(local_match) > 1:
                             logger.warning(f"WARNING {str(current_date)}, study found multiple times on Orthanc: {remote_study.tags.get('PatientID')} - {remote_study.tags.get('PatientName')} - {remote_study.tags.get('StudyDescription')}")
                         # elif self._ignore_missing_on_modality: # in this case only, study comparison has not been performed above -> do it now
@@ -176,7 +173,7 @@ class OrthancComparator:
                         logger.warning(f"WARNING STUDY {dicom_id}, series missing from Orthanc: {remote_serie.dicom_id}")
                         if self._retrieve_missing_from_orthanc:
                             logger.warning(f"WARNING STUDY {dicom_id}, retrieving missing series from Orthanc: {remote_serie.dicom_id}")
-                            self._api_client.modalities.move_series(
+                            self.move_resource(
                                 from_modality=self._modality,
                                 dicom_id=remote_serie.dicom_id,
                                 study_dicom_id=dicom_id
@@ -232,7 +229,7 @@ class OrthancComparator:
                             logger.warning(f"WARNING SERIES {series_summary}, instance missing from Orthanc: {remote_instance.dicom_id}")
                             if self._retrieve_missing_from_orthanc:
                                 logger.warning(f"WARNING SERIES {series_summary}, retrieving instance missing from Orthanc: {remote_instance.dicom_id}")
-                                self._api_client.modalities.move_instance(
+                                self.move_resource(
                                     from_modality=self._modality,
                                     dicom_id=remote_instance.dicom_id,
                                     series_dicom_id=dicom_id,
@@ -251,6 +248,40 @@ class OrthancComparator:
 
         except Exception as ex:
             logger.error(f"ERROR: {str(ex)}")
+
+
+    def move_resource(self, from_modality, dicom_id, study_dicom_id = None, series_dicom_id = None):
+        retry_count = 0
+        while retry_count < 5:
+            try:
+                logger.info(f"C-Move resource {dicom_id} from source {from_modality} to Orthanc...")
+                if series_dicom_id is not None:
+                    self._api_client.modalities.move_instance(
+                        from_modality=from_modality,
+                        dicom_id=dicom_id,
+                        series_dicom_id=series_dicom_id,
+                        study_dicom_id=study_dicom_id
+                    )
+                elif study_dicom_id is not None:
+                    self._api_client.modalities.move_series(
+                        from_modality=from_modality,
+                        dicom_id=dicom_id,
+                        study_dicom_id=study_dicom_id
+                    )
+                else:
+                    self._api_client.modalities.move_study(
+                        from_modality=from_modality,
+                        dicom_id=dicom_id
+                    )
+                break
+            except Exception as ex:
+                retry_count += 1
+                if retry_count == 5:
+                    logger.error(f"Error (retried 5 times) while transferring {dicom_id} {str(ex)}")
+                    raise ex
+                else:
+                    logger.warning(f"Error while transferring, retrying... {dicom_id} {str(ex)}")
+
 
 
 if __name__ == '__main__':

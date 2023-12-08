@@ -54,6 +54,7 @@ class DicomWorklistBuilder:
                                         ('InstitutionName', DicomElementType.OPTIONAL),
                                         ('InstitutionAddress', DicomElementType.OPTIONAL),
                                         ('PatientID', DicomElementType.MANDATORY),
+                                        ('IssuerOfPatientID', DicomElementType.OPTIONAL),
                                         ('PatientName', DicomElementType.MANDATORY),
                                         ('PatientMotherBirthName', DicomElementType.OPTIONAL),
                                         ('PatientAddress', DicomElementType.OPTIONAL),
@@ -65,7 +66,8 @@ class DicomWorklistBuilder:
                                         ('ReferringPhysicianName', DicomElementType.REQUIRED),
                                         ('RequestedProcedureDescription', DicomElementType.REQUIRED),
                                         ('RequestedProcedureID', DicomElementType.MANDATORY),
-                                        ('SpecificCharacterSet', DicomElementType.MANDATORY)
+                                        ('SpecificCharacterSet', DicomElementType.MANDATORY),
+                                        ('ConfidentialityConstraintOnPatientDataDescription', DicomElementType.OPTIONAL)
                           ]:
             self._add_field(ds, values, field_name, element_type)
 
@@ -77,6 +79,7 @@ class DicomWorklistBuilder:
         for field_name, element_type in [('Modality', DicomElementType.REQUIRED),
                                         ('ScheduledProcedureStepStartDate', DicomElementType.OPTIONAL),
                                         ('ScheduledProcedureStepStartTime', DicomElementType.OPTIONAL),
+                                        ('ReasonForTheRequestedProcedure', DicomElementType.OPTIONAL),
                                         ('ReferringPhysicianName', DicomElementType.REQUIRED),
                                         ('ScheduledStationAETitle', DicomElementType.MANDATORY),
                                         ('ScheduledPerformingPhysicianName', DicomElementType.REQUIRED),

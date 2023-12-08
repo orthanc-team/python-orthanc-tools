@@ -20,12 +20,12 @@ class Hl7WorklistParser(Hl7MessageParser):
             'PatientMotherBirthName': 'PID.F6',
             'PatientBirthDate': 'PID.F7',
             '_sex': 'PID.F8',
-            'PatientAddress' : 'PID.F11',
+            'PatientAddress': 'PID.F11',
 
             # --- OBR segment
             #'AccessionNumber': 'OBR.F18',
             'AccessionNumber': 'OBR.F3.R1.C1',
-            'PatientState': 'OBR.F12',
+            #'PatientState': 'OBR.F12', # Seems to be something describing the state of the patient during the examination, so we don't put it in the worklist
             '_requestingPhysicianOBR': 'OBR.F16',
             'ReasonForTheRequestedProcedure': 'OBR.F31',
             'Modality': 'OBR.F24',
@@ -34,21 +34,21 @@ class Hl7WorklistParser(Hl7MessageParser):
             '_scheduledProcedureStepStartDateTime': 'OBR.F27.R1.C4',
 
             # --- PV1 segment
-            '_ambulatoryStatus' : 'PV1.F15',
-            'ReferringPhysicianName' : 'PV1.F8',
-            'ConfidentialityConstraintOnPatientDataDescription' : 'PV1.F16',
-            '_consultingDoctorPV1' : 'PV1.F9',
+            '_ambulatoryStatus': 'PV1.F15',
+            'ReferringPhysicianName': 'PV1.F8',
+            'ConfidentialityConstraintOnPatientDataDescription': 'PV1.F16',
+            '_consultingDoctorPV1': 'PV1.F9',
             ''
 
             # --- ORC segment
-            'OrderPlacerIdentifierSequence' : 'ORC.F2.R1.C1',
-            'RequestedProcedureID' : 'ORC.F2.R1.C1',
-            'ScheduledProcedureStepID' : 'ORC.F2.R1.C1',
-            'OrderFillerIdentifierSequence' : 'ORC.F3',
-            '_requestingPhysicianORC' : 'ORC.F12',
+            'OrderPlacerIdentifierSequence': 'ORC.F2.R1.C1', # not used in any builder!
+            'RequestedProcedureID': 'ORC.F2.R1.C1',
+            'ScheduledProcedureStepID': 'ORC.F2.R1.C1',
+            'OrderFillerIdentifierSequence': 'ORC.F3', # not used in any builder!
+            '_requestingPhysicianORC': 'ORC.F12',
 
             # --- ZDS segment
-            'StudyInstanceUID' : 'ZDS.F1.R1.C1'
+            'StudyInstanceUID': 'ZDS.F1.R1.C1'
         })
 
         # Let's add specific fields (they will override the default ones)

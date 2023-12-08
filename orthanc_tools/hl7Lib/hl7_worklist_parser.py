@@ -124,6 +124,10 @@ class Hl7WorklistParser(Hl7MessageParser):
         elif values.get('_consultingDoctorPV1') is not None:
             values['RequestingPhysician'] = values.get('_consultingDoctorPV1')
 
+        # specific to AssistoVet, this is the first Vet HL7 messages provider integrated, so this could elvove in the future:
+        if values.get('PatientSpeciesDescription') is not None or values.get('PatientBreedDescription') is not None:
+            # this should be an animal, so let's fill the responsible name
+            values['ResponsiblePerson'] = '^'.join({self._get('PID.F5.R1.C1'), values.get('PatientMotherBirthName')})
 
         return values
 

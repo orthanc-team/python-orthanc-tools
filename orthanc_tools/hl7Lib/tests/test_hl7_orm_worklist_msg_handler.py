@@ -322,4 +322,6 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 self.assertEqual("Berger belge malinois", wl.PatientBreedDescription)
                 self.assertEqual("250268731025243", wl.OtherPatientIDs)
                 self.assertEqual("M", wl.PatientSex)
+                self.assertEqual("BENARD^Maverick", wl.ResponsiblePerson)
+
 

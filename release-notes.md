@@ -1,3 +1,7 @@
+v 0.9.11
+========
+- `OrthancComparator`: added retry for MOVE and STORE
+
 v 0.9.10
 ========
 - `OrthancForwarder`: fixed retry bug

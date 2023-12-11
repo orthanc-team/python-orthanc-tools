@@ -93,10 +93,7 @@ class OrthancComparator:
                         logger.warning(f"WARNING {str(current_date)}, study missing on modality: {study_summary}")
                         if self._transfer_missing_to_modality:
                             logger.warning(f"WARNING {str(current_date)}, transferring study to modality: {study_summary}")
-                            self._api_client.modalities.send(
-                                target_modality=self._modality,
-                                resources_ids=local_study.orthanc_id
-                            )
+                            self.store_resource(target_modality=self._modality, orthanc_id=local_study.orthanc_id)
                     elif len(remote_match) > 1:
                         logger.warning(f"WARNING {str(current_date)}, study found multiple times on modality: {study_summary}")
                     elif len(remote_match) == 1:
@@ -151,10 +148,7 @@ class OrthancComparator:
                     logger.warning(f"WARNING STUDY {study_summary}, series missing from modality: {local_dicom_id}")
                     if self._transfer_missing_to_modality:
                         logger.warning(f"WARNING STUDY {study_summary}, transferring series to modality: {local_dicom_id}")
-                        self._api_client.modalities.send(
-                            target_modality=self._modality,
-                            resources_ids=local_serie.get('ID')
-                        )
+                        self.store_resource(target_modality=self._modality, orthanc_id=local_serie.get('ID'))
                 elif len(remote_match) > 1:
                     logger.warning(f"WARNING STUDY {study_summary}, series found multiple times on modality: {local_dicom_id}")
                 elif len(remote_match) == 1:
@@ -211,10 +205,7 @@ class OrthancComparator:
                         logger.warning(f"WARNING SERIES {series_summary}, instance missing from modality: {local_dicom_id}")
                         if self._transfer_missing_to_modality:
                             logger.warning(f"WARNING SERIES {series_summary}, transferring instance to modality: {local_dicom_id}")
-                            self._api_client.modalities.send(
-                                target_modality=self._modality,
-                                resources_ids=local_instance.get('ID')
-                            )
+                            self.store_resource(target_modality=self._modality, orthanc_id=local_instance.get('ID'))
                             success_count += 1
                     elif len(remote_match) > 1:
                         logger.warning(f"WARNING SERIES {series_summary}, instance found multiple times on modality: {local_dicom_id}")
@@ -282,7 +273,23 @@ class OrthancComparator:
                 else:
                     logger.warning(f"Error while transferring, retrying... {dicom_id} {str(ex)}")
 
-
+    def store_resource(self, target_modality, orthanc_id):
+        retry_count = 0
+        while retry_count < 5:
+            try:
+                logger.info(f"C-Store resource {orthanc_id} to remote modality {target_modality}...")
+                self._api_client.modalities.send(
+                    target_modality=target_modality,
+                    resources_ids=orthanc_id
+                )
+                break
+            except Exception as ex:
+                retry_count += 1
+                if retry_count == 5:
+                    logger.error(f"Error (retried 5 times) while storing {orthanc_id} {str(ex)}")
+                    raise ex
+                else:
+                    logger.warning(f"Error while storing, retrying... {orthanc_id} {str(ex)}")
 
 if __name__ == '__main__':
     level = logging.INFO

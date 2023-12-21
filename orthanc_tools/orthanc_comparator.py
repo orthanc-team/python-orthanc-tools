@@ -261,10 +261,19 @@ class OrthancComparator:
                         study_dicom_id=study_dicom_id
                     )
                 else:
-                    self._api_client.modalities.move_study(
+                    # Replaced by a "series by series" retrieve
+                    # self._api_client.modalities.move_study(
+                    #     from_modality=from_modality,
+                    #     dicom_id=dicom_id
+                    # )
+                    remote_series = self._api_client.modalities.query_series(
                         from_modality=from_modality,
-                        dicom_id=dicom_id
-                    )
+                        query={
+                            'StudyInstanceUID': dicom_id,
+                            'SeriesInstanceUID': ''
+                        })
+                    for series in remote_series:
+                        self.move_resource(from_modality=from_modality, dicom_id=series.dicom_id, study_dicom_id=dicom_id)
                 break
             except Exception as ex:
                 retry_count += 1

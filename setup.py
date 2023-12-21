@@ -5,7 +5,7 @@ here = pathlib.Path(__file__).parent.resolve()
 
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
-# Arguments marked as "Required" below must be included for upload to PyPI.
+# Arguments marked as "Required" below must be included for 0.9.11upload to PyPI.
 # Fields marked as "Optional" may be commented out.
 
 setup(
@@ -28,7 +28,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/guides/single-sourcing-package-version/
-    version='0.9.12',  # Required
+    version='0.9.13',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:

@@ -1,3 +1,7 @@
+v 0.9.13
+========
+- `OrthancComparator`: added series by series mode for retrieve
+
 v 0.9.12
 ========
 - `OrthancComparator`: added throttling

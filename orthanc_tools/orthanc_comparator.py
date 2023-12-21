@@ -1,4 +1,4 @@
-import os
+import os, time
 import logging
 import argparse
 import datetime
@@ -54,6 +54,7 @@ class OrthancComparator:
         while current_date != to_date:
             self.compare_date(current_date)
             current_date += datetime.timedelta(days=inc_date)
+            time.sleep(1) # throttling
 
     def compare_date(self, current_date: datetime.date):
         if self._scheduler:

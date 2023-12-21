@@ -1,3 +1,7 @@
+v 0.9.12
+========
+- `OrthancComparator`: added throttling
+
 v 0.9.11
 ========
 - `OrthancComparator`: added retry for MOVE and STORE

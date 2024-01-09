@@ -24,6 +24,7 @@ class Hl7WorklistParser(Hl7MessageParser):
             'PatientSpeciesDescription': 'PID.F9',
             'PatientBreedDescription': 'PID.F10',
             'PatientAddress': 'PID.F11',
+            'PatientSexNeutered': 'PID.F27', # from the theory, PID.F27 is 'Veterans Military Status', we decided to use it with AssistoVet
 
             # --- OBR segment
             #'AccessionNumber': 'OBR.F18',

@@ -288,7 +288,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
                         "\x0bMSH|^~\&|AssistoVetMaestro|AssistoVetSystems|Echographie|Philips|20231109114936||ORM^O01|20231109114936-111717488|P|2.3.1|\r"
-                        "PID|||3951-1^^^MYPACS|250268731025243^|BENARD^HORUS|Maverick|20120824|M|Chien|Berger belge malinois|20 Rue des Moulins - 45430 MARDIE|||||||||\r"
+                        "PID|||3951-1^^^MYPACS|250268731025243^|BENARD^HORUS|Maverick|20120824|M|Chien|Berger belge malinois|20 Rue des Moulins - 45430 MARDIE||||||||||||||||ALTERED\r"
                         "PV1||O||||||M^Alfred Canard^rue des Sorbiers - 4800 Verviers|||||||||||||||||||||||\r"
                         "ORC|NW|181416|181416||SC||^^^20231109114936||||||||||\r"
                         "OBR|1|181416|181416|DX1^RADIO||||||||||||||20231109114936|ECHO2|20231109114936-111717488||||US\r"
@@ -323,5 +323,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 self.assertEqual("250268731025243", wl.OtherPatientIDs)
                 self.assertEqual("M", wl.PatientSex)
                 self.assertEqual("BENARD^Maverick", wl.ResponsiblePerson)
+                self.assertEqual("ALTERED", wl.PatientSexNeutered)
+
 
 

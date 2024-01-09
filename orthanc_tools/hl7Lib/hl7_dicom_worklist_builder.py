@@ -72,7 +72,8 @@ class DicomWorklistBuilder:
                                         ('PatientWeight', DicomElementType.OPTIONAL),
                                         ('PatientSpeciesDescription', DicomElementType.OPTIONAL),
                                         ('PatientBreedDescription', DicomElementType.OPTIONAL),
-                                        ('ResponsiblePerson', DicomElementType.OPTIONAL)
+                                        ('ResponsiblePerson', DicomElementType.OPTIONAL),
+                                        ('PatientSexNeutered', DicomElementType.OPTIONAL)
                           ]:
             self._add_field(ds, values, field_name, element_type)
 

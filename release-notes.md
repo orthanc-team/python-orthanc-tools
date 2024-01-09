@@ -1,3 +1,7 @@
+v 0.9.14
+========
+- `DicomWorklistBuilder`: added fields and tests for Veterinarians purposes
+
 v 0.9.13
 ========
 - `OrthancComparator`: added series by series mode for retrieve

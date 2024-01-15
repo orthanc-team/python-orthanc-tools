@@ -1,3 +1,7 @@
+v 0.9.15
+========
+- `OrthancComparator`: added logging of errors in a file
+
 v 0.9.14
 ========
 - `DicomWorklistBuilder`: added fields and tests for Veterinarians purposes

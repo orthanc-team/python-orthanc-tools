@@ -373,6 +373,47 @@ class Test3Orthancs(unittest.TestCase):
         # now both orthanc should have full dataset
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
+    def test_error_log(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, 'errors.log')
+            # check that the errors are logged
+            self.oa.delete_all_content()  # source
+            self.ob.delete_all_content()  # migrator & destination
+
+            self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+            # let's make the orthanc b refure c-store requests (to cause an error)
+            conf = self.ob.modalities.get_configuration('orthanc-a')
+            conf['AllowStore'] = False
+            self.ob.modalities.configure('orthanc-a', conf)
+
+            comparator = OrthancComparator(
+                api_client=self.ob,
+                modality='orthanc-a',
+                level='Instance',
+                from_study_date=datetime.date(2004, 1, 18),
+                to_study_date=datetime.date(2004, 1, 20),
+                ignore_missing_on_modality=True,
+                retrieve_missing_from_orthanc=True,
+                error_log_file_path=path
+            )
+            comparator.execute()
+
+            self.assertTrue(os.path.exists(path))
+
+            with open(path, "r") as f:
+                content = f.readline()
+
+            id, date, level = content.split(',')
+            self.assertEqual(id, "1.3.6.1.4.1.5962.1.2.1.20040119072730.12322")
+            self.assertEqual(date, "20040119")
+            self.assertEqual(level, "study\n")
+
+            # let's restore config for other tets
+            conf['AllowStore'] = True
+            self.ob.modalities.configure('orthanc-a', conf)
+
+
     def test_all_instance_forwarder_modes(self):
         # simple forwarder test without filtering or processing
 

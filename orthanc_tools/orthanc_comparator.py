@@ -21,7 +21,8 @@ class OrthancComparator:
                  transfer_missing_to_modality: bool = False,
                  ignore_missing_from_orthanc: bool = False,
                  retrieve_missing_from_orthanc: bool = False,
-                 ignore_missing_on_modality: bool = False
+                 ignore_missing_on_modality: bool = False,
+                 error_log_file_path: str = None
                  ):
 
         if level not in ["Study", "Series", "Instance"]:
@@ -37,6 +38,9 @@ class OrthancComparator:
         self._ignore_missing_from_orthanc = ignore_missing_from_orthanc
         self._retrieve_missing_from_orthanc = retrieve_missing_from_orthanc
         self._ignore_missing_on_modality = ignore_missing_on_modality
+        self._error_log_file_path = error_log_file_path
+
+        self._current_date = None
 
     def execute(self):
 
@@ -49,11 +53,11 @@ class OrthancComparator:
             inc_date = -1
             to_date = self._to_study_date - datetime.timedelta(days=1)
 
-        current_date = self._from_study_date
+        self._current_date = self._from_study_date
 
-        while current_date != to_date:
-            self.compare_date(current_date)
-            current_date += datetime.timedelta(days=inc_date)
+        while self._current_date != to_date:
+            self.compare_date(self._current_date)
+            self._current_date += datetime.timedelta(days=inc_date)
             time.sleep(1) # throttling
 
     def compare_date(self, current_date: datetime.date):
@@ -245,9 +249,11 @@ class OrthancComparator:
     def move_resource(self, from_modality, dicom_id, study_dicom_id = None, series_dicom_id = None):
         retry_count = 0
         while retry_count < 5:
+            level = None
             try:
                 logger.info(f"C-Move resource {dicom_id} from source {from_modality} to Orthanc...")
                 if series_dicom_id is not None:
+                    level = 'instance'
                     self._api_client.modalities.move_instance(
                         from_modality=from_modality,
                         dicom_id=dicom_id,
@@ -255,6 +261,7 @@ class OrthancComparator:
                         study_dicom_id=study_dicom_id
                     )
                 elif study_dicom_id is not None:
+                    level = 'series'
                     self._api_client.modalities.move_series(
                         from_modality=from_modality,
                         dicom_id=dicom_id,
@@ -266,6 +273,7 @@ class OrthancComparator:
                     #     from_modality=from_modality,
                     #     dicom_id=dicom_id
                     # )
+                    level = 'study'
                     remote_series = self._api_client.modalities.query_series(
                         from_modality=from_modality,
                         query={
@@ -273,12 +281,24 @@ class OrthancComparator:
                             'SeriesInstanceUID': ''
                         })
                     for series in remote_series:
-                        self.move_resource(from_modality=from_modality, dicom_id=series.dicom_id, study_dicom_id=dicom_id)
+                        # self.move_resource(from_modality=from_modality, dicom_id=series.dicom_id, study_dicom_id=dicom_id)
+                        self._api_client.modalities.move_series(
+                            from_modality=from_modality,
+                            dicom_id=series.dicom_id,
+                            study_dicom_id=dicom_id
+                        )
                 break
             except Exception as ex:
                 retry_count += 1
                 if retry_count == 5:
                     logger.error(f"Error (retried 5 times) while transferring {dicom_id} {str(ex)}")
+                    if self._error_log_file_path is not None:
+                        self.log_error_in_file(
+                            file_path=self._error_log_file_path,
+                            id=dicom_id,
+                            date=helpers.to_dicom_date(self._current_date),
+                            level=level
+                        )
                     raise ex
                 else:
                     logger.warning(f"Error while transferring, retrying... {dicom_id} {str(ex)}")
@@ -300,6 +320,12 @@ class OrthancComparator:
                     raise ex
                 else:
                     logger.warning(f"Error while storing, retrying... {orthanc_id} {str(ex)}")
+
+    def log_error_in_file(self, file_path, id, date, level):
+        with open(file_path, "a") as f:
+            f.write(f"{id},{date},{level}")
+            f.write('\n')
+
 
 if __name__ == '__main__':
     level = logging.INFO
@@ -323,6 +349,7 @@ if __name__ == '__main__':
     parser.add_argument('--retrieve_missing_from_orthanc', default=False, action='store_true', help='Retrieve missing resources to Orthanc from the remote modality')
     parser.add_argument('--ignore_missing_on_modality', default=False, action='store_true', help="Don't generate a warning if resources are missing on the remote modality")
     # TODO parser.add_argument('--retrieve_missing_in_orthanc', default=False, action='store_true', help='Retrieve missing resources from remote modality into Orthanc')
+    parser.add_argument('--error_log_file_path', type=str, default='/errors.log', help='Path to the file to write errors log')
     Scheduler.add_parser_arguments(parser)
 
     args = parser.parse_args()
@@ -338,6 +365,7 @@ if __name__ == '__main__':
     ignore_missing_from_orthanc = os.environ.get("IGNORE_MISSING_FROM_ORTHANC", args.ignore_missing_from_orthanc)
     retrieve_missing_from_orthanc = os.environ.get("RETRIEVE_MISSING_FROM_ORTHANC", args.retrieve_missing_from_orthanc)
     ignore_missing_on_modality = os.environ.get("IGNORE_MISSING_ON_MODALITY", args.ignore_missing_on_modality)
+    error_log_file_path = os.environ.get("ERROR_LOG_FILE_PATH", args.error_log_file_path)
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 
@@ -351,7 +379,8 @@ if __name__ == '__main__':
         transfer_missing_to_modality=transfer_missing_to_modality,
         ignore_missing_from_orthanc=ignore_missing_from_orthanc,
         retrieve_missing_from_orthanc=retrieve_missing_from_orthanc,
-        ignore_missing_on_modality=ignore_missing_on_modality
+        ignore_missing_on_modality=ignore_missing_on_modality,
+        error_log_file_path=error_log_file_path
     )
 
     comparator.execute()

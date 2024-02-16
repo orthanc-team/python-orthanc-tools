@@ -146,3 +146,16 @@ The script will be executed every day at 2:30 (24 format!)
 ```shell
 python3 -m orthanc_tools.orthanc_cleaner --url=http://localhost:8042 --user=orthanc --password=orthanc --execution_time=2:30 --labels_file_path=./tests/stimuli/labels.csv
 ```
+
+## Deploy an HL7 server parsing ORM^O01 messages to create and store worklists files in a folder
+```
+   hl7-server:
+        image: orthancteam/python-orthanc-tools:0.10.0
+        ports: ["2575:2575"]
+        volumes: ["/worklists:/worklists"]
+        restart: unless-stopped
+        entrypoint: ["python", "-m", "orthanc_tools.hl7_worklist_server_for_orthanc"]
+```
+Then, add this env var to Orthanc:
+
+`ORTHANC__WORKLISTS__DATABASE: /var/lib/orthanc/worklists`

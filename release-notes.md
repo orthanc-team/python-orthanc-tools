@@ -1,3 +1,7 @@
+v 0.10.0
+========
+- added a new tool: `hl7_worklist_server_for_orthanc`
+
 v 0.9.15
 ========
 - `OrthancComparator`: added logging of errors in a file

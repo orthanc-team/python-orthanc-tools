@@ -1,3 +1,7 @@
+v 0.10.1
+========
+- added delay before retry in the `pacs_migrator` c-move
+
 v 0.10.0
 ========
 - added a new tool: `hl7_worklist_server_for_orthanc`

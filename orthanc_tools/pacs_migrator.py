@@ -138,7 +138,14 @@ class PacsMigrator:
 
             elif self._source_modality and self._destination_aet:
                 retry_count = 0
+                retry_delays = [5, 20, 60, 300, 900, 1800, 3600, 7200]
+
                 while retry_count < 5:
+                    if retry_count >= 1:
+                        delay = retry_delays[retry_count - 1]
+                        logger.info(f"waiting {delay} seconds before retrying C-Move for study {message.dicom_id}")
+                        time.sleep(delay)
+
                     try:
                         logger.info(f"C-Move study {message.dicom_id} from source {self._source_modality} to destination AET {self._destination_aet}")
                         # move the study from source to target modality

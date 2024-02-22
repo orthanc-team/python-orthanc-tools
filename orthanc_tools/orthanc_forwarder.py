@@ -355,7 +355,7 @@ class OrthancForwarder:
                 series = self._source.series.get(s)
                 if series.statistics.uncompressed_size > 1*1024*1024*1024:
                     logger.info(f"{instances_set} A series is larger than 1 GB, sending instance by instance")
-                    for i in instances_set.get_instances_ids(seris_id=s):
+                    for i in instances_set.get_instances_ids(series_id=s):
                         self._source.dicomweb_servers.send(
                             target_server=destination.destination,
                             resources_ids=[i]

@@ -1,3 +1,8 @@
+v 0.10.2
+========
+
+- `OrthancForwarder`: fixed forwarding of series > 1 GB in `DICOM_WEB_SERIES_BY_SERIES` mode
+
 v 0.10.1
 ========
 - added delay before retry in the `pacs_migrator` c-move
@@ -40,27 +45,11 @@ v 0.9.8
 
 v 0.9.7
 =======
-- `PacsMigrator`: fixed arg bug (exit_on_error)
-
-v 0.9.6
-=======
-- `PacsMigrator`: fixed arg bug
-
-v 0.9.5
-=======
 - `PacsMigrator`: added `exit_on_error` parameter
-
-v 0.9.4
-=======
-- Forget it
 
 v 0.9.3
 =======
 - `OrthancCleaner` and `OrthancComparator`: fixed required arg bug
-
-v 0.9.2
-=======
-- `OrthancCleaner`: updated setup.py
 
 v 0.9.1
 =======
@@ -78,11 +67,6 @@ v 0.8.8
 =======
 
 - `OrthancMonitor`: fixed monitor
-
-v 0.8.7
-=======
-
-- Forget it
 
 v 0.8.6
 =======

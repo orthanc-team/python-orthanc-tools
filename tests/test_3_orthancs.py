@@ -16,7 +16,7 @@ import os
 import logging
 import unittest
 
-from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner
+from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, IdsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -311,7 +311,24 @@ class Test3Orthancs(unittest.TestCase):
 
         self.assertEqual(cm.exception.code, 1)
 
+    def test_ids_migrator_aside(self):
+        self.oa.delete_all_content()  # source
+        self.ob.delete_all_content()  # migrator
+        self.oc.delete_all_content()  # destination
 
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+        self.oa.upload_file(here / "stimuli//MR/Brain/1/IM0")
+
+        migrator = IdsMigrator(
+            api_client=self.ob,
+            source_modality="orthanc-a",
+            destination_aet="ORTHANC-C",
+            ids_list_file_path=here / "stimuli/list.csv"
+        )
+        migrator.execute()
+
+        # check all instances have been transferred and are still on the source
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.oc.instances.get_all_ids()))
 
     def test_orthanc_comparator_as_a_migrator(self):
         self.oa.delete_all_content()  # source & migrator

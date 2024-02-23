@@ -1,3 +1,7 @@
+v 0.12.0
+========
+- added `orthanc_uploader` tool
+
 v 0.11.0
 ========
 - added `ids_migrator` tool

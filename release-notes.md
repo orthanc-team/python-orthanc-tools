@@ -1,3 +1,7 @@
+v 0.11.0
+========
+- added `ids_migrator` tool
+
 v 0.10.2
 ========
 

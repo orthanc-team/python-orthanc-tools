@@ -643,7 +643,6 @@ class Test3Orthancs(unittest.TestCase):
         self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
         self.assertNotEqual(old_study_id, self.oa.studies.get_all_ids()[0])
 
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     unittest.main()

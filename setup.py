@@ -135,7 +135,9 @@ setup(
         'hl7==0.4.2',
         'six',
         'schedule==1.2.0',
-        'pika'
+        'pika',
+        'pathlib',
+        'inquirer'
     ],
 
     # List additional groups of dependencies here (e.g. development

@@ -1,4 +1,4 @@
-v 0.12.1
+v 0.12.2
 ========
 - added `orthanc_uploader` tool
 
@@ -8,7 +8,6 @@ v 0.11.0
 
 v 0.10.2
 ========
-
 - `OrthancForwarder`: fixed forwarding of series > 1 GB in `DICOM_WEB_SERIES_BY_SERIES` mode
 
 v 0.10.1

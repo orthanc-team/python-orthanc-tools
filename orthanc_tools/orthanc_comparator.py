@@ -133,7 +133,7 @@ class OrthancComparator:
 
         try:
 
-            local_series = self._api_client.get_json(f"/studies/{orthanc_id}/series?expand")
+            local_series = self._api_client.get_json(f"studies/{orthanc_id}/series?expand")
 
             remote_series = self._api_client.modalities.query_series(
                 from_modality=self._modality,
@@ -186,7 +186,7 @@ class OrthancComparator:
     def compare_series(self, orthanc_id: str, dicom_id: str, study_dicom_id: str, series_summary: str):
 
         try:
-            local_instances = self._api_client.get_json(f"/series/{orthanc_id}/instances?expand")
+            local_instances = self._api_client.get_json(f"series/{orthanc_id}/instances?expand")
 
             remote_instances = self._api_client.modalities.query_instances(
                 from_modality=self._modality,

@@ -1,4 +1,4 @@
-v 0.12.2
+v 0.12.3
 ========
 - added `orthanc_uploader` tool
 

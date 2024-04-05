@@ -1,3 +1,7 @@
+v 0.12.4
+========
+- updated `orthanc-api-client` to 0.15.0
+
 v 0.12.3
 ========
 - added `orthanc_uploader` tool

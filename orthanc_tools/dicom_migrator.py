@@ -95,7 +95,7 @@ class DicomMigrator:
 
         if not self._destination_modality and not self._destination_aet:
             # destination is orthanc -> set orthanc AET
-            self._destination_aet = self._api_client.get_json('/system')["DicomAet"]
+            self._destination_aet = self._api_client.get_json('system')["DicomAet"]
 
     @property
     def source_is_orthanc(self):

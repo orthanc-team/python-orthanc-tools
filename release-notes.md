@@ -1,6 +1,6 @@
-v 0.12.4
+v 0.12.5
 ========
-- updated `orthanc-api-client` to 0.15.0
+- updated `orthanc-api-client` to 0.15.1
 
 v 0.12.3
 ========

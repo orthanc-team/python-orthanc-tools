@@ -324,6 +324,8 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 self.assertEqual("M", wl.PatientSex)
                 self.assertEqual("BENARD^Maverick", wl.ResponsiblePerson)
                 self.assertEqual("ALTERED", wl.PatientSexNeutered)
+                self.assertEqual("20231109",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
+                self.assertEqual("114936",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartTime)
 
 
 

@@ -232,7 +232,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                     hl7_request = hl7.parse(
                         "\x0bMSH|^~\&|OAZIS||||20230404090644||ADT^A04|01370309|P|2.3||||||8859/1\r"
                         "EVN|A04|20230404090644|||AGIRMANSPOL|202304040906\r"
-                        "PID|1||341410|91041739368^^^^NN|Moraloa^Salva Bernard^^^Monsieur||19910417|M|||Rue No\xe9 11^^VISE^^4200^BE^H||0499/244732^^CP||FR|U||20624682|0000000000|91041739368||||||BE||||N\r"
+                        "PID|1||341410|91041739368^^^^NN|Moraloa^Salva Bernard^^^Monsieur||19910417|U|||Rue No\xe9 11^^VISE^^4200^BE^H||0499/244732^^CP||FR|U||20624682|0000000000|91041739368||||||BE||||N\r"
                         "PD1||||16409914^GILON^PIERRE||||||||N\r"
                         "NK1|1|BALLROS MARIA|OTH^Autre|. ^^^^null|||CP^1|19900101\r"
                         "NK1|2|BALLROS MARIA|OTH^Autre|AV.G.TRUFFEE,21/009 ^^LIEGE^^4020^BE|||CP^2|19900101\r"
@@ -266,6 +266,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 self.assertEqual("UNKNOWN", wl.RequestedProcedureID)
                 self.assertEqual("Rue Noé 11^^VISE^^4200^BE^H", wl.PatientAddress)
                 self.assertEqual("23016738", wl.AccessionNumber)
+                self.assertEqual("", wl.PatientSex)
 
     def test_assistovet_worklists(self):
         port_number = 2007  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)

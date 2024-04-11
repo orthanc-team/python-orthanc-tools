@@ -88,9 +88,9 @@ class Hl7WorklistParser(Hl7MessageParser):
         sex = values['_sex']
         if sex is None or sex in ['M', 'F']:
             values['PatientSex'] = sex
-        elif sex in ['U']:  # unknown in HL7 -> null in Dicom
-            values['PatientSex'] = None
-        elif sex in ['A', 'N']:  # ambiguous or Not Applicable in HL7 -> 'other' in Dicom
+        elif sex in ['U']:  # unknown in HL7 -> empty in DICOM
+            values['PatientSex'] = ''
+        elif sex in ['A', 'N', 'O']:  # Ambiguous or Not Applicable or Other in HL7 -> 'other' in Dicom
             values['PatientSex'] = 'O'
 
         # clean birthdate

@@ -1,3 +1,7 @@
+v 0.12.7
+========
+- upgraded `Hl7WorklistParser` to correctly handle the values (including 'U') for `PatientSex` segment
+
 v 0.12.6
 ========
 - upgraded `Hl7WorklistParser` to handle `ScheduledProcedureStepStartDate` and `ScheduledProcedureStepStartTime` in OBR segment from assistovet

@@ -1,3 +1,7 @@
+v 0.12.6
+========
+- upgraded `Hl7WorklistParser` to handle `ScheduledProcedureStepStartDate` and `ScheduledProcedureStepStartTime` in OBR segment from assistovet
+
 v 0.12.5
 ========
 - updated `orthanc-api-client` to 0.15.1

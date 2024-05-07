@@ -2,21 +2,16 @@ import argparse
 import datetime
 import logging
 import time
-import uuid
 import os
 import threading
 from strenum import StrEnum
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
-from enum import Enum
 
 from orthanc_api_client import OrthancApiClient, Study, Series, JobStatus, ResourceNotFound, InstancesSet, ResourceType, exceptions
-from .helpers.scheduler import Scheduler
-from .helpers.time_out import TimeOut
 from .orthanc_monitor import OrthancMonitor, ChangeType
 
 logger = logging.getLogger(__name__)
-
 
 class ForwarderMode(StrEnum):
     DICOM = 'dicom'             # use DICOM
@@ -393,3 +388,48 @@ class OrthancForwarder:
 
     def on_instances_set_forward_error(self, instances_set: InstancesSet, destination: str, error: str):
         pass
+
+
+if __name__ == '__main__':
+    level = logging.INFO
+
+    if os.environ.get('VERBOSE_ENABLED'):
+        level = logging.DEBUG
+
+    logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    parser = argparse.ArgumentParser(description='Forwards everything Orthanc receives to another Orthanc peer, a DICOM modality or DicomWeb server.')
+    parser.add_argument('--source_url', type=str, default=None, help='Orthanc source url')
+    parser.add_argument('--source_user', type=str, default=None, help='Orthanc source user name')
+    parser.add_argument('--source_pwd', type=str, default=None, help='Orthanc source password')
+    parser.add_argument('--destination', type=str, default=None, help='Orthanc destination alias')
+
+    parser.add_argument('--trigger', type=str, default=None, help='NewInstance or StableStudy')
+    #parser.add_argument('--mode', type=str, default=None, help='Forwarder Mode (Default, Peering, Transfer)')
+
+    args = parser.parse_args()
+
+    source_url = os.environ.get("SOURCE_URL", args.source_url)
+    source_user = os.environ.get("SOURCE_USER", args.source_user)
+    source_pwd = os.environ.get("SOURCE_PWD", args.source_pwd)
+    destination = os.environ.get("DESTINATION", args.destination)
+
+    trigger = os.environ.get("TRIGGER", args.trigger)
+    #mode = os.environ.get("MODE", args.mode)
+
+    if trigger == "StableStudy":
+        trigger = ChangeType.STABLE_STUDY
+    elif trigger == "NewInstance":
+        trigger = ChangeType.NEW_INSTANCE
+    else:
+        raise Exception(f"Trigger parameter not valid!")
+        exit(0)
+
+    forwarder = OrthancForwarder(
+        source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd),
+        destinations=[ForwarderDestination(destination=destination, forwarder_mode=ForwarderMode.DICOM)],
+        trigger=trigger
+    )
+
+    forwarder.execute()
+

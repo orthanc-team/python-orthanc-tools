@@ -1,3 +1,7 @@
+v 0.12.8
+========
+- added a way to call the `OrthancForwarder` directly from the shell
+
 v 0.12.7
 ========
 - upgraded `Hl7WorklistParser` to correctly handle the values (including 'U') for `PatientSex` segment

@@ -1,3 +1,7 @@
+v 0.12.9
+========
+- improved `Replicator` to retry broker connection
+
 v 0.12.8
 ========
 - added a way to call the `OrthancForwarder` directly from the shell

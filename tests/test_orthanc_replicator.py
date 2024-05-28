@@ -104,6 +104,18 @@ class TestOrthancReplicator(unittest.TestCase):
         running_containers = int(subprocess.check_output(bash_cmd, shell=True))
         return running_containers
 
+    def stop_container(self, container_name: str):
+        bash_cmd = f"docker stop {container_name}"
+        subprocess.check_output(bash_cmd, shell=True)
+
+    def start_container(self, container_name: str):
+        bash_cmd = f"docker start {container_name}"
+        subprocess.check_output(bash_cmd, shell=True)
+
+    def get_container_status(self, container_name: str):
+        bash_cmd = f"docker inspect --format={{{{.State.Health.Status}}}} {container_name}"
+        return subprocess.check_output(bash_cmd, shell=True)
+
     def test_forward_and_delete_instance(self):
 
         # clean up
@@ -134,7 +146,7 @@ class TestOrthancReplicator(unittest.TestCase):
         self.oa.delete_all_content()
 
         # and check that is has been deleted from the destination
-        helpers.wait_until(lambda: len(self.ob.studies.get_all_ids()) == 1, 5)
+        helpers.wait_until(lambda: len(self.ob.studies.get_all_ids()) == 0, 5)
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
         replicator.stop()
@@ -205,6 +217,55 @@ class TestOrthancReplicator(unittest.TestCase):
         # so let's check that the queues are empty
         helpers.wait_until(lambda: self.get_queue_length("delete", False) == 0, 5)
         helpers.wait_until(lambda: self.get_queue_length("delete", True) == 0, 5)
+
+        self.assertEqual(self.get_queue_length("delete", False), 0)
+        self.assertEqual(self.get_queue_length("delete", True), 0)
+
+        replicator.stop()
+
+
+    def test_connection_to_broker_failed(self):
+        '''
+        We want the replicator to continuously retries to reach the broker after a connection failure
+        '''
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+        self.purge_all_queues()
+
+        broker_connection_parameters = self.get_rabbitmq_connection_params()
+        replicator = OrthancReplicator(
+            source=self.oa,
+            destination=self.ob,
+            broker_params=broker_connection_parameters
+        )
+
+        replicator.execute()
+
+        # let's upload an instance in the source
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        # wait until it has been forwarded to the destination
+        helpers.wait_until(lambda: len(self.ob.studies.get_all_ids()) == 1, 5)
+
+        # let's stop the broker container
+        self.stop_container("broker")
+        # and wait until it's done
+        helpers.wait_until(lambda: self.get_number_of_running_containers() == 2, 10)
+
+        # let's restart the broker container
+        self.start_container("broker")
+        # and wait until it's done
+        helpers.wait_until(lambda: self.get_number_of_running_containers() == 3, 10)
+
+        # and until the broker is ready to accept connections
+        helpers.wait_until(lambda: str(self.get_container_status("broker")) == "healthy", 15)
+
+        # check that everything is now ok by deleting the instance from the orthanc source
+        self.oa.delete_all_content()
+
+        # and check that is has been deleted from the destination
+        helpers.wait_until(lambda: len(self.ob.studies.get_all_ids()) == 0, 10)
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
         replicator.stop()
 

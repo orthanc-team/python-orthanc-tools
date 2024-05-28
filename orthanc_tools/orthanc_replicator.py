@@ -69,6 +69,8 @@ class OrthancReplicator:
         self._broker_params = broker_params
         self._consuming_thread = None
 
+        self._stop_requested = False
+
     def to_delete_callback(self, channel, method, properties, body):
         orthanc_id = body.decode('utf8')
         try:
@@ -147,60 +149,66 @@ class OrthancReplicator:
 
         self.wait_orthanc_started()
 
-        # initialize connection to rabbitmq
-        connection = pika.BlockingConnection(self._broker_params)
-        channel = connection.channel()
+        # we want the replicator to retry to connect to the broker if there is a trouble...
+        while not self._stop_requested:
+            try:
 
-        # These steps should have been done in the lua, but they are idempotent
-        channel.exchange_declare(exchange="orthanc-exchange", exchange_type="direct", durable=True)
+                # initialize connection to rabbitmq
+                connection = pika.BlockingConnection(self._broker_params)
+                channel = connection.channel()
 
-        # "Main" queues
-        channel.queue_declare(queue='to-forward-queue',
-                              durable=True,
-                              arguments={
-                                  'x-dead-letter-exchange': 'orthanc-exchange',
-                                  'x-dead-letter-routing-key': 'standby-forward-queue'
-                              })
-        channel.queue_declare(queue='to-delete-queue', durable=True,
-                              arguments={
-                                  'x-dead-letter-exchange': 'orthanc-exchange',
-                                  'x-dead-letter-routing-key': 'standby-delete-queue'
-                              })
+                # These steps should have been done in the lua, but they are idempotent
+                channel.exchange_declare(exchange="orthanc-exchange", exchange_type="direct", durable=True)
 
-        # "Standby" queues (messages are waiting there is they were nacked)
-        channel.queue_declare(queue='standby-delete-queue', durable=True,
-                              arguments={
-                                  'x-message-ttl': 10000,
-                                  'x-dead-letter-exchange': 'orthanc-exchange',
-                                  'x-dead-letter-routing-key': 'to-delete-queue'
-                              })
-        channel.queue_declare(queue='standby-forward-queue', durable=True,
-                              arguments={
-                                  'x-message-ttl': 10000,
-                                  'x-dead-letter-exchange': 'orthanc-exchange',
-                                  'x-dead-letter-routing-key': 'to-forward-queue'
-                              })
+                # "Main" queues
+                channel.queue_declare(queue='to-forward-queue',
+                                      durable=True,
+                                      arguments={
+                                          'x-dead-letter-exchange': 'orthanc-exchange',
+                                          'x-dead-letter-routing-key': 'standby-forward-queue'
+                                      })
+                channel.queue_declare(queue='to-delete-queue', durable=True,
+                                      arguments={
+                                          'x-dead-letter-exchange': 'orthanc-exchange',
+                                          'x-dead-letter-routing-key': 'standby-delete-queue'
+                                      })
 
-        channel.queue_bind(exchange="orthanc-exchange", queue="to-forward-queue", routing_key="to-forward-queue")
-        channel.queue_bind(exchange="orthanc-exchange", queue="to-delete-queue", routing_key="to-delete-queue")
-        channel.queue_bind(exchange="orthanc-exchange", queue="standby-delete-queue", routing_key="standby-delete-queue")
-        channel.queue_bind(exchange="orthanc-exchange", queue="standby-forward-queue", routing_key="standby-forward-queue")
+                # "Standby" queues (messages are waiting there is they were nacked)
+                channel.queue_declare(queue='standby-delete-queue', durable=True,
+                                      arguments={
+                                          'x-message-ttl': 10000,
+                                          'x-dead-letter-exchange': 'orthanc-exchange',
+                                          'x-dead-letter-routing-key': 'to-delete-queue'
+                                      })
+                channel.queue_declare(queue='standby-forward-queue', durable=True,
+                                      arguments={
+                                          'x-message-ttl': 10000,
+                                          'x-dead-letter-exchange': 'orthanc-exchange',
+                                          'x-dead-letter-routing-key': 'to-forward-queue'
+                                      })
 
-        channel.basic_consume(queue='to-forward-queue', on_message_callback=self.to_forward_callback)
-        channel.basic_consume(queue='to-delete-queue', on_message_callback=self.to_delete_callback)
+                channel.queue_bind(exchange="orthanc-exchange", queue="to-forward-queue", routing_key="to-forward-queue")
+                channel.queue_bind(exchange="orthanc-exchange", queue="to-delete-queue", routing_key="to-delete-queue")
+                channel.queue_bind(exchange="orthanc-exchange", queue="standby-delete-queue", routing_key="standby-delete-queue")
+                channel.queue_bind(exchange="orthanc-exchange", queue="standby-forward-queue", routing_key="standby-forward-queue")
 
-        # we declare a "stop-queue" which allows to gracefully stop the connection with rabbitmq
-        channel.queue_declare(queue='stop-queue')
-        channel.queue_bind(exchange="orthanc-exchange", queue="stop-queue", routing_key="stop-queue")
-        channel.basic_consume(queue='stop-queue', on_message_callback=self.stop_callback, auto_ack=True)
+                channel.basic_consume(queue='to-forward-queue', on_message_callback=self.to_forward_callback)
+                channel.basic_consume(queue='to-delete-queue', on_message_callback=self.to_delete_callback)
 
-        logger.info("Broker connection configured, waiting for messages...")
-        channel.start_consuming() # this never ends
+                # we declare a "stop-queue" which allows to gracefully stop the connection with rabbitmq
+                channel.queue_declare(queue='stop-queue')
+                channel.queue_bind(exchange="orthanc-exchange", queue="stop-queue", routing_key="stop-queue")
+                channel.basic_consume(queue='stop-queue', on_message_callback=self.stop_callback, auto_ack=True)
 
-        channel.stop_consuming()
-        connection.close()
+                logger.info("Broker connection configured, waiting for messages...")
+                channel.start_consuming() # this never ends
 
-        logger.info("Connection closed -----")
+                channel.stop_consuming()
+                connection.close()
+
+            except Exception as e:
+                logger.info("Broker consuming error, will retry soon...")
+                time.sleep(1)
 
     def stop_callback(self, channel, method, properties, body):
         channel.stop_consuming()
@@ -210,6 +218,7 @@ class OrthancReplicator:
 
     def stop(self):
         logger.info("Stopping Replicator...")
+        self._stop_requested = True
 
         connection = pika.BlockingConnection(self._broker_params)
         channel = connection.channel()

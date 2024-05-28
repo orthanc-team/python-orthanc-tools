@@ -42,6 +42,7 @@ services:
   broker:
     image: rabbitmq:3-management
     ports: ["15672:15672", "5672:5672"]
+    container_name: broker
     environment:
       - RABBITMQ_DEFAULT_USER=rabbit
       - RABBITMQ_DEFAULT_PASS=123456

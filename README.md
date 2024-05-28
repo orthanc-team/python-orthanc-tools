@@ -99,6 +99,19 @@ $ docker exec -it xxxx bash
 ```
 
 
+## Implement a simple forwarder
+
+The forwarder simply forwards the content of an Orthanc to another DICOM destination and then, deletes
+the instances.  This is usefull for, e.g. implementing an Inbox in front of a PACS that does some
+`IngestTranscoding` and/or applies sanitization in a lua script or a python plugin.
+
+from a shell:
+
+```shell
+python3 -m orthanc_tools.orthanc_forwarder --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --destination=target_modality_alias --trigger=StableStudy
+```
+
+
 ## migrate DICOM Data from a modality to another
 
 More info in the [PacsMigrator class](orthanc_tools/pacs_migrator.py)

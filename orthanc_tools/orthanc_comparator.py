@@ -372,8 +372,8 @@ if __name__ == '__main__':
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
     parser.add_argument('--password', type=str, default=None, help='Orthanc password')
     parser.add_argument('--modality', type=str, required='MODALITY' not in os.environ, help='Alias of the modality to compare with (in Orthanc config)')
-    parser.add_argument('--from_study_date', type=str, required='FROM_STUDY_DATE' not in os.environ, help='From Study Date (format 20190225)')
-    parser.add_argument('--to_study_date', type=str, required='TO_STUDY_DATE' not in os.environ, help='To Study Date (format 20190225)')
+    parser.add_argument('--from_study_date', type=str, help='From Study Date (format 20190225)')
+    parser.add_argument('--to_study_date', type=str, help='To Study Date (format 20190225)')
     parser.add_argument('--level', type=str, default='Series', help='Compare resources up to Study/Series/Instance level')
     parser.add_argument('--transfer_missing_to_modality', default=False, action='store_true', help='Transfer missing resources from Orthanc to the remote modality')
     parser.add_argument('--ignore_missing_from_orthanc', default=False, action='store_true', help="Don't generate a warning if resources are missing from Orthanc")
@@ -419,7 +419,10 @@ if __name__ == '__main__':
         ignore_missing_from_orthanc=ignore_missing_from_orthanc,
         retrieve_missing_from_orthanc=retrieve_missing_from_orthanc,
         ignore_missing_on_modality=ignore_missing_on_modality,
-        error_log_file_path=error_log_file_path
+        error_log_file_path=error_log_file_path,
+        days_to_compare = days_to_compare,
+        execution_time = execution_time,
+        execution_day = execution_day
     )
 
     comparator.execute()

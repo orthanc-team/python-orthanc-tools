@@ -141,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--orthanc_url', type=str, default=None, help='Orthanc source url')
     parser.add_argument('--orthanc_user', type=str, default=None, help='Orthanc source user name')
     parser.add_argument('--orthanc_pwd', type=str, default=None, help='Orthanc source password')
-    parser.add_argument('--execution_time', type=str, default='2:30', help='Time for script execution (format: 23:30 or 23:30:14).')
+    parser.add_argument('--execution_time', type=str, default='02:30', help='Time for script execution (format: 23:30 or 23:30:14).')
     parser.add_argument('--labels_file_path', type=str, default=None, help='Path of the file containing the labels to handle and retention duration')
 
     args = parser.parse_args()

@@ -1,3 +1,7 @@
+v 0.12.10
+========
+- added periodic mode to the `Comparator` 
+
 v 0.12.9
 ========
 - improved `Replicator` to retry broker connection

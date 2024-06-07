@@ -6,6 +6,7 @@ from .helpers.scheduler import Scheduler
 from orthanc_api_client import helpers
 import logging
 from orthanc_api_client import OrthancApiClient
+import schedule
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,10 @@ class OrthancComparator:
                  ignore_missing_from_orthanc: bool = False,
                  retrieve_missing_from_orthanc: bool = False,
                  ignore_missing_on_modality: bool = False,
-                 error_log_file_path: str = None
+                 error_log_file_path: str = None,
+                 days_to_compare: int = None,
+                 execution_time: str = None,
+                 execution_day: str = None
                  ):
 
         if level not in ["Study", "Series", "Instance"]:
@@ -40,9 +44,36 @@ class OrthancComparator:
         self._ignore_missing_on_modality = ignore_missing_on_modality
         self._error_log_file_path = error_log_file_path
 
+        self._days_to_compare = days_to_compare
+        self._execution_time = execution_time
+        self._execution_day = execution_day
+
+        self._periodic_mode_enabled = False
+        if self._days_to_compare is not None and self._execution_day is not None and self._execution_time is not None:
+            self._periodic_mode_enabled = True
+
         self._current_date = None
 
     def execute(self):
+
+        # if one of the periodic mode parameters is missing, let's go for the regular mode
+        if not self._periodic_mode_enabled:
+            logger.info("----- Initializing Orthanc comparator (REGULAR mode, will run once)...")
+            self._execute()
+        else:
+            logger.info("----- Initializing Orthanc comparator (PERIODIC mode, will run on a periodic basis)...")
+            # 2 following lines allow to use a string as a method
+            schedule_method = getattr(schedule.every(), self._execution_day)
+            schedule_method.at(self._execution_time).do(self._execute)
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+
+    def _execute(self):
+
+        if self._periodic_mode_enabled:
+            self._from_study_date = datetime.date.today() - datetime.timedelta(days=self._days_to_compare)
+            self._to_study_date = datetime.date.today()
 
         if self._from_study_date < self._to_study_date:
             # ex 20220101 -> 20220131
@@ -350,6 +381,11 @@ if __name__ == '__main__':
     parser.add_argument('--ignore_missing_on_modality', default=False, action='store_true', help="Don't generate a warning if resources are missing on the remote modality")
     # TODO parser.add_argument('--retrieve_missing_in_orthanc', default=False, action='store_true', help='Retrieve missing resources from remote modality into Orthanc')
     parser.add_argument('--error_log_file_path', type=str, default='/errors.log', help='Path to the file to write errors log')
+    parser.add_argument('--days_to_compare', type=int, default=None, help='Enables periodic mode. This is the number of days to compare. The range will start at current day and will end x days before.')
+    parser.add_argument('--execution_time', type=str, default=None,
+                        help='Enables periodic mode. The time when the periodic run will start (format: 23:30 or 23:30:14).')
+    parser.add_argument('--execution_day', type=str, default=None,
+                        help='Enables periodic mode. The day when the periodic run will start. All days of the week are valid values (lowercase), \'day\' is also accepted for everyday runs.')
     Scheduler.add_parser_arguments(parser)
 
     args = parser.parse_args()
@@ -366,6 +402,9 @@ if __name__ == '__main__':
     retrieve_missing_from_orthanc = os.environ.get("RETRIEVE_MISSING_FROM_ORTHANC", args.retrieve_missing_from_orthanc)
     ignore_missing_on_modality = os.environ.get("IGNORE_MISSING_ON_MODALITY", args.ignore_missing_on_modality)
     error_log_file_path = os.environ.get("ERROR_LOG_FILE_PATH", args.error_log_file_path)
+    days_to_compare = int(os.environ.get("DAYS_TO_COMPARE", args.days_to_compare))
+    execution_time = os.environ.get("EXECUTION_TIME", args.execution_time)
+    execution_day = os.environ.get("EXECUTION_DAY", args.execution_day)
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 

@@ -93,7 +93,7 @@ class OrthancUploader:
             exit(-1)
 
         logger.info(f"starting import of folder {path} ...")
-        dicom_ids_set, orthanc_ids_set, rejected_files_list = orthanc_client.upload_folder_return_details(path)
+        dicom_ids_set, orthanc_ids_set, rejected_files_list = orthanc_client.upload_folder_return_details(path, True)
 
         logger.info(f"starting labeling...")
         for id in orthanc_ids_set:

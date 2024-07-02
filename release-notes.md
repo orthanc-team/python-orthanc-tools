@@ -1,6 +1,10 @@
-v 0.12.11
+v 0.12.12
 ========
 - upgraded `orthanc_uploader` to unzip before upload
+
+v 0.12.11
+========
+- forget it
 
 v 0.12.10
 ========

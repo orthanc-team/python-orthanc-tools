@@ -1,3 +1,7 @@
+v 0.12.11
+========
+- upgraded `orthanc_uploader` to unzip before upload
+
 v 0.12.10
 ========
 - added periodic mode to the `Comparator` 

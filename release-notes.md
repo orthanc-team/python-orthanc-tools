@@ -1,3 +1,7 @@
+v 0.12.13
+========
+- added api-key arg (and env var) as a way to authenticate to Orthanc for the tools
+
 v 0.12.12
 ========
 - upgraded `orthanc_uploader` to unzip before upload

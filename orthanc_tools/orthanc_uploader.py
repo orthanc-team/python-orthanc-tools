@@ -115,6 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('--url', help="The url of the Orthanc to upload studies to.", default="http://localhost:8042")
     parser.add_argument('--user', help="The user of the Orthanc to upload studies to.", default="demo")
     parser.add_argument('--password', help="The password of the Orthanc to upload studies to.", default="demo")
+    parser.add_argument('--api_key', type=str, default=None, help='Orthanc api-key')
     parser.add_argument('--start_path', help="The path used as start path for the selection of the folder containing studies to upload. Default value: script execution path", default=".")
 
     args = parser.parse_args()
@@ -122,9 +123,14 @@ if __name__ == '__main__':
     orthanc_url = args.url
     orthanc_user = args.user
     orthanc_password = args.password
+    orthanc_api_key = args.api_key
     start_path = args.start_path
 
-    orthanc_client = OrthancApiClient(orthanc_url, user=orthanc_user, pwd=orthanc_password)
+    orthanc_client = None
+    if orthanc_api_key is not None:
+        orthanc_client=OrthancApiClient(orthanc_url, headers={"api-key":orthanc_api_key})
+    else:
+        orthanc_client=OrthancApiClient(orthanc_url, user=orthanc_user, pwd=orthanc_password)
 
     uploader = OrthancUploader(api_client=orthanc_client, path=start_path)
 

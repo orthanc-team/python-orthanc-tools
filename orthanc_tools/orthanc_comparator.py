@@ -371,6 +371,7 @@ if __name__ == '__main__':
     parser.add_argument('--url', type=str, default='http://localhost:8042', help='Orthanc url')
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
     parser.add_argument('--password', type=str, default=None, help='Orthanc password')
+    parser.add_argument('--api_key', type=str, default=None, help='Orthanc api-key')
     parser.add_argument('--modality', type=str, required='MODALITY' not in os.environ, help='Alias of the modality to compare with (in Orthanc config)')
     parser.add_argument('--from_study_date', type=str, help='From Study Date (format 20190225)')
     parser.add_argument('--to_study_date', type=str, help='To Study Date (format 20190225)')
@@ -393,6 +394,7 @@ if __name__ == '__main__':
     url = os.environ.get("ORTHANC_URL", args.url)
     user = os.environ.get("ORTHANC_USER", args.user)
     password = os.environ.get("ORTHANC_PWD", args.password)
+    api_key = os.environ.get("ORTHANC_API_KEY", args.api_key)
     modality = os.environ.get("MODALITY", args.modality)
     level = os.environ.get("LEVEL", args.level)
     from_study_date = helpers.from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))
@@ -408,8 +410,14 @@ if __name__ == '__main__':
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 
+    api_client = None
+    if api_key is not None:
+        api_client=OrthancApiClient(url, headers={"api-key":api_key})
+    else:
+        api_client=OrthancApiClient(url, user=user, pwd=password)
+
     comparator = OrthancComparator(
-        api_client=OrthancApiClient(url, user=user, pwd=password),
+        api_client=api_client,
         modality=modality,
         from_study_date=from_study_date,
         to_study_date=to_study_date,

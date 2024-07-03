@@ -13,11 +13,17 @@ if __name__ == '__main__':
     parser.add_argument('--url', type=str, default='http://localhost:8042', help='Orthanc url')
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
     parser.add_argument('--password', type=str, default=None, help='Orthanc password')
+    parser.add_argument('--api_key', type=str, default=None, help='Orthanc api-key')
     parser.add_argument('--folder', type=str, help='Folder to import')
     parser.add_argument('--skip_extensions', type=str, default='', help='comma separated list of extensions to ignore: ex .zip,.cne')
     args = parser.parse_args()
 
-    o = OrthancApiClient(args.url, user=args.user, pwd=args.password)
+    o = None
+    if api_key is not None:
+        o=OrthancApiClient(args.url, headers={"api-key":args.api_key})
+    else:
+        o=OrthancApiClient(args.url, user=args.user, pwd=args.pwd)
+    
     o.upload_folder(
         folder_path=args.folder, 
         skip_extensions=args.skip_extensions.split(','),

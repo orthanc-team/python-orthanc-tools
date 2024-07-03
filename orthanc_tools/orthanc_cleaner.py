@@ -141,6 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--orthanc_url', type=str, default=None, help='Orthanc source url')
     parser.add_argument('--orthanc_user', type=str, default=None, help='Orthanc source user name')
     parser.add_argument('--orthanc_pwd', type=str, default=None, help='Orthanc source password')
+    parser.add_argument('--orthanc_api_key', type=str, default=None, help='Orthanc api-key')
     parser.add_argument('--execution_time', type=str, default='02:30', help='Time for script execution (format: 23:30 or 23:30:14).')
     parser.add_argument('--labels_file_path', type=str, default=None, help='Path of the file containing the labels to handle and retention duration')
 
@@ -149,11 +150,19 @@ if __name__ == '__main__':
     orthanc_url = os.environ.get("ORTHANC_URL", args.orthanc_url)
     orthanc_user = os.environ.get("ORTHANC_USER", args.orthanc_user)
     orthanc_pwd = os.environ.get("ORTHANC_PWD", args.orthanc_pwd)
+    orthanc_api_key = os.environ.get("ORTHANC_API_KEY", args.orthanc_api_key)
     execution_time = os.environ.get("EXECUTION_TIME", args.execution_time)
     labels_file_path = os.environ.get("LABELS_FILE_PATH", args.labels_file_path)
 
+
+    api_client = None
+    if orthanc_api_key is not None:
+        api_client=OrthancApiClient(orthanc_url, headers={"api-key":orthanc_api_key})
+    else:
+        api_client=OrthancApiClient(orthanc_url, user=orthanc_user, pwd=orthanc_pwd)
+
     cleaner = OrthancCleaner(
-        api_client=OrthancApiClient(orthanc_url, user=orthanc_user, pwd=orthanc_pwd),
+        api_client=api_client,
         execution_time=execution_time,
         labels_file_path=labels_file_path
     )

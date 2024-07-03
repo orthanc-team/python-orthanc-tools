@@ -165,6 +165,7 @@ if __name__ == '__main__':
     parser.add_argument('--url', type=str, default=None, help='Orthanc url')
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
     parser.add_argument('--password', type=str, default=None, help='Orthanc password')
+    parser.add_argument('--api_key', type=str, default=None, help='Orthanc api-key')
     parser.add_argument('--studies', type=int, default=100, help='Number of studies to push')
     parser.add_argument('--series', type=int, default=None, help='Number of series in each study')
     parser.add_argument('--instances', type=int, default=None, help='Number of instances in each series')
@@ -174,9 +175,16 @@ if __name__ == '__main__':
     url = os.environ.get("ORTHANC_URL", args.url)
     user = os.environ.get("ORTHANC_USER", args.user)
     pwd = os.environ.get("ORTHANC_PWD", args.password)
+    api_key = os.environ.get("ORTHANC_API_KEY", args.api_key)
+
+    api_client = None
+    if api_key is not None:
+        api_client=OrthancApiClient(url, headers={"api-key":api_key})
+    else:
+        api_client=OrthancApiClient(url, user=user, pwd=pwd)
 
     populator = OrthancTestDbPopulator(
-        api_client=OrthancApiClient(url, user=user, pwd=pwd),
+        api_client=api_client,
         studies_count=args.studies,
         series_count=args.series,
         instances_count=args.instances,

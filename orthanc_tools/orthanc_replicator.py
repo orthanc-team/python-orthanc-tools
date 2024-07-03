@@ -247,9 +247,11 @@ if __name__ == '__main__':
     parser.add_argument('--source_url', type=str, default=None, help='Orthanc source url')
     parser.add_argument('--source_user', type=str, default=None, help='Orthanc source user name')
     parser.add_argument('--source_pwd', type=str, default=None, help='Orthanc source password')
+    parser.add_argument('--source_api_key', type=str, default=None, help='Orthanc source api-key')
     parser.add_argument('--dest_url', type=str, default=None, help='Orthanc destination url')
     parser.add_argument('--dest_user', type=str, default=None, help='Orthanc destination user name')
     parser.add_argument('--dest_pwd', type=str, default=None, help='Orthanc destination password')
+    parser.add_argument('--dest_api_key', type=str, default=None, help='Orthanc destination api-key')
     parser.add_argument('--broker_url', type=str, default='broker', help='Broker url')
     parser.add_argument('--broker_user', type=str, default='rabbit', help='Broker user name')
     parser.add_argument('--broker_pwd', type=str, default='123456', help='Broker password')
@@ -261,10 +263,12 @@ if __name__ == '__main__':
     source_url = os.environ.get("SOURCE_URL", args.source_url)
     source_user = os.environ.get("SOURCE_USER", args.source_user)
     source_pwd = os.environ.get("SOURCE_PWD", args.source_pwd)
+    source_api_key = os.environ.get("SOURCE_API_KEY", args.source_api_key)
     
     dest_url = os.environ.get("DEST_URL", args.dest_url)
     dest_user = os.environ.get("DEST_USER", args.dest_user)
     dest_pwd = os.environ.get("DEST_PWD", args.dest_pwd)
+    dest_api_key = os.environ.get("DEST_API_KEY", args.dest_api_key)
     
     broker_url = os.environ.get("BROKER_URL", args.broker_url)
     broker_user = os.environ.get("BROKER_USER", args.broker_user)
@@ -275,9 +279,22 @@ if __name__ == '__main__':
 
     broker_connection_parameters = pika.ConnectionParameters(broker_url, broker_port, credentials=pika.PlainCredentials(broker_user, broker_pwd))
 
+    destination = None
+    if dest_api_key is not None:
+        destination=OrthancApiClient(dest_url, headers={"api-key":dest_api_key})
+    else:
+        destination=OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd)
+    
+    source = None
+    if source_api_key is not None:
+        source=OrthancApiClient(source_url, headers={"api-key":source_api_key})
+    else:
+        source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd)
+
+
     replicator = OrthancReplicator(
-        source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd),
-        destination=OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd),
+        source=source,
+        destination=destination,
         broker_params=broker_connection_parameters
     )
 

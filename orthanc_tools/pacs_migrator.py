@@ -151,6 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('--url', type=str, default=None, help='Orthanc url (migrator)')
     parser.add_argument('--user', type=str, default=None, help='Orthanc user name')
     parser.add_argument('--password', type=str, default=None, help='Orthanc password')
+    parser.add_argument('--api_key', type=str, default=None, help='Orthanc api-key')
     parser.add_argument('--destination_modality', type=str, default=None, help='Destination modality (alias)')
     parser.add_argument('--destination_aet', type=str, default=None, help='Destination AET')
     parser.add_argument('--source_modality', type=str, default=None, help='Source modality (alias)')
@@ -167,6 +168,7 @@ if __name__ == '__main__':
     url = os.environ.get("ORTHANC_URL", args.url)
     user = os.environ.get("ORTHANC_USER", args.user)
     pwd = os.environ.get("ORTHANC_PWD", args.password)
+    api_key = os.environ.get("ORTHANC_API_KEY", args.api_key)
     destination_modality = os.environ.get("DESTINATION_MODALITY", args.destination_modality)
     destination_aet = os.environ.get("DESTINATION_AET", args.destination_aet)
     source_modality = os.environ.get("SOURCE_MODALITY", args.source_modality)
@@ -186,8 +188,14 @@ if __name__ == '__main__':
     else:
         exit_on_error = args.exit_on_error
 
+    api_client = None
+    if api_key is not None:
+        api_client=OrthancApiClient(url, headers={"api-key":api_key})
+    else:
+        api_client=OrthancApiClient(url, user=user, pwd=pwd)
+
     migrator = PacsMigrator(
-        api_client=OrthancApiClient(url, user=user, pwd=pwd),
+        api_client=api_client,
         from_study_date=from_study_date,
         to_study_date=to_study_date,
         destination_modality=destination_modality,

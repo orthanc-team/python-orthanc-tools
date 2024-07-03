@@ -402,6 +402,7 @@ if __name__ == '__main__':
     parser.add_argument('--source_url', type=str, default=None, help='Orthanc source url')
     parser.add_argument('--source_user', type=str, default=None, help='Orthanc source user name')
     parser.add_argument('--source_pwd', type=str, default=None, help='Orthanc source password')
+    parser.add_argument('--source_api_key', type=str, default=None, help='Orthanc source api-key')
     parser.add_argument('--destination', type=str, default=None, help='Orthanc destination alias')
 
     parser.add_argument('--trigger', type=str, default=None, help='NewInstance or StableStudy')
@@ -412,6 +413,7 @@ if __name__ == '__main__':
     source_url = os.environ.get("SOURCE_URL", args.source_url)
     source_user = os.environ.get("SOURCE_USER", args.source_user)
     source_pwd = os.environ.get("SOURCE_PWD", args.source_pwd)
+    source_api_key = os.environ.get("SOURCE_API_KEY", args.source_api_key)
     destination = os.environ.get("DESTINATION", args.destination)
 
     trigger = os.environ.get("TRIGGER", args.trigger)
@@ -425,8 +427,14 @@ if __name__ == '__main__':
         raise Exception(f"Trigger parameter not valid!")
         exit(0)
 
+    api_client = None
+    if source_api_key is not None:
+        api_client=OrthancApiClient(source_url, headers={"api-key":source_api_key})
+    else:
+        api_client=OrthancApiClient(source_url, user=source_user, pwd=source_pwd)
+
     forwarder = OrthancForwarder(
-        source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd),
+        source=api_client,
         destinations=[ForwarderDestination(destination=destination, forwarder_mode=ForwarderMode.DICOM)],
         trigger=trigger
     )

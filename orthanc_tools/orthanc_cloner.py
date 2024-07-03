@@ -122,9 +122,11 @@ if __name__ == '__main__':
     parser.add_argument('--source_url', type=str, default=None, help='Orthanc source url')
     parser.add_argument('--source_user', type=str, default=None, help='Orthanc source user name')
     parser.add_argument('--source_pwd', type=str, default=None, help='Orthanc source password')
+    parser.add_argument('--source_api_key', type=str, default=None, help='Orthanc source api-key')
     parser.add_argument('--dest_url', type=str, default=None, help='Orthanc destination url')
     parser.add_argument('--dest_user', type=str, default=None, help='Orthanc destination user name')
     parser.add_argument('--dest_pwd', type=str, default=None, help='Orthanc destination password')
+    parser.add_argument('--dest_api_key', type=str, default=None, help='Orthanc destination api-key')
     parser.add_argument('--dest_peer', type=str, default=None, help='Orthanc destination peer (peer alias in source Orthanc)')
     parser.add_argument('--mode', type=str, default=None, help='Cloner Mode (Default, Peering, Transfer)')
     parser.add_argument('--persist_state_path', type=str, default=None, help='File path where the state of the cloner will be saved (to resume later)')
@@ -139,9 +141,11 @@ if __name__ == '__main__':
     source_url = os.environ.get("SOURCE_URL", args.source_url)
     source_user = os.environ.get("SOURCE_USER", args.source_user)
     source_pwd = os.environ.get("SOURCE_PWD", args.source_pwd)
+    source_api_key = os.environ.get("SOURCE_API_KEY", args.source_api_key)
     dest_url = os.environ.get("DEST_URL", args.dest_url)
     dest_user = os.environ.get("DEST_USER", args.dest_user)
     dest_pwd = os.environ.get("DEST_PWD", args.dest_pwd)
+    dest_api_key = os.environ.get("DEST_API_KEY", args.dest_api_key)
     dest_peer = os.environ.get("DEST_PEER", args.dest_peer)
     mode = os.environ.get("MODE", args.mode)
     persist_state_path = os.environ.get("PERSIST_STATE_PATH", args.persist_state_path)
@@ -153,10 +157,21 @@ if __name__ == '__main__':
 
     destination = None
     if dest_url:
-        destination = OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd)
+        destination = None
+        if dest_api_key is not None:
+            destination=OrthancApiClient(dest_url, headers={"api-key":dest_api_key})
+        else:
+            destination=OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd)
+    
+    source = None
+    if source_api_key is not None:
+        source=OrthancApiClient(source_url, headers={"api-key":source_api_key})
+    else:
+        source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd)
+
 
     cloner = OrthancCloner(
-        source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd),
+        source=source,
         destination=destination,
         persist_status_path=persist_state_path,
         mode=mode,

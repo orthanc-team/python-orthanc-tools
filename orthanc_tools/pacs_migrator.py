@@ -30,7 +30,9 @@ class PacsMigrator(DicomMigrator):
                  delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only vali
                  scheduler: Scheduler = None,
                  worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
-                 exit_on_error: bool = False
+                 exit_on_error: bool = False,
+                 orthanc_space_threshold: int = 0,
+                 waiting_time_for_space_threshold: int = 600 # useful for unit tests
                  ):
 
         super().__init__(
@@ -47,6 +49,25 @@ class PacsMigrator(DicomMigrator):
 
         self._from_study_date = from_study_date
         self._to_study_date = to_study_date
+        self._orthanc_space_threshold = orthanc_space_threshold
+        self._waiting_time_for_space_threshold = waiting_time_for_space_threshold
+
+    def wait_for_space_in_orthanc(self):
+        '''
+        At some point, we need to migrate a local PACS to a cloud Orthanc.
+        To do that, we use current class, with an Orthanc which is also a dicomweb-forwarder.
+        The problem is that the transfer from the local DICOM PACS to the forwarder is faster
+        than the transfer from the forwarder to the cloud Orthanc.
+        And so, the local server HD is full.
+        
+        Goal of this method: wait until the disk space used by Orthanc is above a threshold.
+        '''
+
+        total_disk_size_mb = self._api_client.get_statistics().total_disk_size_mb
+        while total_disk_size_mb > self._orthanc_space_threshold:
+            logger.info(f"Wait {self._waiting_time_for_space_threshold}s until Orthanc disk space used ({total_disk_size_mb}MB) is lower than {self._orthanc_space_threshold}MB")
+            time.sleep(self._waiting_time_for_space_threshold)
+            total_disk_size_mb = self._api_client.get_statistics().total_disk_size_mb
 
     def execute(self):
         super().execute()
@@ -80,6 +101,9 @@ class PacsMigrator(DicomMigrator):
                 for study in local_studies:
                     self.push_message(Message(orthanc_id=study.orthanc_id))
             else:
+                if self._orthanc_space_threshold > 0:
+                    self.wait_for_space_in_orthanc()
+
                 logger.info(f"Querying remote modality {self._source_modality}")
 
                 retry_count = 0
@@ -160,6 +184,7 @@ if __name__ == '__main__':
     parser.add_argument('--delete_from_source', default=False, action='store_true', help='delete data from source (only if source is an Orthanc)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Worker threads count')
     parser.add_argument('--exit_on_error', default=False, action='store_true', help='if True, the script will exit in case of error')
+    parser.add_argument('--orthanc_space_threshold', type=int, default=0, help='[MB] If different from 0, Migrator will wait until disk space used by Orthanc is above this value.')
 
     Scheduler.add_parser_arguments(parser)
 
@@ -175,6 +200,7 @@ if __name__ == '__main__':
     from_study_date = helpers.from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))
     to_study_date = helpers.from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
+    orthanc_space_threshold = int(os.environ.get("ORTHANC_SPACE_THRESHOLD", str(args.orthanc_space_threshold)))
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 
@@ -204,7 +230,8 @@ if __name__ == '__main__':
         delete_from_source=delete_from_source,
         scheduler=scheduler,
         worker_threads_count=worker_threads_count,
-        exit_on_error=exit_on_error
+        exit_on_error=exit_on_error,
+        orthanc_space_threshold=orthanc_space_threshold
     )
 
     migrator.execute()

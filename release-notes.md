@@ -1,3 +1,7 @@
+v 0.12.14
+========
+- added `orthanc_space_threshold` parameter to the `PacsMigrator`
+
 v 0.12.13
 ========
 - added api-key arg (and env var) as a way to authenticate to Orthanc for the tools

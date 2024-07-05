@@ -1,3 +1,4 @@
+import threading
 import time
 import sys
 import pprint
@@ -310,6 +311,44 @@ class Test3Orthancs(unittest.TestCase):
             migrator.execute()
 
         self.assertEqual(cm.exception.code, 1)
+
+    def test_pacs_migrator_wait_for_space(self):
+
+        # We will run this method in another thread to free some space from the destination after a few seconds
+        def free_space():
+            time.sleep(5)
+            self.ob.delete_all_content()
+
+        self.oa.delete_all_content()  # source
+        self.ob.delete_all_content()  # migrator & destination
+
+        # let's fill the destination with 7 studies from 322KB so that, the disk use is more than 2MB
+        ids = self.ob.upload_file(here / "stimuli/MR/IM-0001-0002.dcm")
+        for i in range(6):
+            self.ob.studies.anonymize(ids[0], delete_original=False)
+
+        # let's upload one study on Orthanc-a to be migrated
+        ids = self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        migrator = PacsMigrator(
+            api_client=self.ob,
+            source_modality="orthanc-a",
+            destination_aet="ORTHANC-B",
+            from_study_date=datetime.date(2004, 1, 18),
+            to_study_date=datetime.date(2004, 1, 20),
+            orthanc_space_threshold=1,
+            waiting_time_for_space_threshold=10
+        )
+
+        # let's plan the freeing of the destination (will happen after 5s)
+        thread = threading.Thread(target=free_space)
+        thread.start()
+        migrator.execute()
+
+        # check that there is now one single instance and it is the one that has been migrated
+        self.assertEqual(1, len(self.ob.instances.get_all_ids()))
+        self.assertEqual(ids[0], self.ob.instances.get_all_ids()[0])
+
 
     def test_ids_migrator_aside(self):
         self.oa.delete_all_content()  # source

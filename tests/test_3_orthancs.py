@@ -85,6 +85,17 @@ class Test3Orthancs(unittest.TestCase):
 
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
+    def test_cloner_dicom(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        cloner = OrthancCloner(source=self.oa, destination_dicom='orthanc-b', mode=ClonerMode.DICOM)
+        cloner.execute()
+
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+
     def test_monitor(self):
         self.oa.delete_all_content()
         processed_instances = []

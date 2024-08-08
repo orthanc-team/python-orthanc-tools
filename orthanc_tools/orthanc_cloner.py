@@ -15,6 +15,7 @@ class ClonerMode(StrEnum):
     DEFAULT = 'Default'             # download instance and reupload them in new orthanc
     PEERING = 'Peering'             # use peering between 2 orthancs
     TRANSFER = 'Transfer'           # use the transfer plugin accelerator between 2 orthancs
+    DICOM = "Dicom"                 # use DICOM such that the destination might be a normal DICOM node
 
 
 class OrthancCloner(OrthancMonitor):
@@ -26,7 +27,8 @@ class OrthancCloner(OrthancMonitor):
                  persist_status_path: str = None,
                  polling_interval: float = 1,
                  mode: ClonerMode = ClonerMode.DEFAULT,
-                 destination_peer: str = None,                    # the 'alias' of the destination peer if declared in Orthanc.  It must be defined for PEERING and TRANSFER mode
+                 destination_peer: str = None,                    # the 'alias' of the destination peer declared in Orthanc configuration.  It must be defined for PEERING and TRANSFER mode
+                 destination_dicom: str = None,                   # the 'alias' of the DICOM destination declared in Orthanc configuration.  It must be defined for DICOM moe.
                  scheduler: Scheduler = None,
                  max_retries: int = 5,
                  error_folder_path: str = None
@@ -43,6 +45,7 @@ class OrthancCloner(OrthancMonitor):
 
         self._destination = destination
         self._destination_peer = destination_peer
+        self._destination_dicom = destination_dicom
         self._mode = mode
 
         if self._scheduler:
@@ -56,14 +59,17 @@ class OrthancCloner(OrthancMonitor):
         if self._mode == ClonerMode.DEFAULT:
             if destination is None:
                 raise ValueError("'destination' must be defined in DEFAULT mode")
+        if self._mode == ClonerMode.DICOM:
+            if destination_dicom is None:
+                raise ValueError("'destination_dicom' must be defined in DICOM mode")
 
-        if self._mode in [ClonerMode.PEERING, ClonerMode.DEFAULT]:
+        if self._mode in [ClonerMode.PEERING, ClonerMode.DEFAULT, ClonerMode.DICOM]:
             self.add_handler(ChangeType.NEW_INSTANCE, self.handle_new_instance)
         elif self._mode == ClonerMode.TRANSFER:
             self.add_handler(ChangeType.STABLE_STUDY, self.handle_stable_study)
 
 
-    def handle_new_instance(self, change_id, instance_id, api_client):
+    def handle_new_instance(self, change_id, instance_id, api_client: OrthancApiClient):
         try:
             if self._mode == ClonerMode.DEFAULT:
                 dicom = api_client.instances.get_file(instance_id)
@@ -72,6 +78,8 @@ class OrthancCloner(OrthancMonitor):
                 logger.info(f"{change_id}, copied instance {instance_id}")
             elif self._mode == ClonerMode.PEERING:
                 api_client.peers.send(target_peer=self._destination_peer, resources_ids=instance_id)
+            elif self._mode == ClonerMode.DICOM:
+                api_client.modalities.send(target_modality=self._destination_dicom, resources_ids=instance_id)
 
         except ResourceNotFound as ex:
             # An instance may have been deleted (by a user, a script,...) between the moment we called the /changes route
@@ -128,6 +136,7 @@ if __name__ == '__main__':
     parser.add_argument('--dest_pwd', type=str, default=None, help='Orthanc destination password')
     parser.add_argument('--dest_api_key', type=str, default=None, help='Orthanc destination api-key')
     parser.add_argument('--dest_peer', type=str, default=None, help='Orthanc destination peer (peer alias in source Orthanc)')
+    parser.add_argument('--dest_dicom', type=str, default=None, help='DICOM destination alias as defined in Orthanc configuration')
     parser.add_argument('--mode', type=str, default=None, help='Cloner Mode (Default, Peering, Transfer)')
     parser.add_argument('--persist_state_path', type=str, default=None, help='File path where the state of the cloner will be saved (to resume later)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Number of worker threads')
@@ -147,6 +156,7 @@ if __name__ == '__main__':
     dest_pwd = os.environ.get("DEST_PWD", args.dest_pwd)
     dest_api_key = os.environ.get("DEST_API_KEY", args.dest_api_key)
     dest_peer = os.environ.get("DEST_PEER", args.dest_peer)
+    dest_dicom = os.environ.get("DEST_DICOM", args.dest_dicom)
     mode = os.environ.get("MODE", args.mode)
     persist_state_path = os.environ.get("PERSIST_STATE_PATH", args.persist_state_path)
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
@@ -176,6 +186,7 @@ if __name__ == '__main__':
         persist_status_path=persist_state_path,
         mode=mode,
         destination_peer=dest_peer,
+        destination_dicom=dest_dicom,
         scheduler=scheduler,
         worker_threads_count=worker_threads_count,
         error_folder_path=error_folder_path,

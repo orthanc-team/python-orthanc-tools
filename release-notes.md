@@ -1,3 +1,7 @@
+v 0.12.15
+========
+- added `Dicom` mode for the `OrthancCloner`
+
 v 0.12.14
 ========
 - added `orthanc_space_threshold` parameter to the `PacsMigrator`

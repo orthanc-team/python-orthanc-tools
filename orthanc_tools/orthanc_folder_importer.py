@@ -19,7 +19,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     o = None
-    if api_key is not None:
+    if args.api_key is not None:
         o=OrthancApiClient(args.url, headers={"api-key":args.api_key})
     else:
         o=OrthancApiClient(args.url, user=args.user, pwd=args.pwd)

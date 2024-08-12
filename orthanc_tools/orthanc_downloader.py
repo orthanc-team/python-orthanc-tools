@@ -39,7 +39,7 @@ if __name__ == '__main__':
     retry_count = 0
     retry_delays = [5, 20, 60, 300, 900]
 
-    studies = []
+    studies_ids = []
     while retry_count < 5:
         if retry_count >= 1:
             delay = retry_delays[retry_count - 1]
@@ -47,7 +47,12 @@ if __name__ == '__main__':
             time.sleep(delay)
         try:
             logger.info(f"Getting list of studies ids...")
-            studies = o.studies.find(query={}, labels=labels)
+            # workaround to avoid find results limit
+            all_ids = o.studies.get_all_ids()
+            for id in all_ids:
+                study_labels = o.studies.get_labels(id)
+                if any(element in study_labels for element in labels):
+                    studies_ids.append(id)
             break
         except Exception as ex:
             retry_count += 1
@@ -58,14 +63,15 @@ if __name__ == '__main__':
                 logger.warning(f"Error while getting studies ids, retrying... Ex:{str(ex)}")
 
     progress_counter = 1
-    for study in studies:
+    for id in studies_ids:
         try:
-            logger.info(f"Downloading study {progress_counter} out of {len(studies)}")
-            folder_path = args.folder + study.orthanc_id
+            logger.info(f"Downloading study {progress_counter} out of {len(studies_ids)}")
+            folder_path = args.folder + id
             os.mkdir(folder_path)
-            o.studies.download_instances(study_id=study.orthanc_id, path=folder_path)
+            o.studies.download_instances(study_id=id, path=folder_path)
+            progress_counter += 1
         except Exception as ex:
-            logger.error(f"Error during download for study {study.orthanc_id}. Ex: {str(ex)}")
+            logger.error(f"Error during download for study {id}. Ex: {str(ex)}")
             sys.exit(1)
 
     logger.info("Over :-)")

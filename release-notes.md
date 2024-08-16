@@ -1,3 +1,7 @@
+v 0.12.16
+=========
+- added `OrthancWarmer` tool (for tests/debug purposes)
+
 v 0.12.15
 ========
 - added `Dicom` mode for the `OrthancCloner`

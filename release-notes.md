@@ -1,4 +1,4 @@
-v 0.12.16
+v 0.12.17
 =========
 - added `OrthancWarmer` tool (for tests/debug purposes)
 

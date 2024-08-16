@@ -38,7 +38,7 @@ class OrthancWarmer:
 
     def execute(self):
         logger.info("----- Initializing Orthanc Warmer...")
-        schedule.every(interval).seconds.do(self.find)
+        schedule.every(interval).minutes.do(self.find)
 
         while True:
             schedule.run_pending()

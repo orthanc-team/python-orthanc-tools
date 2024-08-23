@@ -1,3 +1,7 @@
+v 0.12.18
+=========
+- improved `OrthancCleaner` to handle `LimitFindResults`
+
 v 0.12.17
 =========
 - added `OrthancWarmer` tool (for tests/debug purposes)

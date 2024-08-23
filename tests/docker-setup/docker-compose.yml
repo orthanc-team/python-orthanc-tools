@@ -6,6 +6,7 @@ services:
     environment:
       VERBOSE_STARTUP: "true"
       VERBOSE_ENABLED: "true"
+      ORTHANC__LIMIT_FIND_RESULTS: 100
       TRANSFERS_PLUGIN_ENABLED: "true"
       ORTHANC__STABLE_AGE: "1"
       ORTHANC__KEEP_ALIVE_TIMEOUT: "5"

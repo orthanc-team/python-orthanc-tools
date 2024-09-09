@@ -1,6 +1,7 @@
 import unittest, os, glob
 import hl7  # https://python-hl7.readthedocs.org/en/latest/
 import pydicom
+from pydicom import dcmread
 from orthanc_tools import DicomWorklistBuilder
 import tempfile
 import time
@@ -30,6 +31,7 @@ class TestDicomWorklistBuilder(unittest.TestCase):
             }
             filename = builder.generate(values = values)
 
-            wl_readback = pydicom.read_file(filename)
-            self.assertEqual(60, len(wl_readback.StudyInstanceUID))
-            self.assertEqual("2", wl_readback.PatientID)
+            with dcmread(filename) as wl_readback:
+                wl_readback = pydicom.read_file(filename)
+                self.assertEqual(60, len(wl_readback.StudyInstanceUID))
+                self.assertEqual("2", wl_readback.PatientID)

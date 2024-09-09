@@ -1,6 +1,7 @@
 import unittest, os, glob
 import hl7  # https://python-hl7.readthedocs.org/en/latest/
 import pydicom
+from pydicom import dcmread
 from orthanc_tools import MLLPClient, DicomWorklistBuilder, Hl7WorklistParser, Hl7MessageValidator, MLLPServer, Hl7OrmWorklistMsgHandler
 import tempfile
 import logging
@@ -47,24 +48,24 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 worklist_file_path = files[0]
 
                 # check the content of the file
-                wl = pydicom.read_file(worklist_file_path)
-                self.assertEqual("VANILLÉ^LAURA^^^Mme", wl.PatientName)
-                self.assertEqual("19521103", wl.PatientBirthDate)
-                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
-                self.assertEqual("SCANNER É DE 3 TERRITOIRES ANATOMIQUES OU PLUS AVEC INJECTION é", wl.RequestedProcedureDescription)
-                self.assertEqual("CHUFJEA^CHIFREZE^JEAN FRANCOIS", wl.RequestingPhysician)
-                self.assertEqual("MAIDEN", wl.PatientMotherBirthName.family_name)
+                with dcmread(worklist_file_path) as wl:
+                    self.assertEqual("VANILLÉ^LAURA^^^Mme", wl.PatientName)
+                    self.assertEqual("19521103", wl.PatientBirthDate)
+                    self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+                    self.assertEqual("SCANNER É DE 3 TERRITOIRES ANATOMIQUES OU PLUS AVEC INJECTION é", wl.RequestedProcedureDescription)
+                    self.assertEqual("CHUFJEA^CHIFREZE^JEAN FRANCOIS", wl.RequestingPhysician)
+                    self.assertEqual("MAIDEN", wl.PatientMotherBirthName.family_name)
 
-                self.assertEqual("CT", wl.ScheduledProcedureStepSequence[0].Modality)
-                self.assertEqual("20170914", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
-                # make sure all 'mandatory' fields are there
-                self.assertEqual("723085", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
-                self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
-                self.assertEqual("REF^DOCTOR^JULIEN", wl.ReferringPhysicianName)
-                self.assertEqual(0, len(wl.ReferencedStudySequence))
-                self.assertEqual(0, len(wl.ReferencedPatientSequence))
-                self.assertEqual("723085", wl.RequestedProcedureID)
-                self.assertEqual("RUE MARIE CURIE^BRUXELLES^^74850^99100..LONG ADDRESS..123456...", wl.PatientAddress)
+                    self.assertEqual("CT", wl.ScheduledProcedureStepSequence[0].Modality)
+                    self.assertEqual("20170914", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
+                    # make sure all 'mandatory' fields are there
+                    self.assertEqual("723085", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
+                    self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
+                    self.assertEqual("REF^DOCTOR^JULIEN", wl.ReferringPhysicianName)
+                    self.assertEqual(0, len(wl.ReferencedStudySequence))
+                    self.assertEqual(0, len(wl.ReferencedPatientSequence))
+                    self.assertEqual("723085", wl.RequestedProcedureID)
+                    self.assertEqual("RUE MARIE CURIE^BRUXELLES^^74850^99100..LONG ADDRESS..123456...", wl.PatientAddress)
 
     def test_from_q_doc_chu_liege(self):
         port_number = 2003  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
@@ -96,14 +97,14 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 self.assertTrue(os.path.isfile(worklist_file_path))
 
                 # check the content of the file
-                wl = pydicom.read_file(worklist_file_path)
-                self.assertEqual("DUBOIS^Jean", wl.PatientName)
-                self.assertEqual("19201231", wl.PatientBirthDate)
-                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)
-                self.assertEqual("CT cérébral", wl.RequestedProcedureDescription)
+                with dcmread(worklist_file_path) as wl:
+                    self.assertEqual("DUBOIS^Jean", wl.PatientName)
+                    self.assertEqual("19201231", wl.PatientBirthDate)
+                    self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)
+                    self.assertEqual("CT cérébral", wl.RequestedProcedureDescription)
 
-                # check that the specific field is correctly handled
-                self.assertEqual("0897456", wl.AccessionNumber)
+                    # check that the specific field is correctly handled
+                    self.assertEqual("0897456", wl.AccessionNumber)
 
     def test_orthanc_worklist_c_find_encoding_bug(self):
         port_number = 2004  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
@@ -138,14 +139,14 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 worklist_file_path = files[0]
 
                 # check the content of the file
-                wl = pydicom.read_file(worklist_file_path)
-                self.assertEqual("VANILLÉ^LAURA^^^Mme", wl.PatientName)
-                self.assertEqual("MAIDEN^^^^^^L", wl.PatientMotherBirthName)
-                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
-                self.assertEqual("ÉCHOGRAPHIE", wl.RequestedProcedureDescription)
-                self.assertEqual("DOCTOR_CODE^DOCTOR^NAME", wl.RequestingPhysician)
-                self.assertEqual("CT", wl.ScheduledProcedureStepSequence[0].Modality)
-                self.assertEqual("20170608", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
+                with dcmread(worklist_file_path) as wl:
+                    self.assertEqual("VANILLÉ^LAURA^^^Mme", wl.PatientName)
+                    self.assertEqual("MAIDEN^^^^^^L", wl.PatientMotherBirthName)
+                    self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+                    self.assertEqual("ÉCHOGRAPHIE", wl.RequestedProcedureDescription)
+                    self.assertEqual("DOCTOR_CODE^DOCTOR^NAME", wl.RequestingPhysician)
+                    self.assertEqual("CT", wl.ScheduledProcedureStepSequence[0].Modality)
+                    self.assertEqual("20170608", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
 
     def test_ried_worklists(self):
         port_number = 2005  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
@@ -183,22 +184,22 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 worklist_file_path = files[0]
 
                 # check the content of the file
-                wl = pydicom.read_file(worklist_file_path)
-                self.assertEqual("LLOxxx^Simxxx^^^", wl.PatientName)
-                self.assertEqual("19550812", wl.PatientBirthDate)
-                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
-                self.assertEqual("IRM FOIE IV", wl.RequestedProcedureDescription)
-                self.assertEqual("Docteur^Quenotte", wl.RequestingPhysician)
-                self.assertEqual("NMR", wl.ScheduledProcedureStepSequence[0].Modality)
-                self.assertEqual("20201001", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
+                with dcmread(worklist_file_path) as wl:
+                    self.assertEqual("LLOxxx^Simxxx^^^", wl.PatientName)
+                    self.assertEqual("19550812", wl.PatientBirthDate)
+                    self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+                    self.assertEqual("IRM FOIE IV", wl.RequestedProcedureDescription)
+                    self.assertEqual("Docteur^Quenotte", wl.RequestingPhysician)
+                    self.assertEqual("NMR", wl.ScheduledProcedureStepSequence[0].Modality)
+                    self.assertEqual("20201001", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
 
-                # make sure all 'mandatory' fields are there
-                self.assertEqual("3264557", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
-                self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
-                self.assertEqual("Docteur^Traitant", wl.ReferringPhysicianName)
-                self.assertEqual("3264557", wl.RequestedProcedureID)
-                self.assertEqual("2 rue ^^THUIR^^66300^^H", wl.PatientAddress)
-                self.assertEqual("3264557", wl.AccessionNumber)
+                    # make sure all 'mandatory' fields are there
+                    self.assertEqual("3264557", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
+                    self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
+                    self.assertEqual("Docteur^Traitant", wl.ReferringPhysicianName)
+                    self.assertEqual("3264557", wl.RequestedProcedureID)
+                    self.assertEqual("2 rue ^^THUIR^^66300^^H", wl.PatientAddress)
+                    self.assertEqual("3264557", wl.AccessionNumber)
 
 
     def test_isosl_worklists(self):
@@ -252,21 +253,21 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 worklist_file_path = files[0]
 
                 # check the content of the file
-                wl = pydicom.read_file(worklist_file_path)
-                self.assertEqual("Moraloa^Salva Bernard^^", wl.PatientName)
-                self.assertEqual("19910417", wl.PatientBirthDate)
-                # TODO: check the characterSet with the customer !
-                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
-                self.assertEqual("16371009^THISO^DANILO", wl.RequestingPhysician)
+                with dcmread(worklist_file_path) as wl:
+                    self.assertEqual("Moraloa^Salva Bernard^^", wl.PatientName)
+                    self.assertEqual("19910417", wl.PatientBirthDate)
+                    # TODO: check the characterSet with the customer !
+                    self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+                    self.assertEqual("16371009^THISO^DANILO", wl.RequestingPhysician)
 
-                # make sure all 'mandatory' fields are there
-                self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
-                self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
-                self.assertEqual("16409914^GILSON^MARC", wl.ReferringPhysicianName)
-                self.assertEqual("UNKNOWN", wl.RequestedProcedureID)
-                self.assertEqual("Rue Noé 11^^VISE^^4200^BE^H", wl.PatientAddress)
-                self.assertEqual("23016738", wl.AccessionNumber)
-                self.assertEqual("", wl.PatientSex)
+                    # make sure all 'mandatory' fields are there
+                    self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
+                    self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
+                    self.assertEqual("16409914^GILSON^MARC", wl.ReferringPhysicianName)
+                    self.assertEqual("UNKNOWN", wl.RequestedProcedureID)
+                    self.assertEqual("Rue Noé 11^^VISE^^4200^BE^H", wl.PatientAddress)
+                    self.assertEqual("23016738", wl.AccessionNumber)
+                    self.assertEqual("", wl.PatientSex)
 
     def test_assistovet_worklists(self):
         port_number = 2007  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
@@ -306,27 +307,27 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 worklist_file_path = files[0]
 
                 # check the content of the file
-                wl = pydicom.read_file(worklist_file_path)
-                self.assertEqual("BENARD^HORUS", wl.PatientName)
-                self.assertEqual("20120824", wl.PatientBirthDate)
-                self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+                with dcmread(worklist_file_path) as wl:
+                    self.assertEqual("BENARD^HORUS", wl.PatientName)
+                    self.assertEqual("20120824", wl.PatientBirthDate)
+                    self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
 
-                # make sure all 'mandatory' fields are there
-                self.assertEqual("181416", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
-                self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
-                self.assertEqual("M^Alfred Canard^rue des Sorbiers - 4800 Verviers", wl.ReferringPhysicianName)
-                self.assertEqual("181416", wl.RequestedProcedureID)
-                self.assertEqual("20 Rue des Moulins - 45430 MARDIE", wl.PatientAddress)
-                self.assertEqual("181416", wl.AccessionNumber)
-                self.assertEqual(36.000, wl.PatientWeight)
-                self.assertEqual("Chien", wl.PatientSpeciesDescription)
-                self.assertEqual("Berger belge malinois", wl.PatientBreedDescription)
-                self.assertEqual("250268731025243", wl.OtherPatientIDs)
-                self.assertEqual("M", wl.PatientSex)
-                self.assertEqual("BENARD^Maverick", wl.ResponsiblePerson)
-                self.assertEqual("ALTERED", wl.PatientSexNeutered)
-                self.assertEqual("20231109",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
-                self.assertEqual("114936",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartTime)
+                    # make sure all 'mandatory' fields are there
+                    self.assertEqual("181416", wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepID)
+                    self.assertEqual("UNKNOWN", wl.ScheduledProcedureStepSequence[0].ScheduledStationAETitle)
+                    self.assertEqual("M^Alfred Canard^rue des Sorbiers - 4800 Verviers", wl.ReferringPhysicianName)
+                    self.assertEqual("181416", wl.RequestedProcedureID)
+                    self.assertEqual("20 Rue des Moulins - 45430 MARDIE", wl.PatientAddress)
+                    self.assertEqual("181416", wl.AccessionNumber)
+                    self.assertEqual(36.000, wl.PatientWeight)
+                    self.assertEqual("Chien", wl.PatientSpeciesDescription)
+                    self.assertEqual("Berger belge malinois", wl.PatientBreedDescription)
+                    self.assertEqual("250268731025243", wl.OtherPatientIDs)
+                    self.assertEqual("M", wl.PatientSex)
+                    self.assertEqual("BENARD^Maverick", wl.ResponsiblePerson)
+                    self.assertEqual("ALTERED", wl.PatientSexNeutered)
+                    self.assertEqual("20231109",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
+                    self.assertEqual("114936",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartTime)
 
 
 

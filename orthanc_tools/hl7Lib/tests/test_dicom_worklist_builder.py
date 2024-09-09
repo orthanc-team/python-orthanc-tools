@@ -32,6 +32,5 @@ class TestDicomWorklistBuilder(unittest.TestCase):
             filename = builder.generate(values = values)
 
             with dcmread(filename) as wl_readback:
-                wl_readback = pydicom.read_file(filename)
                 self.assertEqual(60, len(wl_readback.StudyInstanceUID))
                 self.assertEqual("2", wl_readback.PatientID)

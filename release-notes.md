@@ -2,6 +2,14 @@ v 0.13.0
 ========
 - fixed an incompatibility with pydicom 3.0.0
 
+v 0.12.18
+========
+- improved `OrthancCleaner` to handle `LimitFindResults`
+
+v 0.12.17
+========
+- added `OrthancWarmer` tool (for tests/debug purposes)
+
 v 0.12.15
 ========
 - added `Dicom` mode for the `OrthancCloner`

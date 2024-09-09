@@ -693,6 +693,36 @@ class Test3Orthancs(unittest.TestCase):
         self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
         self.assertNotEqual(old_study_id, self.oa.studies.get_all_ids()[0])
 
+    def test_orthanc_cleaner_with_more_than_100_studies(self):
+        self.oa.delete_all_content()
+
+        # populate Orthanc with 120 old studies...
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=120,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=3),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=4)
+        )
+        populator.execute()
+
+        # apply a label to all the studies.
+        studies_ids = self.oa.studies.get_all_ids()
+        for id in studies_ids:
+            self.oa.studies.add_label(id, "LABEL3")
+
+        # then, remove the label for a single study
+        self.oa.studies.delete_label(studies_ids[0], "LABEL3")
+
+        # execute cleaner
+        cleaner = OrthancCleaner(api_client=self.oa, execution_time=None, labels_file_path=here / "stimuli/labels.csv")
+        cleaner.execute()
+
+        # only one single study should be kept
+        self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     unittest.main()

@@ -65,9 +65,29 @@ class OrthancCleaner:
         for rule in labels_rules:
             logger.info(f"{rule.label_name} - {rule.retention_duration} weeks")
 
-        studies_to_delete = []
+        # get the list of studies to delete
+        studies_to_delete = self.get_studies_to_delete(labels_rules=labels_rules)
 
-        # Query Orthanc and delete the studies for each label rule
+        while len(studies_to_delete) > 0:
+            
+            # Delete the found studies
+            for s in studies_to_delete:
+                try:
+                    self._api_client.studies.delete(s.orthanc_id)
+                    logger.info(f"Deleting study {s.dicom_id} from {s.main_dicom_tags.get('StudyDate')}...")
+                except Exception as ex:
+                    logger.error(f"ERROR: {str(ex)}")
+            
+            # Get one more time the list of studies to delete (because we may have been limited to the value of 'LimitFindResults')
+            studies_to_delete = self.get_studies_to_delete(labels_rules=labels_rules)
+
+        logger.info("Clean up done!")
+
+    def get_studies_to_delete(self, labels_rules: LabelRule) -> List[str]:
+        '''
+        Query Orthanc to get the list of studies to delete (depending on the date and the label)
+        '''
+        studies_to_delete = []
         for label_rule in labels_rules:
 
             # Let's compute the date
@@ -79,21 +99,13 @@ class OrthancCleaner:
                 labels=[label_rule.label_name]
                 )
 
-            # Filter the old studies which were recently stored in Orthanc
+            # Filter out the old studies which were recently stored in Orthanc
             for s in studies_to_delete_by_study_date:
                 if limit_date > s.last_update.date():
                     studies_to_delete.append(s)
 
-        # Delete the found studies
-        for s in studies_to_delete:
-            try:
-                self._api_client.studies.delete(s.orthanc_id)
-                logger.info(f"Deleting study {s.dicom_id} from {s.main_dicom_tags.get('StudyDate')}...")
-            except Exception as ex:
-                logger.error(f"ERROR: {str(ex)}")
-
-        logger.info("Clean up done!")
-
+        logger.info(f"Found {len(studies_to_delete)} studies to delete...")
+        return studies_to_delete
 
     def compute_limit_date(self, number_of_weeks) -> datetime.date:
         limit_date = datetime.date.today() - datetime.timedelta(weeks=number_of_weeks)

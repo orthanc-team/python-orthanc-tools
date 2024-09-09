@@ -1,6 +1,6 @@
 requests
-orthanc-api-client>=0.15.3
-pydicom>=2.3.1
+orthanc-api-client>=0.16.0
+pydicom>=3.0.0
 hl7==0.4.2
 six
 schedule==1.2.0

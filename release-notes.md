@@ -1,3 +1,7 @@
+v 0.13.0
+========
+- fixed an incompatibility with pydicom 3.0.0
+
 v 0.12.15
 ========
 - added `Dicom` mode for the `OrthancCloner`

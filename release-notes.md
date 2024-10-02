@@ -1,3 +1,7 @@
+v 0.13.1
+========
+- improved `orthanc_uploader` with retry and immediate labeling 
+
 v 0.13.0
 ========
 - fixed an incompatibility with pydicom 3.0.0

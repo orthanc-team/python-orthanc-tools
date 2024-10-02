@@ -3,6 +3,9 @@ from pathlib import Path
 import logging
 import argparse
 from orthanc_api_client import OrthancApiClient
+import os, time, sys
+import zipfile
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +45,54 @@ class OrthancUploader:
                 current_path = Path(answers['studies_path'])
         return str(current_path.absolute())
 
+    def upload_folder_and_label(self, folder_path, labels_list):
+        """
+        Recursively get the files of the folder to
+        - upload each file
+        - apply the labels on the study
+        """
+
+        for path in os.listdir(folder_path):
+            full_path = os.path.join(folder_path, path)
+            if os.path.isfile(full_path):
+
+                if zipfile.is_zipfile(full_path):
+                    with tempfile.TemporaryDirectory() as tempDir:
+                        with zipfile.ZipFile(full_path, 'r') as z:
+                            z.extractall(tempDir)
+                        self.upload_folder_and_label(folder_path=tempDir, labels_list=labels_list)
+                else:
+                    retry_count = 0
+                    retry_delays = [5, 20, 60, 300, 900, 1800, 3600, 7200]
+                    while retry_count <= 8:
+                        if retry_count >= 1:
+                            delay = retry_delays[retry_count - 1]
+                            logger.info(f"waiting {delay} seconds before retrying the upload of {full_path}")
+                            time.sleep(delay)
+                        try:
+                            # here, we should have only files (and no zip file)
+                            instance_orthanc_ids = orthanc_client.upload_file(full_path, ignore_errors=True)
+                            if len(instance_orthanc_ids) == 0:
+                                logger.error(f"File not uploaded: {full_path}.")
+                                break
+                            study_orthanc_id = orthanc_client.instances.get_parent_study_id(instance_orthanc_ids[0])
+                            orthanc_client.studies.add_labels(orthanc_id=study_orthanc_id, labels=labels_list)
+                            break
+                        except Exception as e:
+                            retry_count += 1
+                            if retry_count == 8:
+                                logger.error(f"Error while uploading this file: {full_path}. Exception: {str(e)}")
+                                logger.error(f"too many attempts, exiting...")
+                                sys.exit(1)
+                            else:
+                                logger.warning(f"Error while uploading this file, retrying...: {full_path}. Exception: {str(e)}")
+            elif os.path.isdir(full_path):
+                self.upload_folder_and_label(folder_path=full_path, labels_list=labels_list)
+
     def execute(self):
 
         # let the user choose the folder to upload
-        path = self.get_folder(Path(self._path))
+        folder_path = self.get_folder(Path(self._path))
 
         # let's get the existing labels
         labels_list = orthanc_client.get_all_labels()
@@ -81,7 +128,7 @@ class OrthancUploader:
                 orthanc_labels_chosen_list.append(orthanc_extra_label)
 
         print("-----------------------------------------------------------------------------------")
-        print(f"Folder to import: {path}")
+        print(f"Folder to import: {folder_path}")
         print(f"Labels to apply: {orthanc_labels_chosen_list}")
         questions_continue = [
             inquirer.Confirm("continue", message="Ready to start?", default=True)
@@ -92,18 +139,11 @@ class OrthancUploader:
             print("Aborted!")
             exit(-1)
 
-        logger.info(f"starting import of folder {path} ...")
-        dicom_ids_set, orthanc_ids_set, rejected_files_list = orthanc_client.upload_folder_return_details(path, True)
+        logger.info(f"starting import of folder {folder_path} ...")
 
-        logger.info(f"starting labeling...")
-        for id in orthanc_ids_set:
-            orthanc_client.studies.add_labels(orthanc_id=id, labels=orthanc_labels_chosen_list)
+        self.upload_folder_and_label(folder_path=folder_path, labels_list=orthanc_labels_chosen_list)
 
-        if len(rejected_files_list)>0:
-            logger.info("End of upload, here are files in error:")
-            for rejected_file in rejected_files_list:
-                logger.info(f"{rejected_file[0]} --- {rejected_file[1]}")
-        logger.info("End of upload, no errors :-)")
+        logger.info("End of upload!")
 
 
 if __name__ == '__main__':

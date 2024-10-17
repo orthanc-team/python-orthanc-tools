@@ -102,7 +102,7 @@ class OrthancTestDbPopulator:
         tags["SeriesTime"] = helpers.to_dicom_time(datetime.datetime.now())
         tags["Modality"] = random.choice(["MR", "CT", "CR", "DX"])
         tags["StationName"] = random.choice(places)
-        tags["BodyPartExamined"] = self.generate_random_string()
+        tags["BodyPartExamined"] = self.generate_random_string().upper()
         tags["SequenceName"] = self.generate_random_string()
         tags["ProtocolName"] = self.generate_random_string()
         tags["OperatorsName"] = self.generate_random_name()

@@ -1,4 +1,4 @@
-v 0.13.3
+v 0.13.2
 ========
 - Improved `OrthancTestDbPopulator` to generate more Tags and more different values to have 
   more representative larger SQL indexes.  It also generates more MR/CT series with more instances.

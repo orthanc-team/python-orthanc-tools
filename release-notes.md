@@ -1,4 +1,8 @@
-v 0.13.2
+v 0.13.4
+========
+- `OrthancForwarder` can now work with multipler worker_threads.
+
+v 0.13.3
 ========
 - Improved `OrthancTestDbPopulator` to generate more Tags and more different values to have 
   more representative larger SQL indexes.  It also generates more MR/CT series with more instances.

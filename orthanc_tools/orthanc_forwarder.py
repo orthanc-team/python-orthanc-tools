@@ -4,6 +4,7 @@ import logging
 import time
 import os
 import threading
+import queue
 from strenum import StrEnum
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
@@ -28,6 +29,10 @@ class ForwarderDestination:
     forwarder_mode: ForwarderMode           # the mode to use to forward to the destination
     alternate_destination: str = None       # an alternate destination in case this one can not be contacted
 
+@dataclass
+class ResourceToForward:
+    type: str
+    resource_id: str
 
 # class ForwarderMetadata(Enum):
 #     INSTANCE_PROCESSED = 4600
@@ -85,6 +90,7 @@ class OrthancForwarder:
                  trigger: ChangeType = ChangeType.STABLE_STUDY,
                  max_retry_count_at_startup: int = 5,
                  polling_interval_in_seconds: int = 1,
+                 worker_threads_count: int = 3,
                  instance_filter = None,                    # a method to filter instances.  Signature: Filter(api_client, instance_id) -> bool (returns True to keep an instance, returns False to delete it)
                  instance_processor = None,                 # a method to process instances before forwarding them.  Signature: Process(api_client, instance_id)
                  on_instances_set_forwarded = None,         # a method that is called each time an InstancesSet has been forwarded to a destination.  Signature: forwarded(instances_set, destination)
@@ -103,6 +109,10 @@ class OrthancForwarder:
         self._on_instances_set_forwarded = on_instances_set_forwarded
         self._on_instances_set_forward_error = on_instances_set_forward_error
         self._status = {}
+        self._resources_to_process = queue.Queue(worker_threads_count + 1)
+        self._worker_threads_count = worker_threads_count
+        self._worker_threads = []
+        self._is_running = False
 
     def wait_orthanc_started(self):
         retry = 0
@@ -129,38 +139,84 @@ class OrthancForwarder:
             self.handle_all_content()
             time.sleep(self._polling_interval_in_seconds)
 
+    def _process_resources(self, worker_id):
+        logger.debug(f"Starting Forwarder thread {worker_id}")
+
+        while True:
+            try:
+                resource = self._resources_to_process.get()  # block until a message is available
+
+                if resource is None:  # sent by stop() to stop all worker threads
+                    self._resources_to_process.task_done()
+                    break
+
+                if resource.type == "study":
+                    self._handle_study(study_id=resource.resource_id,
+                                       api_client=self._source)
+                elif resource.type == "series":
+                    self._handle_series(series_id=resource.resource_id,
+                                        api_client=self._source)
+                elif resource.type == "instance":
+                    self._handle_instance(instance_id=resource.resource_id,
+                                          api_client=self._source)
+
+                self._resources_to_process.task_done()  # tell the queue the item has been processed
+
+            except exceptions.ConnectionError as ex:
+                logger.info(f"Connection error while handling {resource.type} {resource.resource_id}: {ex.msg}")
+            except Exception as ex:
+                logger.exception(f"Error while handling all {resource.type} {resource.resource_id}", ex)
+
+        logger.debug(f"Stopping Forwarder thread {worker_id}")
+
     def handle_all_content(self):
-        try:
-            if self._trigger == ChangeType.STABLE_STUDY:
-                studies_ids = self._source.studies.get_all_ids()
-                if len(studies_ids) > 0:
-                    for study_id in studies_ids:
-                        self._handle_study(study_id=study_id,
-                                           api_client=self._source)
+        # create worker threads
+        for thread_id in range(0, self._worker_threads_count):
+            self._worker_threads.append(threading.Thread(
+                target=self._process_resources,
+                name=f"Worker Thread {thread_id}",
+                args=(thread_id,)
+            ))
 
-            elif self._trigger == ChangeType.STABLE_SERIES:
-                series_ids = self._source.series.get_all_ids()
-                if len(series_ids) > 0:
-                    for id in series_ids:
-                        self._handle_series(series_id=id,
-                                            api_client=self._source)
-                else:
-                    logger.warning(f"No series found in Orthanc at startup")
+        # start threads
+        for wt in self._worker_threads:
+            wt.start()
 
-            elif self._trigger == ChangeType.NEW_INSTANCE:
-                instances_ids = self._source.instances.get_all_ids()
-                if len(instances_ids) > 0:
-                    for id in instances_ids:
-                        self._handle_instance(instance_id=id,
-                                              api_client=self._source)
-                else:
-                    logger.warning(f"No series found in Orthanc at startup")
+        if self._trigger == ChangeType.STABLE_STUDY:
+            studies_ids = self._source.studies.get_all_ids()
+            if len(studies_ids) > 0:
+                for study_id in studies_ids:
+                    self._resources_to_process.put(ResourceToForward(type="study", resource_id=study_id))
             else:
-                raise NotImplementedError()
-        except exceptions.ConnectionError as ex:
-            logger.info(f"Connection error while handling all content: {ex.msg}")
-        except Exception as ex:
-            logger.exception("Error while handling all content", ex)
+                logger.debug(f"No studies found in Orthanc")
+
+        elif self._trigger == ChangeType.STABLE_SERIES:
+            series_ids = self._source.series.get_all_ids()
+            if len(series_ids) > 0:
+                for series_id in series_ids:
+                    self._resources_to_process.put(ResourceToForward(type="series", resource_id=series_id))
+            else:
+                logger.debug(f"No series found in Orthanc")
+
+        elif self._trigger == ChangeType.NEW_INSTANCE:
+            instances_ids = self._source.instances.get_all_ids()
+            if len(instances_ids) > 0:
+                for instance_id in instances_ids:
+                    self._resources_to_process.put(ResourceToForward(type="instance", resource_id=instance_id))
+            else:
+                logger.debug(f"No instances found in Orthanc")
+        else:
+            raise NotImplementedError()
+
+        # post one 'empty' exit message per thread to unlock the threads from waiting on the process queue
+        for i in range(0, self._worker_threads_count):
+            self._resources_to_process.put(None)
+
+        for t in self._worker_threads:
+            t.join()
+
+        self._worker_threads = []
+
 
     def _thread_execute(self):
         while self._is_running:
@@ -404,6 +460,7 @@ if __name__ == '__main__':
     parser.add_argument('--source_pwd', type=str, default=None, help='Orthanc source password')
     parser.add_argument('--source_api_key', type=str, default=None, help='Orthanc source api-key')
     parser.add_argument('--destination', type=str, default=None, help='Orthanc destination alias')
+    parser.add_argument('--worker_threads_count', type=int, default=1, help='Number of worker threads')
 
     parser.add_argument('--trigger', type=str, default=None, help='NewInstance or StableStudy')
     #parser.add_argument('--mode', type=str, default=None, help='Forwarder Mode (Default, Peering, Transfer)')
@@ -415,7 +472,7 @@ if __name__ == '__main__':
     source_pwd = os.environ.get("SOURCE_PWD", args.source_pwd)
     source_api_key = os.environ.get("SOURCE_API_KEY", args.source_api_key)
     destination = os.environ.get("DESTINATION", args.destination)
-
+    worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     trigger = os.environ.get("TRIGGER", args.trigger)
     #mode = os.environ.get("MODE", args.mode)
 
@@ -436,7 +493,8 @@ if __name__ == '__main__':
     forwarder = OrthancForwarder(
         source=api_client,
         destinations=[ForwarderDestination(destination=destination, forwarder_mode=ForwarderMode.DICOM)],
-        trigger=trigger
+        trigger=trigger,
+        worker_threads_count=worker_threads_count
     )
 
     forwarder.execute()

@@ -242,7 +242,9 @@ class Test3Orthancs(unittest.TestCase):
 
         populator_a = OrthancTestDbPopulator(
             api_client=self.oa,
-            studies_count=5,
+            studies_count=3,
+            series_count=3,
+            instances_count=20,
             random_seed=42,
             from_study_date=datetime.date(2022, 4, 19),
             to_study_date=datetime.date(2022, 4, 25)
@@ -387,7 +389,9 @@ class Test3Orthancs(unittest.TestCase):
         # populate Orthanc A & B with 2 DBs
         populator_a = OrthancTestDbPopulator(
             api_client=self.oa,
-            studies_count=5,
+            studies_count=3,
+            series_count=3,
+            instances_count=20,
             from_study_date=datetime.date(2022, 4, 19),
             to_study_date=datetime.date(2022, 4, 25)
         )
@@ -395,7 +399,9 @@ class Test3Orthancs(unittest.TestCase):
 
         populator_b = OrthancTestDbPopulator(
             api_client=self.ob,
-            studies_count=5,
+            studies_count=3,
+            series_count=3,
+            instances_count=20,
             from_study_date=datetime.date(2022, 4, 19),
             to_study_date=datetime.date(2022, 4, 25)
         )
@@ -421,8 +427,8 @@ class Test3Orthancs(unittest.TestCase):
         comparator.execute()
 
         # B should have both studies from A & B while A should stay untouched (except for the few instances transferred)
-        self.assertEqual(10, len(self.ob.studies.get_all_ids()))
-        self.assertNotEqual(10, len(self.oa.studies.get_all_ids()))
+        self.assertEqual(6, len(self.ob.studies.get_all_ids()))
+        self.assertNotEqual(6, len(self.oa.studies.get_all_ids()))
 
         # run the comparator with B as the modality and make sure
         # everything in B goes to A
@@ -497,7 +503,7 @@ class Test3Orthancs(unittest.TestCase):
                     # upload once the forwarder is running
                     instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
 
-                    # wait until the the source is empty (= the forwarder has completed its job)
+                    # wait until the source is empty (= the forwarder has completed its job)
                     helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
 
                     self.assertEqual(len(instances_ids), len(self.ob.instances.get_all_ids()))
@@ -520,7 +526,7 @@ class Test3Orthancs(unittest.TestCase):
                                       trigger=trigger,
                                       polling_interval_in_seconds=0.1) as forwarder:
 
-                    # wait until the the source is empty (= the forwarder has completed its job)
+                    # wait until the source is empty (= the forwarder has completed its job)
                     helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
 
                     self.assertEqual(len(instances_ids), len(self.ob.instances.get_all_ids()))

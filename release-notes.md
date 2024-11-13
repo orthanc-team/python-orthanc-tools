@@ -1,3 +1,7 @@
+v 0.13.5
+========
+- `OrthancFolderImporter` can now logs errors and state.
+
 v 0.13.4
 ========
 - `OrthancForwarder` can now work with multipler worker_threads.

@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     importer = OrthancFolderImporter(
         api_client=o,
-        folder_path=args.folder,
+        folder_path=args.folder_path,
         labels_list=args.labels_list,
         errors_path=args.errors_path,
         state_path=args.state_path,

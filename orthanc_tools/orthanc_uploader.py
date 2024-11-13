@@ -14,6 +14,8 @@ This script is interactive!
 So, run it from the console, follow instructions and enjoy...
 '''
 
+#TODO: modify to use the folder importer!
+
 class OrthancUploader:
     def __init__(self,
                  api_client: OrthancApiClient,

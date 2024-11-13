@@ -13,6 +13,7 @@ services:
       ORTHANC__REGISTERED_USERS: |
         {"test": "test"}
       ORTHANC__DICOM_AET: "ORTHANC-A"
+      ORTHANC__EXECUTE_LUA_ENABLED: "true"
       ORTHANC__OVERWRITE_INSTANCES: "true"
       ORTHANC__DICOM_MODALITIES: |
         {

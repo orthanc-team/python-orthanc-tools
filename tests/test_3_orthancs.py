@@ -17,7 +17,7 @@ import os
 import logging
 import unittest
 
-from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, IdsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner
+from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, IdsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner, OrthancFolderImporter
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -727,6 +727,108 @@ class Test3Orthancs(unittest.TestCase):
 
         # only one single study should be kept
         self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
+
+    def test_folder_importer(self):
+        self.oa.delete_all_content()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            errors_path = os.path.join(temp_dir, 'errors.txt')
+            state_path = os.path.join(temp_dir, 'folders.txt')
+            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli/MR", errors_path=errors_path, state_path=state_path)
+            importer.execute()
+
+            self.assertEqual(4, len(self.oa.instances.get_all_ids()))
+            with open(state_path, 'r') as file:
+                lines = file.readlines()
+                self.assertEqual(3, len(lines))
+
+    def test_folder_importer_with_labels(self):
+        self.oa.delete_all_content()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            errors_path = os.path.join(temp_dir, 'errors.txt')
+            state_path = os.path.join(temp_dir, 'folders.txt')
+            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli/MR/Brain/1", errors_path=errors_path, state_path=state_path, labels_list=["L1", "L2"])
+            importer.execute()
+
+            self.assertEqual(2, len(self.oa.instances.get_all_ids()))
+            study_id = self.oa.studies.get_all_ids()
+            labels = self.oa.studies.get_labels(study_id[0])
+            for label in labels:
+                self.assertIn(label, ["L1", "L2"])
+
+    def test_folder_importer_with_bad_files(self):
+        self.oa.delete_all_content()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            errors_path = os.path.join(temp_dir, 'errors.txt')
+            state_path = os.path.join(temp_dir, 'folders.txt')
+            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli", errors_path=errors_path, state_path=state_path)
+            importer.execute()
+
+            self.assertEqual(5, len(self.oa.instances.get_all_ids()))
+            with open(errors_path, 'r') as file:
+                lines = file.readlines()
+                self.assertEqual(3, len(lines))
+
+    def test_folder_importer_with_errors(self):
+        self.oa.delete_all_content()
+
+        # let's inhibit orthanc, so that the importer won't be able to upload to it
+        with open(here / "docker-setup-replicator/inhibit.lua", 'rb') as f:
+            lua_script = f.read()
+        self.oa.execute_lua_script(lua_script)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            errors_path = os.path.join(temp_dir, 'errors.txt')
+            state_path = os.path.join(temp_dir, 'folders.txt')
+            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli/MR", errors_path=errors_path, state_path=state_path, max_retries=0)
+            importer.execute()
+
+            helpers.wait_until(lambda: os.path.exists(errors_path), 2)
+
+            with open(errors_path, 'r') as file:
+                lines = file.readlines()
+                self.assertEqual(4, len(lines))
+
+        # let's uninhibit Orthanc
+        with open(here / "docker-setup-replicator/uninhibit.lua", 'rb') as f:
+            lua_script = f.read()
+        self.oa.execute_lua_script(lua_script)
+
+    def test_folder_importer_with_restart(self):
+        self.oa.delete_all_content()
+
+        # Let's upload the 'Brain' folder
+        with tempfile.TemporaryDirectory() as temp_dir:
+            errors_path = os.path.join(temp_dir, 'errors.txt')
+            state_path = os.path.join(temp_dir, 'folders.txt')
+            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli/MR/Brain", errors_path=errors_path, state_path=state_path, max_retries=0)
+            importer.execute()
+
+            with open(state_path, 'r') as file:
+                lines = file.readlines()
+                # 2 folders should have been logged ('1' and '2')
+                self.assertEqual(2, len(lines))
+
+            # then, let's execute the importer again, but for the MR folder, only the file at root level should be imported
+            # to be sure of that, we will inhibit Orthanc, and count the errors (should be only 1)
+            with open(here / "docker-setup-replicator/inhibit.lua", 'rb') as f:
+                lua_script = f.read()
+            self.oa.execute_lua_script(lua_script)
+
+            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli/MR",
+                                             errors_path=errors_path, state_path=state_path, max_retries=0)
+            importer.execute()
+
+            helpers.wait_until(lambda: os.path.exists(errors_path), 2)
+
+            with open(errors_path, 'r') as file:
+                lines = file.readlines()
+                # 1 error should have been logged
+                self.assertEqual(1, len(lines))
+
+            # let's uninhibit Orthanc
+            with open(here / "docker-setup-replicator/uninhibit.lua", 'rb') as f:
+                lua_script = f.read()
+            self.oa.execute_lua_script(lua_script)
 
 
 if __name__ == '__main__':

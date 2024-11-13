@@ -1,4 +1,4 @@
-v 0.13.6
+v 0.13.7
 ========
 - `OrthancFolderImporter` can now logs errors and state.
 

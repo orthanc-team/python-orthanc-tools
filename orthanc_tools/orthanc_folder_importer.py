@@ -147,7 +147,7 @@ if __name__ == '__main__':
         labels_list=args.labels_list,
         errors_path=args.errors_path,
         state_path=args.state_path,
-        max_retries=args.state_path
+        max_retries=args.max_retries
     )
 
     importer.execute()

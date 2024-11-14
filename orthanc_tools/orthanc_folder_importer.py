@@ -61,7 +61,7 @@ class OrthancFolderImporter:
             full_path = os.path.join(folder_path, path)
             if os.path.isfile(full_path):
 
-                if zipfile.is_zipfile(full_path):
+                if "zip" in full_path and zipfile.is_zipfile(full_path):
                     with tempfile.TemporaryDirectory() as tempDir:
                         with zipfile.ZipFile(full_path, 'r') as z:
                             z.extractall(tempDir)

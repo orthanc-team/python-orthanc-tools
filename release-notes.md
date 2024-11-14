@@ -1,3 +1,7 @@
+v 0.13.8
+========
+- `OrthancFolderImporter` is more robust for zip files.
+
 v 0.13.7
 ========
 - `OrthancFolderImporter` can now logs errors and state.

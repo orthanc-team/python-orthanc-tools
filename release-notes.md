@@ -1,4 +1,4 @@
-v 0.13.9
+v 0.13.10
 ========
 - `OrthancFolderImporter` uses worker threads.
 - `OrthancFolderImporter` is more robust for zip files.

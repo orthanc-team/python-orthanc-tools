@@ -212,10 +212,10 @@ if __name__ == '__main__':
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
 
     o = None
-    if args.api_key is not None:
-        o=OrthancApiClient(args.url, headers={"api-key":args.api_key})
+    if api_key is not None:
+        o=OrthancApiClient(url, headers={"api-key": api_key})
     else:
-        o=OrthancApiClient(args.url, user=args.user, pwd=args.password)
+        o=OrthancApiClient(url, user=user, pwd=password)
 
     importer = OrthancFolderImporter(
         api_client=o,

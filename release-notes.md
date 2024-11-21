@@ -1,3 +1,7 @@
+v 0.13.11
+========
+- `OrthancTestDbPopulator` script now accepts `--from_study_date` and `--to_study_date` arguments.
+
 v 0.13.10
 ========
 - `OrthancFolderImporter` uses worker threads.

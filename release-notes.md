@@ -2,6 +2,10 @@ v 0.14.0
 ========
 - `LabelModifier` tool added. Allows to fix a typo in a label with handling of the permissions. 
 
+v 0.13.11
+========
+- `OrthancTestDbPopulator` script now accepts `--from_study_date` and `--to_study_date` arguments.
+
 v 0.13.10
 ========
 - `OrthancFolderImporter` uses worker threads.

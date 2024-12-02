@@ -214,6 +214,8 @@ if __name__ == '__main__':
     parser.add_argument('--series', type=int, default=None, help='Number of series in each study')
     parser.add_argument('--instances', type=int, default=None, help='Number of instances in each series')
     parser.add_argument('--workers', type=int, default=1, help='Number of worker threads')
+    parser.add_argument('--from_study_date', type=str, default="20000101", help='Minimum date for StudyDates YYYYMMDD')
+    parser.add_argument('--to_study_date', type=str, default="20241231", help='Maximum date for StudyDates YYYYMMDD')
     parser.add_argument('--seed', type=int, default=42, help='Random seed (to make generation repeatable - only if using a single worker)')
     args = parser.parse_args()
 
@@ -221,6 +223,10 @@ if __name__ == '__main__':
     user = os.environ.get("ORTHANC_USER", args.user)
     pwd = os.environ.get("ORTHANC_PWD", args.password)
     api_key = os.environ.get("ORTHANC_API_KEY", args.api_key)
+    from_study_date = os.environ.get("FROM_STUDY_DATE", args.from_study_date)
+    to_study_date = os.environ.get("TO_STUDY_DATE", args.to_study_date)
+    from_study_date = helpers.from_dicom_date(from_study_date)
+    to_study_date = helpers.from_dicom_date(to_study_date)
 
     api_client = None
     if api_key is not None:
@@ -234,7 +240,9 @@ if __name__ == '__main__':
         series_count=args.series,
         instances_count=args.instances,
         random_seed=args.seed,
-        worker_threads_count=args.workers
+        worker_threads_count=args.workers,
+        from_study_date=from_study_date,
+        to_study_date=to_study_date
     )
 
     populator.execute()

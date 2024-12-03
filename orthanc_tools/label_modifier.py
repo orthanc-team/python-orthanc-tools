@@ -27,11 +27,15 @@ HOW IT WORKS
 
     ask for the new label value
 
+    add the new label to the list of available labels (if this list is not empty)
+
     apply new label to all the studies from existing one
 
     remove original label from all the studies from the new one
 
     handle permissions
+    
+    remove the old label from the list of available labels (if this list is not empty)
 
 HOW TO USE IT
 -------------
@@ -104,6 +108,51 @@ class LabelsModifier:
             logger.error("Error setting permissions:", response.status_code)
             sys.exit(1)
 
+    def add_label_to_available_list(self, label_to_add: str):
+        content_as_json = self.get_roles()
+
+        # get available-labels
+        available_labels = content_as_json["available-labels"]
+
+        # if there is no restriction on labels, let's forget it
+        if len(available_labels) == 0:
+            return
+
+        # let's add the new label to the list
+        content_as_json["available-labels"].append(label_to_add)
+
+        # push the modifications
+        response = requests.put(
+            url=self._auth_service_roles_url,
+            json=content_as_json,
+            auth=self._auth_service_auth)
+
+        if response.status_code != 200:
+            logger.error("Error setting permissions:", response.status_code)
+            sys.exit(1)
+
+    def remove_label_from_available_list(self, label_to_remove: str):
+        content_as_json = self.get_roles()
+
+        # get available-labels
+        available_labels = content_as_json["available-labels"]
+
+        # if there is no restriction on labels, let's forget it
+        if len(available_labels) == 0:
+            return
+
+        # let's add the new label to the list
+        content_as_json["available-labels"].remove(label_to_remove)
+
+        # push the modifications
+        response = requests.put(
+            url=self._auth_service_roles_url,
+            json=content_as_json,
+            auth=self._auth_service_auth)
+
+        if response.status_code != 200:
+            logger.error("Error setting permissions:", response.status_code)
+            sys.exit(1)
 
     def update_dict_values(self, data, target_key, old_value, new_value):
         """
@@ -176,11 +225,17 @@ class LabelsModifier:
 
         logger.info(f"Starting label modification...")
 
+        # add new label into the available-labels list (if not empty)
+        self.add_label_to_available_list(label_to_add=label_new_value)
+
         self.apply_new_label(new_label=label_new_value, old_label=label_to_modify)
         logger.info(f"Applied new label.")
 
         self.modify_permissions(new_label=label_new_value, old_label=label_to_modify)
         logger.info(f"Modified permissions.")
+
+        # remove old label from the available-labels list
+        self.remove_label_from_available_list(label_to_remove=label_to_modify)
 
         logger.info("End of label modification!")
 

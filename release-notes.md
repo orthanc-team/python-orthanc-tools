@@ -1,4 +1,4 @@
-v 0.14.0
+v 0.14.1
 ========
 - `LabelModifier` tool added. Allows to fix a typo in a label with handling of the permissions. 
 

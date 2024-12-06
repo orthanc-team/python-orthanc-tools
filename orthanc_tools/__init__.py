@@ -10,6 +10,7 @@ from .orthanc_replicator import OrthancReplicator
 from .ids_migrator import IdsMigrator
 from .orthanc_downloader import *
 from .orthanc_warmer import OrthancWarmer
+from .label_modifier import LabelModifier
 
 from .hl7Lib import *
 from .helpers import *

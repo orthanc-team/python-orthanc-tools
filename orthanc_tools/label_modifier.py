@@ -45,7 +45,7 @@ HOW TO USE IT
 - Note that password will be prompted by the script itself
 '''
 
-class LabelsModifier:
+class LabelModifier:
     def __init__(self,
                  api_client: OrthancApiClient,
                  auth_service_url: str,
@@ -118,8 +118,10 @@ class LabelsModifier:
         if len(available_labels) == 0:
             return
 
-        # let's add the new label to the list
-        content_as_json["available-labels"].append(label_to_add)
+        # let's add the new label to the list (without duplicate)
+        temp_list = content_as_json["available-labels"]
+        temp_list.append(label_to_add)
+        content_as_json["available-labels"] = list(dict.fromkeys(temp_list))
 
         # push the modifications
         response = requests.put(
@@ -141,7 +143,7 @@ class LabelsModifier:
         if len(available_labels) == 0:
             return
 
-        # let's add the new label to the list
+        # let's remove the old label from the list
         content_as_json["available-labels"].remove(label_to_remove)
 
         # push the modifications
@@ -168,7 +170,8 @@ class LabelsModifier:
             for key, value in data.items():
                 if key == target_key and isinstance(value, list):
                     # Replace old_value with new_value in the array
-                    data[key] = [new_value if item == old_value else item for item in value]
+                    updated_list = [new_value if item == old_value else item for item in value]
+                    data[key] = list(dict.fromkeys(updated_list))  # Remove duplicates
                 elif isinstance(value, (dict, list)):
                     # Recursively process nested dictionaries and lists
                     self.update_dict_values(value, target_key, old_value, new_value)
@@ -283,7 +286,7 @@ if __name__ == '__main__':
 
     if auth_url[-1] == "/":
         auth_url = auth_url[:-1]
-    modifier = LabelsModifier(api_client=orthanc_client, auth_service_url=auth_url, auth_service_login=auth_user, auth_service_password=auth_password)
+    modifier = LabelModifier(api_client=orthanc_client, auth_service_url=auth_url, auth_service_login=auth_user, auth_service_password=auth_password)
 
     # will crash if password is wrong
     modifier.get_roles()

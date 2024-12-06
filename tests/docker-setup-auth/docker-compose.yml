@@ -1,0 +1,82 @@
+version: "3"
+
+# Warning: in this setup, there is no binding between Orthanc (actually simply basic auth) and auth service!
+# Because this would require an api key for a user and this is not so fast to implement and not neeeded for
+# the considered tests...
+# So, to be done when needed...
+
+services:
+  orthanc-a:
+    image: orthancteam/orthanc:24.11.0
+    ports: ["10042:8042"]
+    environment:
+      VERBOSE_STARTUP: "true"
+      VERBOSE_ENABLED: "true"
+      ORTHANC__LIMIT_FIND_RESULTS: 100
+      TRANSFERS_PLUGIN_ENABLED: "true"
+      ORTHANC__STABLE_AGE: "1"
+      ORTHANC__KEEP_ALIVE_TIMEOUT: "5"
+      ORTHANC__REGISTERED_USERS: |
+        {"test": "test"}
+      ORTHANC__DICOM_AET: "ORTHANC-A"
+      ORTHANC__OVERWRITE_INSTANCES: "true"
+
+  orthanc-auth-service:
+    image: orthancteam/orthanc-auth-service:24.12.0
+    ports: ["18000:8000"]
+    volumes:
+      - ./permissions.json:/orthanc_auth_service/permissions.json
+    depends_on:
+      wait-for-keycloak:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: "change-me-I-am-a-secret-key"
+      ENABLE_KEYCLOAK: "true"
+      ENABLE_KEYCLOAK_API_KEYS: "true"
+      KEYCLOAK_CLIENT_SECRET: "NPtsEUenl6nw8gJmM886TbvzuGPzvgt9"
+      PUBLIC_ORTHANC_ROOT: "http://orthanc-a:8042/"
+      PUBLIC_LANDING_ROOT: "http://orthanc-a:8042/ui/app/token-landing.html"
+      USERS: |
+        {
+          "test": "test"
+        }
+
+# The Keycloak health check can only be queried from external (because there is no curl in the Keycloak
+# container for safety reasons).
+# So, this wait-for-keycloak container will check that and the Auth service will check the wait-for-keycloak
+# container.
+  wait-for-keycloak:
+    image: alpine/curl
+    depends_on: [keycloak]
+    entrypoint: >
+      /bin/sh -c "
+      until curl -f http://keycloak:9000/health/ready; do
+        echo 'Waiting for Keycloak...';
+        sleep 5;
+      done;
+      echo 'Keycloak is ready!';
+      sleep 10;"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://keycloak:9000/health/ready || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: orthancteam/orthanc-keycloak:24.12.1
+    depends_on: [keycloak-db]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: "admin"
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "change-me"
+      KC_DB: "postgres"
+      KC_DB_URL: "jdbc:postgresql://keycloak-db:5432/keycloak"
+      KC_DB_USERNAME: "keycloak"
+      KC_DB_PASSWORD: "keycloak"
+      SKIP_CLIENT_SECRET_UPDATE_FOR_TESTS: true
+
+  keycloak-db:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: "keycloak"
+      POSTGRES_USER: "keycloak"
+      POSTGRES_DB: "keycloak"

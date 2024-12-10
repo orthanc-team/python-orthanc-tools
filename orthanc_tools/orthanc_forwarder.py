@@ -7,10 +7,10 @@ import threading
 import queue
 from strenum import StrEnum
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
-from orthanc_api_client import OrthancApiClient, Study, Series, JobStatus, ResourceNotFound, InstancesSet, ResourceType, exceptions
-from .orthanc_monitor import OrthancMonitor, ChangeType
+from orthanc_api_client import OrthancApiClient, InstancesSet, ResourceType, exceptions
+from .orthanc_monitor import ChangeType
 
 logger = logging.getLogger(__name__)
 
@@ -188,7 +188,7 @@ class OrthancForwarder:
                 for study_id in studies_ids:
                     self._resources_to_process.put(ResourceToForward(type="study", resource_id=study_id))
             else:
-                logger.debug(f"No studies found in Orthanc")
+                logger.debug("No studies found in Orthanc")
 
         elif self._trigger == ChangeType.STABLE_SERIES:
             series_ids = self._source.series.get_all_ids()
@@ -196,7 +196,7 @@ class OrthancForwarder:
                 for series_id in series_ids:
                     self._resources_to_process.put(ResourceToForward(type="series", resource_id=series_id))
             else:
-                logger.debug(f"No series found in Orthanc")
+                logger.debug("No series found in Orthanc")
 
         elif self._trigger == ChangeType.NEW_INSTANCE:
             instances_ids = self._source.instances.get_all_ids()
@@ -204,7 +204,7 @@ class OrthancForwarder:
                 for instance_id in instances_ids:
                     self._resources_to_process.put(ResourceToForward(type="instance", resource_id=instance_id))
             else:
-                logger.debug(f"No instances found in Orthanc")
+                logger.debug("No instances found in Orthanc")
         else:
             raise NotImplementedError()
 
@@ -446,6 +446,14 @@ class OrthancForwarder:
         pass
 
 
+def add_parser_argument_w_alias(parser, name, *args, **kwargs):
+    '''
+    Add an argument to the parser with both the name and its alias 
+    so that both `--source_url` and `--source-url` can be used.
+    '''
+    aliased = name.replace('_', '-')
+    parser.add_argument(name, aliased, *args, **kwargs)
+
 if __name__ == '__main__':
     level = logging.INFO
 
@@ -454,16 +462,18 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    parser = argparse.ArgumentParser(description='Forwards everything Orthanc receives to another Orthanc peer, a DICOM modality or DicomWeb server.')
-    parser.add_argument('--source_url', type=str, default=None, help='Orthanc source url')
-    parser.add_argument('--source_user', type=str, default=None, help='Orthanc source user name')
-    parser.add_argument('--source_pwd', type=str, default=None, help='Orthanc source password')
-    parser.add_argument('--source_api_key', type=str, default=None, help='Orthanc source api-key')
-    parser.add_argument('--destination', type=str, default=None, help='Orthanc destination alias')
-    parser.add_argument('--worker_threads_count', type=int, default=1, help='Number of worker threads')
+    valid_modes = [m.value for m in ForwarderMode]
 
-    parser.add_argument('--trigger', type=str, default=None, help='NewInstance or StableStudy')
-    #parser.add_argument('--mode', type=str, default=None, help='Forwarder Mode (Default, Peering, Transfer)')
+    parser = argparse.ArgumentParser(description='Forwards everything Orthanc receives to another Orthanc peer, a DICOM modality or DicomWeb server.')
+
+    add_parser_argument_w_alias(parser, '--source_url', type=str, default=None, help='Orthanc source url')
+    add_parser_argument_w_alias(parser, '--source_user', type=str, default=None, help='Orthanc source user name')
+    add_parser_argument_w_alias(parser, '--source_pwd', type=str, default=None, help='Orthanc source password')
+    add_parser_argument_w_alias(parser, '--source_api_key', type=str, default=None, help='Orthanc source api-key')
+    add_parser_argument_w_alias(parser, '--destination', type=str, default=None, help='Orthanc destination alias')
+    add_parser_argument_w_alias(parser, '--worker_threads_count', type=int, default=1, help='Number of worker threads')
+    add_parser_argument_w_alias(parser, '--trigger', type=str, default=None, help='NewInstance or StableStudy')
+    add_parser_argument_w_alias(parser, '--mode', type=str, default='dicom', help=f'Forwarder mode. One of: {", ".join(valid_modes)}')
 
     args = parser.parse_args()
 
@@ -474,28 +484,32 @@ if __name__ == '__main__':
     destination = os.environ.get("DESTINATION", args.destination)
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     trigger = os.environ.get("TRIGGER", args.trigger)
-    #mode = os.environ.get("MODE", args.mode)
+    mode_str = os.environ.get("MODE", args.mode)
 
+    # Validate trigger
     if trigger == "StableStudy":
         trigger = ChangeType.STABLE_STUDY
     elif trigger == "NewInstance":
         trigger = ChangeType.NEW_INSTANCE
     else:
-        raise Exception(f"Trigger parameter not valid!")
-        exit(0)
+        raise ValueError("Trigger parameter not valid!")
 
-    api_client = None
+    # Validate mode
+    if mode_str not in valid_modes:
+        raise ValueError(f"Invalid mode: {mode_str}. Allowed modes: {valid_modes}")
+    chosen_mode = ForwarderMode(mode_str)
+
+    # Create API client
     if source_api_key is not None:
-        api_client=OrthancApiClient(source_url, headers={"api-key":source_api_key})
+        api_client = OrthancApiClient(source_url, headers={"api-key": source_api_key})
     else:
-        api_client=OrthancApiClient(source_url, user=source_user, pwd=source_pwd)
+        api_client = OrthancApiClient(source_url, user=source_user, pwd=source_pwd)
 
     forwarder = OrthancForwarder(
         source=api_client,
-        destinations=[ForwarderDestination(destination=destination, forwarder_mode=ForwarderMode.DICOM)],
+        destinations=[ForwarderDestination(destination=destination, forwarder_mode=chosen_mode)],
         trigger=trigger,
         worker_threads_count=worker_threads_count
     )
 
     forwarder.execute()
-

@@ -1,3 +1,7 @@
+v 0.14.3
+========
+- `OrthancFolderImporter` update: allows to modify/filter instance before upload.
+
 v 0.14.2
 ========
 - `LabelModifier` tool added. Allows to fix a typo in a label with handling of the permissions. 

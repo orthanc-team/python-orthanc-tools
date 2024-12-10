@@ -93,7 +93,20 @@ class OrthancFolderImporter:
                         time.sleep(delay)
                     try:
                         # here, we should have only files (and no zip file)
-                        instance_orthanc_ids = self._api_client.upload_file(path_to_upload, ignore_errors=True)
+
+                        # let's modify/filter the file if needed
+                        with open(path_to_upload, 'rb') as f:
+                            buffer = f.read()
+                            buffer = self.process_dicom_file(buffer)
+
+                        # filtering out case
+                        if buffer is None:
+                            logger.debug(f"File {path_to_upload} has been filtered out.")
+                            return
+
+                        # modification case: let's upload the file
+                        instance_orthanc_ids = self._api_client.upload(buffer, ignore_errors=True)
+
                         if len(instance_orthanc_ids) == 0:
                             logger.error(f"File not uploaded: {path_to_upload}.")
                             self.add_file_name_in_errors_log(file_path=path_to_upload)
@@ -126,6 +139,19 @@ class OrthancFolderImporter:
 
             # let's add this folder path in the processed ones:
             self.add_folder_path_in_state_file(path_to_upload)
+
+    def process_dicom_file(self, file_content: bytes) -> bytes:
+        '''
+        This method is called just before the upload of the file to Orthanc
+        By default, nothing is done, but one could want to apply some modifications on the data before upload
+        or to filter out some files.
+        To do so, this method should be overridden in a derived class.
+        If the goal is to filter out the file, 'None' should be returned.
+
+        file_content: content of the DICOM file, as a buffer of bytes
+        output: a buffer of bytes (None to filter out the file)
+        '''
+        return file_content
 
     def _process_path(self, worker_id):
         logger.debug(f"Starting Processing thread {worker_id}")

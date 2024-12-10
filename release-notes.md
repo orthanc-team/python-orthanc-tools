@@ -1,6 +1,10 @@
-v 0.14.3
+v 0.14.4
 ========
 - `OrthancFolderImporter` update: allows to modify/filter instance before upload.
+
+v 0.14.3
+========
+- Added `--mode` argument to `OrthancForwarder`.
 
 v 0.14.2
 ========

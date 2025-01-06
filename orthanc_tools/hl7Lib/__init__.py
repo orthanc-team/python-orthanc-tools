@@ -10,3 +10,5 @@ from .hl7_orm_worklist_msg_handler import Hl7OrmWorklistMsgHandler
 from .hl7_oru_report_msg_handler import Hl7OruReportMsgHandler
 from .hl7_report_series_builder import ReportSeriesBuilder
 from .hl7_report_parser import Hl7ReportParser
+from .hl7_worklist_parser_assistovet import Hl7WorklistParserAssistovet
+from .hl7_worklist_parser_vetera import Hl7WorklistParserVetera

@@ -2,9 +2,10 @@ import unittest, os, glob
 import hl7  # https://python-hl7.readthedocs.org/en/latest/
 import pydicom
 from pydicom import dcmread
-from orthanc_tools import MLLPClient, DicomWorklistBuilder, Hl7WorklistParser, Hl7MessageValidator, MLLPServer, Hl7OrmWorklistMsgHandler
+from orthanc_tools import MLLPClient, DicomWorklistBuilder, Hl7WorklistParser, Hl7MessageValidator, MLLPServer, Hl7OrmWorklistMsgHandler, Hl7WorklistParserAssistovet, Hl7WorklistParserVetera
 import tempfile
 import logging
+import typing
 
 
 class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
@@ -271,9 +272,10 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
 
     def test_assistovet_worklists(self):
         port_number = 2007  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+
         with tempfile.TemporaryDirectory() as temporary_dir:
 
-            parser = Hl7WorklistParser()
+            parser = Hl7WorklistParserAssistovet()
             builder = DicomWorklistBuilder(folder = temporary_dir)
             orm_handler = Hl7OrmWorklistMsgHandler(parser=parser, builder=builder)
 
@@ -330,4 +332,60 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                     self.assertEqual("114936",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartTime)
 
 
+    def test_vetera_worklists(self):
+        port_number = 2008  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+
+        with tempfile.TemporaryDirectory() as temporary_dir:
+
+            parser = Hl7WorklistParserVetera()
+            builder = DicomWorklistBuilder(folder = temporary_dir)
+            orm_handler = Hl7OrmWorklistMsgHandler(parser=parser, builder=builder)
+
+            mllp_server = MLLPServer(
+                    host='localhost',
+                    port=port_number,
+                    handlers={
+                    'ORM^O01': (orm_handler.handle_orm_message,)
+                    }
+            )
+
+            with mllp_server as server:
+                # validate that ADT messages do create worklist files
+                with MLLPClient('localhost', port_number) as client:
+                    hl7_request = hl7.parse(
+                        "\x0bMSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r"
+                        "PID|1|999888777||123456789012345|GP.Software^Vetera||20070501|F|||||||||||||||||||||||||||Katze|Balinese|ALTERED|ZH-123|\r"
+                        "ORC|NW||||||||20170731081517||||||||||\r"
+                        "OBR|||1000000001|HD||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r"
+                        "\x1c\x0d"
+                    )
+                    response = client.send(hl7_request)
+                    hl7Response = hl7.parse(response)
+
+                # make sure a file has been created
+                files = glob.glob('{path}/*.wl'.format(path = temporary_dir))
+                self.assertEqual(1, len(files))
+                worklist_file_path = files[0]
+
+                #TODO:
+                # check the content of the file
+                with dcmread(worklist_file_path) as wl:
+                    self.assertEqual("Vetera", wl.PatientName)
+                    self.assertEqual("GP.Software", wl.ResponsiblePerson)
+                    self.assertEqual("20070501", wl.PatientBirthDate)
+                    self.assertEqual("999888777", wl.PatientID)
+                    self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message
+
+                    # make sure all 'mandatory' fields are there
+                    self.assertEqual("123456789012345", wl.OtherPatientIDs)
+                    self.assertEqual("Katze", wl.PatientSpeciesDescription)
+                    self.assertEqual("Balinese", wl.PatientBreedDescription)
+                    self.assertEqual("ALTERED", wl.PatientSexNeutered)
+                    self.assertEqual("ZH-123", wl.BreedRegistrationNumber)
+                    self.assertEqual("20170731",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartDate)
+                    self.assertEqual("081517",  wl.ScheduledProcedureStepSequence[0].ScheduledProcedureStepStartTime)
+                    self.assertEqual("1000000001", wl.AccessionNumber)
+                    self.assertEqual("F", wl.PatientSex)
+                    self.assertEqual("DX", wl.ScheduledProcedureStepSequence[0].Modality)
+                    self.assertEqual("Dr. P. Muster", wl.RequestingPhysician)
 

@@ -1,3 +1,7 @@
+v 0.15.0
+========
+- Added `Hl7FolderMonitor` which allows to read HL7 messages from a folder. 
+
 v 0.14.5
 ========
 - `Hl7WorklistParser` update: some different parsers implemented, to handle different the message providers.

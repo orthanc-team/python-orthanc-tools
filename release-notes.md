@@ -2,7 +2,7 @@ v 0.14.5
 ========
 - `Hl7WorklistParser` update: some different parsers implemented, to handle different the message providers.
 
-- v 0.14.4
+v 0.14.4
 ========
 - `OrthancFolderImporter` update: allows to modify/filter instance before upload.
 

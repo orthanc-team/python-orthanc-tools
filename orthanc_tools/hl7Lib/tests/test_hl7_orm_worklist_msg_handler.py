@@ -370,8 +370,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 #TODO:
                 # check the content of the file
                 with dcmread(worklist_file_path) as wl:
-                    self.assertEqual("Vetera", wl.PatientName)
-                    self.assertEqual("GP.Software", wl.ResponsiblePerson)
+                    self.assertEqual("GP.Software^Vetera", wl.PatientName)
                     self.assertEqual("20070501", wl.PatientBirthDate)
                     self.assertEqual("999888777", wl.PatientID)
                     self.assertEqual("ISO_IR 100", wl.SpecificCharacterSet)  # default char set if not specified in HL7 message

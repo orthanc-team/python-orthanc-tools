@@ -12,3 +12,4 @@ from .hl7_report_series_builder import ReportSeriesBuilder
 from .hl7_report_parser import Hl7ReportParser
 from .hl7_worklist_parser_assistovet import Hl7WorklistParserAssistovet
 from .hl7_worklist_parser_vetera import Hl7WorklistParserVetera
+from .hl7_folder_monitor import Hl7FolderMonitor

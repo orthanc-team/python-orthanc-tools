@@ -48,6 +48,7 @@ services:
         image: orthancteam/python-orthanc-tools:0.6.0
         volumes: ["orthanc-cloner:/status"]
         environment:
+            TZ: "Etc/UTC"
             RUN_ONLY_AT_NIGHT_AND_WEEKEND: "true"
             NIGHT_START_HOUR: "15"
             NIGHT_END_HOUR: "6"

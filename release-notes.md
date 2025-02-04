@@ -1,3 +1,8 @@
+v 0.15.1
+========
+- `OrthancTestDbPopulator`: `instances_count` is now applied to every generated series
+  and not only MR & CT series. 
+
 v 0.15.0
 ========
 - Added `Hl7FolderMonitor` which allows to read HL7 messages from a folder. 

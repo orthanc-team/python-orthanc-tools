@@ -36,7 +36,7 @@ class OrthancTestDbPopulator:
                  api_client: OrthancApiClient,
                  studies_count: int,
                  series_count: int = None,                  # to force the number of series in a study
-                 instances_count: int = None,               # to force the number of instances in a study
+                 instances_count: int = None,               # to force the number of instances in each series
                  random_seed: int = None,                   # to make the generation repeatable
                  from_study_date: datetime.date = datetime.date(2000, 1, 1),     # StudyDate for generated studies
                  to_study_date: datetime.date = datetime.date(2022, 4, 21),        # StudyDate for generated studies
@@ -171,6 +171,12 @@ class OrthancTestDbPopulator:
 
             for series_counter in range(0, series_count):
                 tags = self.generate_series_tags(tags, series_counter, study_counter)
+
+                # force MR or CT series if the instances_count is forced at large values 
+                if self._instances_count is not None and self._instances_count > 1:
+                    tags["Modality"] = random.choice(["MR", "CT"])
+                elif self._instances_count is not None and self._instances_count == 1:
+                    tags["Modality"] = random.choice(["CR", "DX"])
 
                 if tags["Modality"] in ["MR", "CT"]:
                     if self._instances_count is not None:

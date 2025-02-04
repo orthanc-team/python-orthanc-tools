@@ -146,6 +146,14 @@ class Test3Orthancs(unittest.TestCase):
         self.assertEqual(a_ids, b_ids)
         self.assertEqual(len(a_ids), 2)
 
+    def test_populator_quantities(self):
+        self.oa.delete_all_content()
+
+        populator_a = OrthancTestDbPopulator(api_client=self.oa, studies_count=2, series_count=2, instances_count=10, random_seed=42)
+        populator_a.execute()
+
+        self.assertEqual(40, len(self.oa.instances.get_all_ids()))
+
 
     def test_monitor_recovery(self):
         with tempfile.TemporaryDirectory() as temp_dir:

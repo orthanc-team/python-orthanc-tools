@@ -37,6 +37,7 @@ class Hl7WorklistParser(Hl7MessageParser):
             #'ScheduledProcedureStepStartDateTime': 'OBR.F27.R1.C4',
             '_scheduledProcedureStepStartDateTime': 'OBR.F27.R1.C4',
             '__scheduledProcedureStepStartDateTime': 'OBR.F20', # By default, this is the segment used by assistovet it seems not to be in use in other cases
+            '___scheduledProcedureStepStartDateTime': 'OBR.F36',  # for HL7 v2.5
 
             # --- PV1 segment
             '_ambulatoryStatus': 'PV1.F15',
@@ -120,6 +121,11 @@ class Hl7WorklistParser(Hl7MessageParser):
                 values['ScheduledProcedureStepStartTime'] = datetimeString[8:14]
         elif values.get('__scheduledProcedureStepStartDateTime') is not None: # AssistoVet case
             datetimeString = values.get('__scheduledProcedureStepStartDateTime')
+            values['ScheduledProcedureStepStartDate'] = datetimeString[
+                                                        :8]  # date is made of the 8 first chars of the string
+            values['ScheduledProcedureStepStartTime'] = datetimeString[8:14]
+        elif values.get('___scheduledProcedureStepStartDateTime') is not None: # HL7 2.5
+            datetimeString = values.get('___scheduledProcedureStepStartDateTime')
             values['ScheduledProcedureStepStartDate'] = datetimeString[
                                                         :8]  # date is made of the 8 first chars of the string
             values['ScheduledProcedureStepStartTime'] = datetimeString[8:14]

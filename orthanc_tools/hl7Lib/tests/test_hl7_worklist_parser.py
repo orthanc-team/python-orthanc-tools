@@ -47,6 +47,33 @@ class TestHl7MessageExtractor(unittest.TestCase):
 
         self.assertEqual('ÉCHOGRAPHIE DE L\'ABDOMEN ET DU PETIT BASSIN (PELVIS)', values.get('RequestedProcedureDescription'))
 
+    new_message_from_avignon = (
+        "\x0bMSH|^~\&|Institut Ste Catherine|Institut Ste Catherine|||20250130152802||ORM^O01^ORM_O01|20250130152802966|P|2.5|||AL||FR||FR\r"
+        "PID|||202303295^^^icap84.org^PI~139061305567914^^^ASIP-SANTE-INS-NIR&1.2.250.1.213.1.4.8&ISO^INS||TEST^LUCIEN^^^^^D~TEST^LUCIEN^^^^^L||19491230|M|||8 IMPASSE VIVALDI ^^VILLE^^84999||0780808008^PRN^PH~0123456789^PRN^CP~test.lucien@test.fr^NET^Internet||||||||||13055\r"
+        "ORC|NW|999001714293|1714293||SC|||||||DOYE^DOYER^MICHEL\r"
+        "OBR||1714293|1714293|DPAC^Depose de PAC^LOCAL|||20250130163000|20250130173000||||||||DOE^DOYER^MICHEL^^^DR^RAD||1714293||||||DX||||||||^^^SGT||||20250130163000\r"
+        "\x1c\x0d"
+    )
+    def test_new_message_from_avignon(self):
+        worklist_parser = Hl7WorklistParser()
+        values = worklist_parser.parse(self.new_message_from_avignon)
+
+        self.assertEqual('M', values.get('PatientSex'))
+        self.assertEqual('19491230', values.get('PatientBirthDate'))
+        self.assertEqual('202303295', values.get('PatientID'))
+        self.assertEqual('TEST^LUCIEN^^^', values.get('PatientName'))
+        self.assertEqual('icap84.org', values.get('IssuerOfPatientID'))
+        self.assertEqual('999001714293', values.get('OrderPlacerIdentifierSequence'))
+        self.assertEqual('1714293', values.get('OrderFillerIdentifierSequence'))
+        self.assertEqual('1714293', values.get('AccessionNumber'))
+        self.assertEqual('DX', values.get('Modality'))
+        self.assertEqual('Depose de PAC', values.get('RequestedProcedureDescription'))
+        self.assertEqual('20250130', values.get('ScheduledProcedureStepStartDate'))
+        self.assertEqual('163000', values.get('ScheduledProcedureStepStartTime'))
+
+
+
+
 
     message2 = (
         "\x0bMSH|^~\&|MPA|SYSTEMA|IMPAX|MDRADAMB|200802210826||ORM^O01|MSG242081|P|2.3|\r"

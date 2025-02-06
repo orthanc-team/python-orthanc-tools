@@ -1,6 +1,6 @@
 v 0.16.0
 ========
-- BREAKING_CHANGE `OrthancCleaner`: can now filter on `modalities in study`. Rules file has changed. 
+- BREAKING_CHANGE `OrthancCleaner` can now filter on `modalities in study`. Rules file format has changed. 
 
 v 0.15.4
 ========

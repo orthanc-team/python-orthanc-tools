@@ -707,6 +707,115 @@ class Test3Orthancs(unittest.TestCase):
         self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
         self.assertNotEqual(old_study_id, self.oa.studies.get_all_ids()[0])
 
+    def test_orthanc_cleaner_with_future_studies_and_filter_on_modality(self):
+        self.oa.delete_all_content()
+
+        # We are not able to trick Orthanc to modify the `LastUpdate` value
+        # so let's create studies with dates in the future and
+        # a negative retention period
+
+        # populate Orthanc with a first "old" future study (CT)
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=3),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=4),
+            modality="CT"
+        )
+        populator.execute()
+
+        ct_study_id = self.oa.studies.get_all_ids()[0]
+
+        # populate Orthanc with a second "old" future study (OT)
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=3),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=4),
+            modality="OT"
+        )
+        populator.execute()
+
+        # populate Orthanc with a third "recent" future study (CT)
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=14),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=16),
+            modality="CT"
+        )
+        populator.execute()
+
+        studies_ids = self.oa.studies.get_all_ids()
+
+        self.oa.studies.add_label(studies_ids[0], "LABEL5")
+        self.oa.studies.add_label(studies_ids[1], "LABEL5")
+        self.oa.studies.add_label(studies_ids[2], "LABEL5")
+
+        cleaner = OrthancCleaner(api_client=self.oa, execution_time=None,
+                                 labels_file_path=here / "stimuli/labels.csv")
+
+        cleaner.execute()
+
+        # we would like to check that the old OT study is still there and the old CT one is gone,
+        # while the "recent" CT is also still there
+        self.assertEqual(len(self.oa.studies.get_all_ids()), 2)
+        self.assertNotEqual(ct_study_id, self.oa.studies.get_all_ids()[0])
+
+    def test_orthanc_cleaner_with_future_studies_and_filter_on_modality_with_2_rules(self):
+        self.oa.delete_all_content()
+
+        # We are not able to trick Orthanc to modify the `LastUpdate` value
+        # so let's create studies with dates in the future and
+        # a negative retention period
+
+        # populate Orthanc with a first "old" future study (CT)
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=8),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=9),
+            modality="CT"
+        )
+        populator.execute()
+
+        ct_study_id = self.oa.studies.get_all_ids()[0]
+
+        # populate Orthanc with a second "old" future study (0T)
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=8),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=9),
+            modality="OT"
+        )
+        populator.execute()
+
+        studies_ids = self.oa.studies.get_all_ids()
+
+        self.oa.studies.add_label(studies_ids[0], "LABEL6")
+        self.oa.studies.add_label(studies_ids[1], "LABEL6")
+
+        cleaner = OrthancCleaner(api_client=self.oa, execution_time=None,
+                                 labels_file_path=here / "stimuli/labels.csv")
+
+        cleaner.execute()
+
+        # we would like to check that CT study has been deleted because there is a rule for a short retention period
+        # while the OT remains
+        self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
+        self.assertNotEqual(ct_study_id, self.oa.studies.get_all_ids()[0])
+
     def test_orthanc_cleaner_with_more_than_100_studies(self):
         self.oa.delete_all_content()
 

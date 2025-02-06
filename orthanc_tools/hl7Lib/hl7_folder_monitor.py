@@ -15,7 +15,7 @@ class Hl7FolderMonitor:
         '''
         folder_path: the absolute path of the folder which will be monitored (for HL7 files to be found)
         handlers: dict: message type and callback. ex: {'ORM^O01': 'process_message'}
-        interval: time (s) between to check of the folder
+        interval: time (s) between two checks of the folder
         '''
         self._folder_path = folder_path
         # An error message will probably never arrive from a file...

@@ -40,7 +40,8 @@ class OrthancTestDbPopulator:
                  random_seed: int = None,                   # to make the generation repeatable
                  from_study_date: datetime.date = datetime.date(2000, 1, 1),     # StudyDate for generated studies
                  to_study_date: datetime.date = datetime.date(2022, 4, 21),        # StudyDate for generated studies
-                 worker_threads_count: int = 1
+                 worker_threads_count: int = 1,
+                 modality: str = None                       # to for ce the type of modality
                  ):
 
         self._api_client = api_client
@@ -54,6 +55,7 @@ class OrthancTestDbPopulator:
         self._worker_threads = []
         self._worker_threads_count = worker_threads_count
         self._queue = queue.Queue(worker_threads_count + 1)
+        self._modality = modality
 
     def generate_random_name(self) -> str:
         # generate a pseudo name
@@ -100,7 +102,10 @@ class OrthancTestDbPopulator:
         tags["SeriesNumber"] = series_counter
         tags["SeriesDate"] = tags["StudyDate"]
         tags["SeriesTime"] = helpers.to_dicom_time(datetime.datetime.now())
-        tags["Modality"] = random.choice(["MR", "CT", "CR", "DX"])
+        if self._modality is not None:
+            tags["Modality"] = self._modality
+        else:
+            tags["Modality"] = random.choice(["MR", "CT", "CR", "DX"])
         tags["StationName"] = random.choice(places)
         tags["BodyPartExamined"] = self.generate_random_string().upper()
         tags["SequenceName"] = self.generate_random_string()
@@ -172,11 +177,12 @@ class OrthancTestDbPopulator:
             for series_counter in range(0, series_count):
                 tags = self.generate_series_tags(tags, series_counter, study_counter)
 
-                # force MR or CT series if the instances_count is forced at large values 
-                if self._instances_count is not None and self._instances_count > 1:
-                    tags["Modality"] = random.choice(["MR", "CT"])
-                elif self._instances_count is not None and self._instances_count == 1:
-                    tags["Modality"] = random.choice(["CR", "DX"])
+                if self._modality is None and self._instances_count is not None:
+                    # force MR or CT series if the instances_count is forced at large values
+                    if self._instances_count > 1:
+                        tags["Modality"] = random.choice(["MR", "CT"])
+                    elif self._instances_count == 1:
+                        tags["Modality"] = random.choice(["CR", "DX"])
 
                 if tags["Modality"] in ["MR", "CT"]:
                     if self._instances_count is not None:

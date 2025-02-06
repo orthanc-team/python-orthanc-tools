@@ -1,16 +1,19 @@
 '''
 # Summary
-This script will clean the Orthanc by deleting the oldest studies according to the labels applied on them.
+This script will clean the Orthanc by deleting the oldest studies according to the labels applied on them, and
+potentially to the modality type.
 
 # How it works
 The script will run every day at specified time.
 It will read a configuration file defining what should be done:
 
-LABEL1,6
-LABEL2,12
+LABEL1,6,
+LABEL2,12,
+LABEL2,4,CT
 
 With that sample, all studies with the LABEL1 and older than 6 weeks will be deleted
-all studies with the LABEL2 and older than 12 weeks will be deleted.
+all studies with the LABEL2 and older than 12 weeks will be deleted;
+all studies which have CT in the 'ModalitiesInStudy' tag and older than 4 weeks will be deleted;
 
 Note: studies are deleted only if they were uploaded/modified in Orthanc before the retention period
 '''
@@ -31,10 +34,12 @@ logger = logging.getLogger(__name__)
 class LabelRule:
     def __init__(self,
                  label_name: str,
-                 retention_duration: int    # unit: week
+                 retention_duration: int,    # unit: week
+                 modality: str = ""
                  ):
         self.label_name = label_name
         self.retention_duration = retention_duration
+        self.modality = modality
 
 class OrthancCleaner:
 
@@ -63,31 +68,31 @@ class OrthancCleaner:
 
         logger.info(f"Rules found:")
         for rule in labels_rules:
-            logger.info(f"{rule.label_name} - {rule.retention_duration} weeks")
+            logger.info(f"Label: {rule.label_name} - {rule.retention_duration} weeks - Modality: {rule.modality}")
 
         # get the list of studies to delete
-        studies_to_delete = self.get_studies_to_delete(labels_rules=labels_rules)
+        studies_ids_to_delete = self.get_studies_to_delete(labels_rules=labels_rules)
 
-        while len(studies_to_delete) > 0:
+        while len(studies_ids_to_delete) > 0:
             
             # Delete the found studies
-            for s in studies_to_delete:
+            for id in studies_ids_to_delete:
                 try:
-                    self._api_client.studies.delete(s.orthanc_id)
-                    logger.info(f"Deleting study {s.dicom_id} from {s.main_dicom_tags.get('StudyDate')}...")
+                    logger.info(f"Deleting study {id} from {self._api_client.studies.get(id).main_dicom_tags.get('StudyDate')}...")
+                    self._api_client.studies.delete(id)
                 except Exception as ex:
                     logger.error(f"ERROR: {str(ex)}")
             
             # Get one more time the list of studies to delete (because we may have been limited to the value of 'LimitFindResults')
-            studies_to_delete = self.get_studies_to_delete(labels_rules=labels_rules)
+            studies_ids_to_delete = self.get_studies_to_delete(labels_rules=labels_rules)
 
         logger.info("Clean up done!")
 
-    def get_studies_to_delete(self, labels_rules: LabelRule) -> List[str]:
+    def get_studies_to_delete(self, labels_rules: List[LabelRule]) -> set():
         '''
-        Query Orthanc to get the list of studies to delete (depending on the date and the label)
+        Query Orthanc to get the list of orthanc ids of the studies to delete (depending on the date and the label)
         '''
-        studies_to_delete = []
+        studies_to_delete = set()
         for label_rule in labels_rules:
 
             # Let's compute the date
@@ -95,14 +100,17 @@ class OrthancCleaner:
 
             # Query Orthanc based on the date and the label
             studies_to_delete_by_study_date = self._api_client.studies.find(
-                query={'StudyDate': f'-{helpers.to_dicom_date(limit_date)}'},
+                query={
+                    'StudyDate': f'-{helpers.to_dicom_date(limit_date)}',
+                    'ModalitiesInStudy': label_rule.modality
+                },
                 labels=[label_rule.label_name]
                 )
 
             # Filter out the old studies which were recently stored in Orthanc
             for s in studies_to_delete_by_study_date:
                 if limit_date > s.last_update.date():
-                    studies_to_delete.append(s)
+                    studies_to_delete.add(s.orthanc_id)
 
         logger.info(f"Found {len(studies_to_delete)} studies to delete...")
         return studies_to_delete
@@ -121,7 +129,7 @@ class OrthancCleaner:
             reader = csv.reader(csv_file)
 
             for row in reader:
-                labels_rules.append(LabelRule(row[0], int(row[1])))
+                labels_rules.append(LabelRule(row[0], int(row[1]), row[2]))
         return labels_rules
 
 

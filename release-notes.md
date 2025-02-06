@@ -1,3 +1,7 @@
+v 0.16.0
+========
+- BREAKING_CHANGE `OrthancCleaner`: can now filter on `modalities in study`. Rules file has changed. 
+
 v 0.15.4
 ========
 - `Hl7WorklistParser`: 

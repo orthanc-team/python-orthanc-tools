@@ -102,7 +102,7 @@ class DicomWorklistBuilder:
         if file_name is None:  # if no filename provided, save in the folder
             file_name = os.path.join(self._folder, "{id}.wl".format(id = ds.AccessionNumber))
 
-        ds.save_as(file_name, write_like_original = False)
+        ds.save_as(file_name, enforce_file_format=True)
         return file_name
 
     def _add_field(self, ds: pydicom.dataset.Dataset, values: typing.Dict[str, str], field_name: str, element_type: DicomElementType):

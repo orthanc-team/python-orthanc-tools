@@ -104,6 +104,7 @@ class _Hl7MllpRequestHandler(socketserver.StreamRequestHandler):
             try:
                 handler, args = self._handlers[msgType][0], self._handlers[msgType][1:]
             except KeyError:
+                logger.warning(f"Unsupported message type '{msgType}'")
                 raise UnsupportedMessageType(msgType)
 
             # create a new handler and call the constructor with the args provided

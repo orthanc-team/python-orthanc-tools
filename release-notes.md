@@ -1,6 +1,8 @@
-v 0.15.2
+v 0.15.3
 ========
-- `Hl7WorklistParser`: support for HL7 v2.5. 
+- `Hl7WorklistParser`: 
+  - added support for HL7 v2.5.
+  - nicer exiting of OldFilesDeleter
 
 v 0.15.1
 ========

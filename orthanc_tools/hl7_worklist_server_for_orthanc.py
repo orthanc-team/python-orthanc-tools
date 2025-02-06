@@ -35,22 +35,19 @@ if __name__ == "__main__":
     worklist_builder = DicomWorklistBuilder(folder = folder)
     orm_handler = Hl7OrmWorklistMsgHandler(parser=orm_parser, builder=worklist_builder)
 
-    # configure server
-    mllp_server = MLLPServer(
+    # configure and start MLLP server
+    with MLLPServer(
             host = '0.0.0.0',
             port = port,
             handlers = {
-            'ORM^O01': (orm_handler.handle_orm_message,)
+                'ORM^O01': (orm_handler.handle_orm_message,),
+                'ORM^O01^ORM_O01': (orm_handler.handle_orm_message,)
             }
-    )
+    ) as mllp_server:
 
-    # start server
-    mllp_server.start()
+        # configure and start old_files_deleter
+        with OldFilesDeleter(folder_to_monitor = folder, timeout = retention*3600.0, filter = '*.wl', execution_interval = 3600.0) as worklist_cleaner:
 
-    # configurer and start old_files_deleter
-    worklist_cleaner = OldFilesDeleter(folder_to_monitor = folder, timeout = retention*3600.0, filter = '*.wl', execution_interval = 3600.0)
-    worklist_cleaner.start()
-
-    while True:
-        time.sleep(1)
+            while True:
+                time.sleep(1)
 

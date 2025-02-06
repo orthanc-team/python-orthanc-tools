@@ -58,7 +58,7 @@ class OldFilesDeleter:
 
         while self._is_running:
             while self._is_running and not timeout.is_expired():
-                time.sleep(1)
+                time.sleep(min(1, self._execution_interval))
             self.execute_once()
             timeout.reset()
 

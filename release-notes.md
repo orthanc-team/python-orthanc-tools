@@ -1,4 +1,4 @@
-v 0.15.3
+v 0.15.4
 ========
 - `Hl7WorklistParser`: 
   - added support for HL7 v2.5.
@@ -7,7 +7,7 @@ v 0.15.3
 v 0.15.1
 ========
 - `OrthancTestDbPopulator`: `instances_count` is now applied to every generated series
-  and not only MR & CT series. 
+  and not only to MR & CT series. 
 
 v 0.15.0
 ========

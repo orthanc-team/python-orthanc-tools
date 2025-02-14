@@ -1,3 +1,7 @@
+v 0.16.1
+========
+- `OrthancFolderImporter`: allow working without saving the state in a file
+
 v 0.16.0
 ========
 - BREAKING_CHANGE `OrthancCleaner` can now filter on `modalities in study`. Rules file format has changed. 

@@ -60,9 +60,10 @@ class OrthancFolderImporter:
             f.write(file_path + "\n")
 
     def add_folder_path_in_state_file(self, folder_path):
-        with self._lock:
-            with open(self._state_path, "at") as f:
-                f.write(folder_path + "\n")
+        if self._state_path:
+            with self._lock:
+                with open(self._state_path, "at") as f:
+                    f.write(folder_path + "\n")
 
     def upload_and_label(self, path_to_upload):
         """
@@ -172,7 +173,7 @@ class OrthancFolderImporter:
 
     def execute(self):
         # read state
-        if os.path.isfile(self._state_path):
+        if self._state_path and os.path.isfile(self._state_path):
             with open(self._state_path, 'r') as file:
                 lines = file.readlines()
                 self._folders_uploaded = [line.strip() for line in lines]

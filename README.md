@@ -95,7 +95,7 @@ $ docker exec -it xxxx bash
 
 /# pip3 install orthanc-tools
 
-/# python3 -m orthanc_tools.orthanc_folder_importer --folder=/import --url=http://localhost:8042 --user=test --password=test --skip_extensions=.cne,.bmp,.ini
+/# python3 -m orthanc_tools.orthanc_folder_importer --folder_path=/import --url=http://localhost:8042 --user=test --password=test --skip_extensions=.cne,.bmp,.ini --worker_threads_count=5
 
 ```
 

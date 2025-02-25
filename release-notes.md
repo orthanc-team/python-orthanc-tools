@@ -1,3 +1,7 @@
+v 0.16.2
+========
+- added `PostgresDumper` to dump a postgres db and write the dump on an sftp server.
+
 v 0.16.1
 ========
 - `OrthancFolderImporter`: allow working without saving the state in a file

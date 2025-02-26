@@ -1,4 +1,4 @@
-v 0.16.3
+v 0.16.4
 ========
 - added `PostgresDumper` to dump a postgres db and write the dump on an sftp server.
 

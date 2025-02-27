@@ -47,7 +47,7 @@ class PostgresDumper:
 
             # Build full file path: we use the name fo the day, so that only 7 files are kept and there is no need
             # to clean up ourselves (files are overwritten the next week)
-            sftp_file_path = f"{self.sftp_folder_path}/{datetime.date.today().strftime('%A')}.gzip"
+            sftp_file_path = f"{self.sftp_folder_path}/{datetime.date.today().strftime('%A')}.gz"
 
             # Open a remote file for writing
             # TODO: given that the 'sftp.open()' works the same way as a regular file, we could make this script working for both cases

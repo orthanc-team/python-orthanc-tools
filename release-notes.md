@@ -1,3 +1,7 @@
+v 0.16.5
+========
+- Fix [#8](https://github.com/orthanc-team/python-orthanc-tools/issues/8): removed pathlib dependency
+
 v 0.16.4
 ========
 - added `PostgresDumper` to dump a postgres db and write the dump on an sftp server.

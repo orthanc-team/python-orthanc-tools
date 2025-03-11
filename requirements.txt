@@ -5,6 +5,5 @@ hl7==0.4.2
 six
 schedule==1.2.0
 pika
-pathlib
 inquirer
 paramiko

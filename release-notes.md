@@ -1,3 +1,7 @@
+v 0.16.6
+========
+- Fix retry errors in `OrthancForwarder`
+
 v 0.16.5
 ========
 - Fix [#8](https://github.com/orthanc-team/python-orthanc-tools/issues/8): removed pathlib dependency

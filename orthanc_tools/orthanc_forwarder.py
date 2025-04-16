@@ -165,7 +165,7 @@ class OrthancForwarder:
             except exceptions.ConnectionError as ex:
                 logger.info(f"Connection error while handling {resource.type} {resource.resource_id}: {ex.msg}")
             except Exception as ex:
-                logger.exception(f"Error while handling all {resource.type} {resource.resource_id}", ex)
+                logger.exception(f"Error while handling all {resource.type} {resource.resource_id}: {ex.msg}")
 
         logger.debug(f"Stopping Forwarder thread {worker_id}")
 
@@ -286,7 +286,7 @@ class OrthancForwarder:
             except exceptions.OrthancApiException as ex:
                 logger.error(f"{instances_set} Error while processing: {ex.msg}")
             except Exception as ex:
-                logger.error(f"{instances_set} Error while processing: {ex}", exc_info=1)
+                logger.error(f"{instances_set} Error while processing: {ex.msg}", exc_info=True)
                 return False
 
         return True
@@ -323,7 +323,7 @@ class OrthancForwarder:
                                                          destination=dest.destination,
                                                          error=ex.msg)
             except Exception as ex:
-                logger.error(f"{instances_set} Error while forwarding to {dest.destination}: {ex}", exc_info=1)
+                logger.error(f"{instances_set} Error while forwarding to {dest.destination}: {ex}", exc_info=True)
                 if self._on_instances_set_forward_error:
                     self._on_instances_set_forward_error(instances_set=instances_set,
                                                          destination=dest.destination,
@@ -349,7 +349,7 @@ class OrthancForwarder:
 
         if instances_set.id not in self._status:
             self._status[instances_set.id] = ForwarderInstancesSetStatus()
-        else:  # this is a retry !
+        elif self._status[instances_set.id].next_retry:  # this is a retry !
             if datetime.datetime.now() < self._status[instances_set.id].next_retry:
                 logger.debug(f"{instances_set} Skipping while waiting for retry")
                 return

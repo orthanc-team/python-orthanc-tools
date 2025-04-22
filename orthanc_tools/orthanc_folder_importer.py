@@ -106,6 +106,7 @@ class OrthancFolderImporter:
                             return
 
                         # modification case: let's upload the file
+                        logger.info(f"uploading {path_to_upload}")
                         instance_orthanc_ids = self._api_client.upload(buffer, ignore_errors=True)
 
                         if len(instance_orthanc_ids) == 0:

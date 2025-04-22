@@ -1,3 +1,7 @@
+v 0.16.7
+========
+- Restored logging in `OrthancFolderImporter`
+
 v 0.16.6
 ========
 - Fix retry errors in `OrthancForwarder`

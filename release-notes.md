@@ -1,3 +1,7 @@
+v 0.16.7
+========
+- Fix [#6](https://github.com/orthanc-team/python-orthanc-tools/issues/6): encoding issue in populator
+
 v 0.16.6
 ========
 - Fix retry errors in `OrthancForwarder`

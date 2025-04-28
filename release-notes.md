@@ -1,3 +1,8 @@
+
+v 0.16.8
+========
+- Fix [#6](https://github.com/orthanc-team/python-orthanc-tools/issues/6): encoding issue in populator
+
 v 0.16.7
 ========
 - Restored logging in `OrthancFolderImporter`

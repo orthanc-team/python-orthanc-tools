@@ -109,7 +109,9 @@ class OrthancCloner(OrthancMonitor):
                 if transfer_job.info.status != JobStatus.SUCCESS:
                     raise Exception(str(transfer_job.info.content))
 
-            logger.info(f"{change_id} transfered study {study_id}")
+                logger.info(f"{change_id} transfered study {study_id}")
+            else:
+                raise NotImplementedError("Only Transfer mode is implemented!")
 
         except Exception as ex:
             raise Exception(f"Error while transferring study {study_id}: {str(ex)}")

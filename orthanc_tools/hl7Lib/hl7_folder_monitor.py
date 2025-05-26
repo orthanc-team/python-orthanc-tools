@@ -33,6 +33,13 @@ class Hl7FolderMonitor:
     def add_handlers(self, handlers: dict):
         self._handlers.update(handlers)
 
+    def clean_file_content(self, file_content):
+        '''
+        In some cases (Vetera), the HL7 message file contains `\r\n` in place of
+        `\r`. here is the replacement.
+        '''
+        return file_content.replace(b'\r\n', b'\r')
+
     def monitor_folder(self):
         self._is_running = True
 
@@ -42,8 +49,10 @@ class Hl7FolderMonitor:
                 full_path = os.path.join(self._folder_path, path)
 
                 # quick parse and call handler if present
-                with open(full_path, newline="\r") as f:
-                    file_content = f.read()
+                with open(full_path, 'rb') as f:
+                    file_content_binary = f.read()
+                    file_content_binary = self.clean_file_content(file_content_binary)
+                    file_content = file_content_binary.decode('utf-8')
                     message = self._parser.parse(file_content)
                     message_type = message['message_type']
                     if message_type in self._handlers:

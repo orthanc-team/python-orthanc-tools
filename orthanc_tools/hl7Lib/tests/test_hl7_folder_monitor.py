@@ -64,6 +64,38 @@ class TestHl7FolderMonitor(unittest.TestCase):
 
                 monitor = Hl7FolderMonitor(temp_dir_hl7, {'ORM^O01': orm_handler.handle_orm_message}, 3)
 
+                # we use `\r\n` as newline delimiter because this how Vetera works...
+                hl7_str = "MSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r\n"\
+                    "PID|1|999888777||123456789012345|GP.Software^Vetera||20070501|F|||||||||||||||||||||||||||Katze|Balinese|ALTERED|ZH-123|\r\n"\
+                    "ORC|NW||||||||20170731081517||||||||||\r\n"\
+                    "OBR|||1000000001|HD||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r\n"
+
+                file_path = temp_dir_hl7 + "/test.hl7"
+                f = open(file_path, "w")
+                f.write(hl7_str)
+                f.close()
+
+                self.assertEqual(1, len(os.listdir(temp_dir_hl7)))
+
+                monitor.start()
+
+                # wait until the hl7 file has been deleted, so that, the wl file should have been created
+                helpers.wait_until(lambda: len(os.listdir(temp_dir_hl7)) == 0, 4)
+
+                self.assertEqual(1, len(os.listdir(temp_dir_wl)))
+                monitor.stop()
+
+    def test_worklist_creation2(self):
+        # start a monitor that will check the folder and create the wl file
+        with tempfile.TemporaryDirectory() as temp_dir_hl7:
+            with tempfile.TemporaryDirectory() as temp_dir_wl:
+                orm_parser = Hl7WorklistParserVetera()
+                worklist_builder = DicomWorklistBuilder(folder=temp_dir_wl)
+                orm_handler = Hl7OrmWorklistMsgHandler(parser=orm_parser, builder=worklist_builder)
+
+                monitor = Hl7FolderMonitor(temp_dir_hl7, {'ORM^O01': orm_handler.handle_orm_message}, 3)
+
+                # regular `\r`
                 hl7_str = "MSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r"\
                     "PID|1|999888777||123456789012345|GP.Software^Vetera||20070501|F|||||||||||||||||||||||||||Katze|Balinese|ALTERED|ZH-123|\r"\
                     "ORC|NW||||||||20170731081517||||||||||\r"\
@@ -83,5 +115,3 @@ class TestHl7FolderMonitor(unittest.TestCase):
 
                 self.assertEqual(1, len(os.listdir(temp_dir_wl)))
                 monitor.stop()
-
-

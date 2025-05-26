@@ -1,3 +1,6 @@
+v 0.16.9
+========
+- Fix bug in `Hl7FolderMonitor`
 
 v 0.16.8
 ========

@@ -17,7 +17,7 @@ import os
 import logging
 import unittest
 
-from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, IdsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner, OrthancFolderImporter
+from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, IdsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner, OrthancFolderImporter, OrthancSyncher
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -946,6 +946,93 @@ class Test3Orthancs(unittest.TestCase):
             with open(here / "docker-setup-replicator/uninhibit.lua", 'rb') as f:
                 lua_script = f.read()
             self.oa.execute_lua_script(lua_script)
+
+    def test_orthanc_syncher_as_a_migrator(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        # populate Orthanc A & B with 2 DBs
+        populator_a = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=23,
+            series_count=3,
+            instances_count=4,
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25)
+        )
+        populator_a.execute()
+
+        populator_b = OrthancTestDbPopulator(
+            api_client=self.ob,
+            studies_count=23,
+            series_count=3,
+            instances_count=4,
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25)
+        )
+        populator_b.execute()
+
+        # transfer a few instances randomly before launching the comparator to make sur it acts correctly on incomplete series ...
+        instances_a = self.oa.instances.get_all_ids()
+        instances_b = self.ob.instances.get_all_ids()
+        self.oa.modalities.send('orthanc-b', [instances_a[0], instances_a[2], instances_a[4]])
+        self.ob.modalities.send('orthanc-a', [instances_b[0], instances_b[2], instances_b[4]])
+
+        # run the syncher and make sure that the content of both Orthanc is exactly the same
+        syncher = OrthancSyncher(
+            api_client_1=self.oa,
+            api_client_2=self.ob,
+            level='Instance',
+            orthanc_queries_batch_size=5
+        )
+        syncher.execute()
+
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+        self.assertEqual(len(self.oa.instances.get_all_ids()), 552)
+
+    def test_orthanc_syncher_with_recovery(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        # populate Orthanc A
+        populator_a = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=15,
+            series_count=3,
+            instances_count=2,
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25)
+        )
+        populator_a.execute()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            persist_status_path = os.path.join(temp_dir, 'status.txt')
+
+            # run the syncher and make sure that the content of both Orthanc is the same
+            syncher = OrthancSyncher(
+                api_client_1=self.oa,
+                api_client_2=self.ob,
+                level='Instance',
+                persist_status_path=persist_status_path,
+                orthanc_queries_batch_size=5
+            )
+            syncher.execute()
+
+            self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
+
+            # add some new images to the Orthanc A
+            populator_a = OrthancTestDbPopulator(
+                api_client=self.oa,
+                studies_count=3,
+                series_count=3,
+                instances_count=2,
+                from_study_date=datetime.date(2025, 4, 19),
+                to_study_date=datetime.date(2025, 10, 25)
+            )
+            populator_a.execute()
+
+            syncher.execute()
+            self.assertEqual(len(self.oa.instances.get_all_ids()), 108)
+
 
 
 if __name__ == '__main__':

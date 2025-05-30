@@ -11,6 +11,7 @@ from .ids_migrator import IdsMigrator
 from .orthanc_downloader import *
 from .orthanc_warmer import OrthancWarmer
 from .label_modifier import LabelModifier
+from .orthanc_syncher import OrthancSyncher
 
 from .hl7Lib import *
 from .helpers import *

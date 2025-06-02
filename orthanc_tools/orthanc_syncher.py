@@ -82,6 +82,8 @@ class OrthancSyncher:
         self._error_log_file_path = error_log_file_path
         self._persist_status_path = persist_status_path
 
+        self._current_run = "unknown"
+
         # first, we get the `run till` value from the file...
         if self._persist_status_path is not None:
             self._run_till_last_update_1, self._run_till_last_update_2 = self._read_status_from_file()
@@ -153,6 +155,10 @@ class OrthancSyncher:
 
     def _execute(self):
         # First run (Orthanc-1 studies are processed and pushed to Orthanc-2 if needed)
+
+        self._current_run = "1 -> 2"
+        logger.info(f"Starting run 1 ({self._current_run})...")
+
         self._run_till_last_update_1 = self.synch(
             orthanc_source=self._api_client_1,
             orthanc_destination=self._api_client_2,
@@ -162,7 +168,11 @@ class OrthancSyncher:
         if self._persist_status_path is not None:
             self.save_last_update_limit(self._run_till_last_update_1, 0)
 
-        # First run (Orthanc-2 studies are processed and pushed to Orthanc-1 if needed)
+        # Second run (Orthanc-2 studies are processed and pushed to Orthanc-1 if needed)
+
+        self._current_run = "2 -> 1"
+        logger.info(f"Starting run 2 ({self._current_run})...")
+
         self._run_till_last_update_2 = self.synch(
             orthanc_source=self._api_client_2,
             orthanc_destination=self._api_client_1,
@@ -178,6 +188,8 @@ class OrthancSyncher:
             # Get a batch of studies
             studies = self.get_studies(orthanc_client=orthanc_source, batch_size=self._batch_size, index=index)
 
+            logger.info(f"[{self._current_run}] Processing batch index {index}...")
+
             if index == 0:
                 new_last_update_limit = studies[0].last_update
 
@@ -187,10 +199,13 @@ class OrthancSyncher:
                 else:
                     # the current study LastUpdate value is older than the most recent value checked during the last run, so it's over
                     # let's return the new_last_update_limit
+
+                    logger.info(f"[{self._current_run}] Reached the 'LastUpdate' value already processed during last run, end of this run!")
                     return new_last_update_limit
 
             if len(studies) < self._batch_size:
                 # if the actual batch size is less than the expected, all studies have been processed --> stop
+                logger.info(f"[{self._current_run}] Processed all studies, end of this run!")
                 return new_last_update_limit
 
             else:
@@ -238,11 +253,30 @@ class OrthancSyncher:
 
 
     def transfer_instances(self, orthanc_source: OrthancApiClient, orthanc_destination: OrthancApiClient, instances_ids: List[str]):
-        #TODO: retry!
-        for instance_id in instances_ids:
-            data = orthanc_source.instances.get_file(instance_id)
-            orthanc_destination.upload(data)
 
+        retry_count = 0
+        retry_delays = [5, 20, 60, 300, 900, 1800, 3600, 7200]
+
+        while retry_count <= 5:
+            if retry_count >= 1:
+                delay = retry_delays[retry_count - 1]
+                logger.info(f"waiting {delay} seconds before retrying transfer for resource from study {orthanc_source.instances.get_parent_study_id(instances_ids[0])}")
+                time.sleep(delay)
+
+            try:
+                for instance_id in instances_ids:
+                    data = orthanc_source.instances.get_file(instance_id)
+                    orthanc_destination.upload(data)
+
+                break
+
+            except Exception as e:
+                if retry_count == 5:
+                    logger.error(f"Error while transfering a resource from this study: {orthanc_source.instances.get_parent_study_id(instances_ids[0])}. Exception: {str(e)}")
+                    exit(0)
+                else:
+                    retry_count += 1
+                    logger.warning(f"Error while transfering a resource from this study: {orthanc_source.instances.get_parent_study_id(instances_ids[0])}. Exception: {str(e)}")
 
     def get_studies(self, orthanc_client: OrthancApiClient, batch_size: int, index: int):
         return orthanc_client.studies.find(

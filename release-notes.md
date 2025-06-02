@@ -1,3 +1,7 @@
+v 0.16.10
+========
+- added `OrthancSyncher`
+
 v 0.16.9
 ========
 - Fix bug in `Hl7FolderMonitor`

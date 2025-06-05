@@ -129,7 +129,7 @@ setup(
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/discussions/install-requires-vs-requirements/
     install_requires=[
-        'orthanc-api-client>=0.18.6',
+        'orthanc-api-client>=0.18.7',
         'requests>=2.31.0',
         'pydicom>=3.0.1',
         'hl7==0.4.2',

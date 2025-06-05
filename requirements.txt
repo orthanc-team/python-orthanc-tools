@@ -1,5 +1,5 @@
 requests
-orthanc-api-client>=0.18.6
+orthanc-api-client>=0.18.7
 pydicom>=3.0.0
 hl7==0.4.2
 six

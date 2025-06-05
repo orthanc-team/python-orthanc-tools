@@ -1,3 +1,7 @@
+v 0.16.11
+========
+- upgraded api-client from 0.18.6 to 0.18.7 (unsupported preview bug)
+
 v 0.16.10
 ========
 - added `OrthancSyncher`

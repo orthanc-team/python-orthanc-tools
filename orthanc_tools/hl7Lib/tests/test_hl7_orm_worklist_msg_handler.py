@@ -356,7 +356,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                         "\x0bMSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r"
                         "PID|1|999888777||123456789012345|GP.Software^Vetera||20070501|F|||||||||||||||||||||||||||Katze|Balinese|ALTERED|ZH-123|\r"
                         "ORC|NW||||||||20170731081517||||||||||\r"
-                        "OBR|||1000000001|HD||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r"
+                        "OBR|||1000000001|my-description||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r"
                         "\x1c\x0d"
                     )
                     response = client.send(hl7_request)
@@ -387,4 +387,5 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                     self.assertEqual("F", wl.PatientSex)
                     self.assertEqual("DX", wl.ScheduledProcedureStepSequence[0].Modality)
                     self.assertEqual("Dr. P. Muster", wl.RequestingPhysician)
+                    self.assertEqual("my-description", wl.RequestedProcedureDescription)
 

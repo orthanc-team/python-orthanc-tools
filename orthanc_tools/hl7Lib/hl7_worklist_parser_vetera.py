@@ -14,7 +14,8 @@ class Hl7WorklistParserVetera(Hl7WorklistParser):
             'BreedRegistrationNumber': 'PID.F38',
             '_scheduledProcedureStepStartDateTime': 'OBR.F6',
             'Modality': 'OBR.F21',
-            'RequestingPhysician': 'OBR.F32'
+            'RequestingPhysician': 'OBR.F32',
+            'RequestedProcedureDescription': 'OBR.F4'
         }
         if specific_fields is not None:
             vetera_dict.update(specific_fields)

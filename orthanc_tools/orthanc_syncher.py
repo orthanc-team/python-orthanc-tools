@@ -124,7 +124,7 @@ class OrthancSyncher:
                 last_update_strings = f.read().splitlines()
         except (ValueError, FileNotFoundError):  # if can not read, use 1-1-1950
             logger.warning("Could not read LastUpdate values from file, running till at 01-01-1950")
-            first_january_1950 = datetime.datetime(year=2025, month=1, day=1, hour=1, minute=1, second=1)
+            first_january_1950 = datetime.datetime(year=1950, month=1, day=1, hour=1, minute=1, second=1)
 
             with open(self._persist_status_path, 'w') as f:
                 full_line = datetime.datetime.strftime(first_january_1950, "%Y-%m-%d %H:%M:%S") + '\n'

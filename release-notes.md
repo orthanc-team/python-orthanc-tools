@@ -1,4 +1,8 @@
-v 0.16.11
+v 0.16.12
+========
+- fixed date bug in `OrthancSyncher` 
+
+- v 0.16.11
 ========
 - upgraded api-client from 0.18.6 to 0.18.7 (unsupported preview bug)
 

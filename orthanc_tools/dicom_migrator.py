@@ -67,7 +67,8 @@ class DicomMigrator:
                  delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only vali
                  scheduler: Scheduler = None,
                  worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
-                 exit_on_error: bool = False
+                 exit_on_error: bool = False,
+                 use_get_not_move: bool = False
                  ):
 
         if (destination_aet is not None and destination_modality is not None):
@@ -81,6 +82,7 @@ class DicomMigrator:
         self._delete_from_source = delete_from_source
         self._scheduler = scheduler
         self._exit_on_error = exit_on_error
+        self._use_get_not_move = use_get_not_move
 
         self._worker_threads_count = worker_threads_count
         self._worker_threads = []
@@ -147,14 +149,25 @@ class DicomMigrator:
                         time.sleep(delay)
 
                     try:
-                        logger.info(f"C-Move study {message.dicom_id} from source {self._source_modality} to destination AET {self._destination_aet}")
-                        # move the study from source to target modality
-                        self._api_client.modalities.move_study(
-                            from_modality=self._source_modality,
-                            dicom_id=message.dicom_id,
-                            to_modality_aet=self._destination_aet
-                        )
-                        break
+                        # not possible to use the `retrive_study` method because the destination could be something else than Orthanc
+                        if self._use_get_not_move:
+                            logger.info(
+                                f"C-Get study {message.dicom_id} from source {self._source_modality} to Orthanc ({self._destination_aet})")
+                            # get the study from source to Orthanc
+                            self._api_client.modalities.get_study(
+                                from_modality=self._source_modality,
+                                dicom_id=message.dicom_id
+                            )
+                            break
+                        else:
+                            logger.info(f"C-Move study {message.dicom_id} from source {self._source_modality} to destination AET {self._destination_aet}")
+                            # move the study from source to target modality
+                            self._api_client.modalities.move_study(
+                                from_modality=self._source_modality,
+                                dicom_id=message.dicom_id,
+                                to_modality_aet=self._destination_aet
+                            )
+                            break
                     except Exception as ex:
                         retry_count += 1
                         if retry_count == 5:

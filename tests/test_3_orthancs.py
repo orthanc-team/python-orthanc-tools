@@ -312,6 +312,24 @@ class Test3Orthancs(unittest.TestCase):
         # check all instances have been transferred and are still on the source
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
+    def test_pacs_migrator_as_destination_c_get(self):
+        self.oa.delete_all_content()  # source
+        self.ob.delete_all_content()  # migrator & destination
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        migrator = PacsMigrator(
+            api_client=self.ob,
+            source_modality="orthanc-a",
+            destination_aet="ORTHANC-B",
+            from_study_date=datetime.date(2004, 1, 18),
+            to_study_date=datetime.date(2004, 1, 20),
+            use_get_not_move=True
+        )
+        migrator.execute()
+
+        # check all instances have been transferred and are still on the source
+        self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
     def test_pacs_migrator_exit_on_error(self):
         self.oa.delete_all_content()  # source

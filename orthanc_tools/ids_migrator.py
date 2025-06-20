@@ -28,7 +28,8 @@ class IdsMigrator(DicomMigrator):
                  delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only vali
                  scheduler: Scheduler = None,
                  worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
-                 exit_on_error: bool = False
+                 exit_on_error: bool = False,
+                 use_get_not_move: bool = False
                  ):
 
         super().__init__(
@@ -40,7 +41,8 @@ class IdsMigrator(DicomMigrator):
             delete_from_source=delete_from_source,
             scheduler=scheduler,
             worker_threads_count=worker_threads_count,
-            exit_on_error=exit_on_error
+            exit_on_error=exit_on_error,
+            use_get_not_move=use_get_not_move
         )
 
         self._ids_list_file_path = ids_list_file_path
@@ -92,6 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('--delete_from_source', default=False, action='store_true', help='delete data from source (only if source is an Orthanc)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Worker threads count')
     parser.add_argument('--exit_on_error', default=False, action='store_true', help='if True, the script will exit in case of error')
+    parser.add_argument('--use_get_not_move', default=False, action='store_true', help='use a C-Get in place of C-Move (only if destination is Orthanc)')
 
     Scheduler.add_parser_arguments(parser)
 
@@ -105,6 +108,11 @@ if __name__ == '__main__':
     source_modality = os.environ.get("SOURCE_MODALITY", args.source_modality)
     ids_list_file_path = os.environ.get("IDS_LIST_FILE_PATH", args.ids_list_file_path)
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
+
+    if os.environ.get("USE_GET_NOT_MOVE", None) is not None:
+        use_get_not_move = os.environ.get("USE_GET_NOT_MOVE") in ["true", "True"]
+    else:
+        use_get_not_move = args.use_get_not_move
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 
@@ -127,7 +135,8 @@ if __name__ == '__main__':
         delete_from_source=delete_from_source,
         scheduler=scheduler,
         worker_threads_count=worker_threads_count,
-        exit_on_error=exit_on_error
+        exit_on_error=exit_on_error,
+        use_get_not_move=use_get_not_move
     )
 
     migrator.execute()

@@ -32,7 +32,8 @@ class PacsMigrator(DicomMigrator):
                  worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
                  exit_on_error: bool = False,
                  orthanc_space_threshold: int = 0,
-                 waiting_time_for_space_threshold: int = 600 # useful for unit tests
+                 waiting_time_for_space_threshold: int = 600, # useful for unit tests
+                 use_get_not_move: bool = False
                  ):
 
         super().__init__(
@@ -44,7 +45,8 @@ class PacsMigrator(DicomMigrator):
             delete_from_source=delete_from_source,
             scheduler=scheduler,
             worker_threads_count=worker_threads_count,
-            exit_on_error=exit_on_error
+            exit_on_error=exit_on_error,
+            use_get_not_move=use_get_not_move
         )
 
         self._from_study_date = from_study_date
@@ -185,6 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Worker threads count')
     parser.add_argument('--exit_on_error', default=False, action='store_true', help='if True, the script will exit in case of error')
     parser.add_argument('--orthanc_space_threshold', type=int, default=0, help='[MB] If different from 0, Migrator will wait until disk space used by Orthanc is above this value.')
+    parser.add_argument('--use_get_not_move', default=False, action='store_true', help='use a C-Get in place of C-Move (only if destination is Orthanc)')
 
     Scheduler.add_parser_arguments(parser)
 
@@ -201,6 +204,11 @@ if __name__ == '__main__':
     to_study_date = helpers.from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     orthanc_space_threshold = int(os.environ.get("ORTHANC_SPACE_THRESHOLD", str(args.orthanc_space_threshold)))
+
+    if os.environ.get("USE_GET_NOT_MOVE", None) is not None:
+        use_get_not_move = os.environ.get("USE_GET_NOT_MOVE") in ["true", "True"]
+    else:
+        use_get_not_move = args.use_get_not_move
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 
@@ -231,7 +239,8 @@ if __name__ == '__main__':
         scheduler=scheduler,
         worker_threads_count=worker_threads_count,
         exit_on_error=exit_on_error,
-        orthanc_space_threshold=orthanc_space_threshold
+        orthanc_space_threshold=orthanc_space_threshold,
+        use_get_not_move=use_get_not_move
     )
 
     migrator.execute()

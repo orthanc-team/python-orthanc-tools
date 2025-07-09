@@ -33,7 +33,9 @@ class PacsMigrator(DicomMigrator):
                  exit_on_error: bool = False,
                  orthanc_space_threshold: int = 0,
                  waiting_time_for_space_threshold: int = 600, # useful for unit tests
-                 use_get_not_move: bool = False
+                 use_get_not_move: bool = False,
+                 max_retries: int = 5,
+                 constant_retry_delays: bool = False
                  ):
 
         super().__init__(
@@ -46,7 +48,9 @@ class PacsMigrator(DicomMigrator):
             scheduler=scheduler,
             worker_threads_count=worker_threads_count,
             exit_on_error=exit_on_error,
-            use_get_not_move=use_get_not_move
+            use_get_not_move=use_get_not_move,
+            max_retries=max_retries,
+            constant_retry_delays=constant_retry_delays
         )
 
         self._from_study_date = from_study_date
@@ -188,6 +192,8 @@ if __name__ == '__main__':
     parser.add_argument('--exit_on_error', default=False, action='store_true', help='if True, the script will exit in case of error')
     parser.add_argument('--orthanc_space_threshold', type=int, default=0, help='[MB] If different from 0, Migrator will wait until disk space used by Orthanc is above this value.')
     parser.add_argument('--use_get_not_move', default=False, action='store_true', help='use a C-Get in place of C-Move (only if destination is Orthanc)')
+    parser.add_argument('--max_retries', type=int, default=5, help='Maximum number of retries')
+    parser.add_argument('--constant_retry_delays', default=False, action='store_true', help='Use constant 60 seconds retry instead of the default increasing delay retries')
 
     Scheduler.add_parser_arguments(parser)
 
@@ -204,6 +210,7 @@ if __name__ == '__main__':
     to_study_date = helpers.from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     orthanc_space_threshold = int(os.environ.get("ORTHANC_SPACE_THRESHOLD", str(args.orthanc_space_threshold)))
+    max_retries = int(os.environ.get("MAX_RETRIES", str(args.max_retries)))
 
     if os.environ.get("USE_GET_NOT_MOVE", None) is not None:
         use_get_not_move = os.environ.get("USE_GET_NOT_MOVE") in ["true", "True"]
@@ -221,6 +228,11 @@ if __name__ == '__main__':
         exit_on_error = os.environ.get("EXIT_ON_ERROR") == "true"
     else:
         exit_on_error = args.exit_on_error
+
+    if os.environ.get("CONSTANT_RETRY_DELAYS", None) is not None:
+        constant_retry_delays = os.environ.get("CONSTANT_RETRY_DELAYS") in ["true", "True"]
+    else:
+        constant_retry_delays = args.constant_retry_delays
 
     api_client = None
     if api_key is not None:
@@ -240,7 +252,9 @@ if __name__ == '__main__':
         worker_threads_count=worker_threads_count,
         exit_on_error=exit_on_error,
         orthanc_space_threshold=orthanc_space_threshold,
-        use_get_not_move=use_get_not_move
+        use_get_not_move=use_get_not_move,
+        max_retries=max_retries,
+        constant_retry_delays=constant_retry_delays
     )
 
     migrator.execute()

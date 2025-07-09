@@ -68,7 +68,9 @@ class DicomMigrator:
                  scheduler: Scheduler = None,
                  worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
                  exit_on_error: bool = False,
-                 use_get_not_move: bool = False
+                 use_get_not_move: bool = False,
+                 max_retries: int = 5,
+                 constant_retry_delays: bool = False
                  ):
 
         if (destination_aet is not None and destination_modality is not None):
@@ -83,7 +85,9 @@ class DicomMigrator:
         self._scheduler = scheduler
         self._exit_on_error = exit_on_error
         self._use_get_not_move = use_get_not_move
-
+        self._max_retries = max_retries
+        self._constant_retry_delays = constant_retry_delays
+        
         self._worker_threads_count = worker_threads_count
         self._worker_threads = []
         self._messages = queue.Queue(maxsize=2*worker_threads_count)  # this is thread safe https://docs.python.org/3.5/library/queue.html#module-queue
@@ -140,11 +144,14 @@ class DicomMigrator:
 
             elif self._source_modality and self._destination_aet:
                 retry_count = 0
-                retry_delays = [5, 20, 60, 300, 900, 1800, 3600, 7200]
+                if self._constant_retry_delays:
+                    retry_delays = [60]
+                else:
+                    retry_delays = [5, 20, 60, 120, 300, 600, 900, 1200, 1500, 1800, 3600]
 
-                while retry_count < 5:
+                while retry_count < self._max_retries:
                     if retry_count >= 1:
-                        delay = retry_delays[retry_count - 1]
+                        delay = retry_delays[min(retry_count, retry_delays) - 1]
                         logger.info(f"waiting {delay} seconds before retrying C-Move for study {message.dicom_id}")
                         time.sleep(delay)
 

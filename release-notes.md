@@ -1,6 +1,11 @@
+v 0.17.1
+========
+- added `--constant_retry_delays`|`CONSTANT_RETRY_DELAYS` option in `OrthancMigrator` 
+- added `--max_retries`|`MAX_RETRIES` option in `OrthancMigrator`
+
 v 0.17.0
 ========
-- added C-Get option in `OrthancMigrator` 
+- added `--use_get_not_move`|`USE_GET_NOT_MOVE` option in `OrthancMigrator` 
 
 v 0.16.12
 ========

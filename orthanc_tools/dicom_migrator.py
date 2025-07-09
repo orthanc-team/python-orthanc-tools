@@ -151,7 +151,7 @@ class DicomMigrator:
 
                 while retry_count < self._max_retries:
                     if retry_count >= 1:
-                        delay = retry_delays[min(retry_count, retry_delays) - 1]
+                        delay = retry_delays[min(retry_count, len(retry_delays)) - 1]
                         logger.info(f"waiting {delay} seconds before retrying C-Move for study {message.dicom_id}")
                         time.sleep(delay)
 

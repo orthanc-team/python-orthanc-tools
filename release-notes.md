@@ -1,4 +1,4 @@
-v 0.17.1
+v 0.17.2
 ========
 - added `--constant_retry_delays`|`CONSTANT_RETRY_DELAYS` option in `OrthancMigrator` 
 - added `--max_retries`|`MAX_RETRIES` option in `OrthancMigrator`

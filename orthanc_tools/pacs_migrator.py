@@ -27,15 +27,16 @@ class PacsMigrator(DicomMigrator):
                  max_cfind_study_count: int = None,     # Known maximum amount of studies retrievable from the source modality at once
                  destination_modality: str = None,      # Destination modality as configured in Orthanc (alias)
                  destination_aet: str = None,           # Destination AET
-                 delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only vali
+                 delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only valid if the source is an Orthanc)
                  scheduler: Scheduler = None,
-                 worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
+                 worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one
                  exit_on_error: bool = False,
                  orthanc_space_threshold: int = 0,
                  waiting_time_for_space_threshold: int = 600, # useful for unit tests
                  use_get_not_move: bool = False,
                  max_retries: int = 5,
-                 constant_retry_delays: bool = False
+                 constant_retry_delays: bool = False,
+                 error_log_path: str = None             # path to a file that will contain a CSV with the failed studies
                  ):
 
         super().__init__(
@@ -50,7 +51,8 @@ class PacsMigrator(DicomMigrator):
             exit_on_error=exit_on_error,
             use_get_not_move=use_get_not_move,
             max_retries=max_retries,
-            constant_retry_delays=constant_retry_delays
+            constant_retry_delays=constant_retry_delays,
+            error_log_path=error_log_path
         )
 
         self._from_study_date = from_study_date
@@ -113,8 +115,14 @@ class PacsMigrator(DicomMigrator):
                 logger.info(f"Querying remote modality {self._source_modality}")
 
                 retry_count = 0
-                while retry_count < 5:
+                while retry_count < self._max_retries:
                     try:
+                        # get more details if we are going to log the errors
+                        if self._error_log_path:                        
+                            query["PatientID"] = ""
+                            query["PatientName"] = ""
+                            query["StudyDescription"] = ""
+                        
                         remote_modality_studies = self._api_client.modalities.query_studies(
                             from_modality=self._source_modality,
                             query=query
@@ -123,8 +131,8 @@ class PacsMigrator(DicomMigrator):
 
                     except Exception as ex:
                         retry_count += 1
-                        if retry_count == 5:
-                            logger.error("Could not query the modality (retried 5 times), aborting")
+                        if retry_count == self._max_retries:
+                            logger.error(f"Could not query the modality (retried {self._max_retries} times), aborting")
                             if self._exit_on_error:
                                 logger.info("exiting due to an error...")
                                 self.stop_threads()
@@ -141,7 +149,19 @@ class PacsMigrator(DicomMigrator):
                         sys.exit(1)
 
                 for study in remote_modality_studies:
-                    self.push_message(Message(dicom_id=study.dicom_id))
+                    if self._error_log_path:                        
+                        info = ";".join([
+                            study.tags.get('StudyDate'),
+                            study.tags.get('StudyInstanceUID'),
+                            study.tags.get('PatientID'),
+                            study.tags.get('PatientName'),
+                            study.tags.get('StudyDescription')
+                            ])
+                    else:
+                        info = None
+
+                    self.push_message(Message(dicom_id=study.dicom_id,
+                                              info=info))
 
             current_date += datetime.timedelta(days=inc_date)
 
@@ -194,6 +214,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_get_not_move', default=False, action='store_true', help='use a C-Get in place of C-Move (only if destination is Orthanc)')
     parser.add_argument('--max_retries', type=int, default=5, help='Maximum number of retries')
     parser.add_argument('--constant_retry_delays', default=False, action='store_true', help='Use constant 60 seconds retry instead of the default increasing delay retries')
+    parser.add_argument('--error_log_path', type=str, default=None, help='File to record the failed studies in CSV')
 
     Scheduler.add_parser_arguments(parser)
 
@@ -211,6 +232,7 @@ if __name__ == '__main__':
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     orthanc_space_threshold = int(os.environ.get("ORTHANC_SPACE_THRESHOLD", str(args.orthanc_space_threshold)))
     max_retries = int(os.environ.get("MAX_RETRIES", str(args.max_retries)))
+    error_log_path = os.environ.get("ERROR_LOG_PATH", args.error_log_path)
 
     if os.environ.get("USE_GET_NOT_MOVE", None) is not None:
         use_get_not_move = os.environ.get("USE_GET_NOT_MOVE") in ["true", "True"]
@@ -254,7 +276,8 @@ if __name__ == '__main__':
         orthanc_space_threshold=orthanc_space_threshold,
         use_get_not_move=use_get_not_move,
         max_retries=max_retries,
-        constant_retry_delays=constant_retry_delays
+        constant_retry_delays=constant_retry_delays,
+        error_log_path=error_log_path
     )
 
     migrator.execute()

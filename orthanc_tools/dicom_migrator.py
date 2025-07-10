@@ -18,10 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 class Message:
-    def __init__(self, dicom_id: str = None, orthanc_id: str = None, should_stop: bool = False):
+    def __init__(self, dicom_id: str = None, orthanc_id: str = None, should_stop: bool = False, info: str = None):
         self.dicom_id = dicom_id
         self.orthanc_id = orthanc_id
         self.should_stop = should_stop
+        self.info = info
 
 
 class DicomMigrator:
@@ -64,13 +65,14 @@ class DicomMigrator:
                  max_cfind_study_count: int = None,     # Known maximum amount of studies retrievable from the source modality at once
                  destination_modality: str = None,      # Destination modality as configured in Orthanc (alias)
                  destination_aet: str = None,           # Destination AET
-                 delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only vali
+                 delete_from_source: bool = False,      # once the data has been migrated, delete it from source (only valid if the source is an Orthanc)
                  scheduler: Scheduler = None,
-                 worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
+                 worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one
                  exit_on_error: bool = False,
                  use_get_not_move: bool = False,
                  max_retries: int = 5,
-                 constant_retry_delays: bool = False
+                 constant_retry_delays: bool = False,
+                 error_log_path: str = None             # path to a file that will contain a CSV with the failed studies
                  ):
 
         if (destination_aet is not None and destination_modality is not None):
@@ -87,7 +89,9 @@ class DicomMigrator:
         self._use_get_not_move = use_get_not_move
         self._max_retries = max_retries
         self._constant_retry_delays = constant_retry_delays
-        
+        self._error_log_path = error_log_path
+        self._error_log_lock = threading.Lock()
+
         self._worker_threads_count = worker_threads_count
         self._worker_threads = []
         self._messages = queue.Queue(maxsize=2*worker_threads_count)  # this is thread safe https://docs.python.org/3.5/library/queue.html#module-queue
@@ -177,12 +181,17 @@ class DicomMigrator:
                             break
                     except Exception as ex:
                         retry_count += 1
-                        if retry_count == 5:
-                            logger.error(f"Error (retried 5 times) while transferring {message.dicom_id} {str(ex)}")
+                        if retry_count == self._max_retries:
+                            logger.error(f"Error (retried {retry_count} times) while transferring {message.dicom_id} {str(ex)}")
                             if self._exit_on_error:
                                 logger.info("exiting due to an error...")
                                 self.stop_threads()
                                 sys.exit(1)
+                            elif self._error_log_path and message.info:
+                                with self._error_log_lock:
+                                    with open(self._error_log_path, "at") as f:
+                                        f.write(message.info + "\n")
+                            break
                         else:
                             logger.warning(f"Error while transferring, retrying... {message.dicom_id} {str(ex)}")
 

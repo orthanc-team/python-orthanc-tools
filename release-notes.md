@@ -1,3 +1,7 @@
+v 0.17.4
+========
+- updated `hl7 folder monitor` to work with Vetera software 
+
 v 0.17.3
 ========
 - added `--error_log_path`|`ERROR_LOG_PATH` option in `OrthancMigrator` 

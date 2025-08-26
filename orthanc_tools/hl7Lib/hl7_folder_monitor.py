@@ -37,8 +37,13 @@ class Hl7FolderMonitor:
         '''
         In some cases (Vetera), the HL7 message file contains `\r\n` in place of
         `\r`. here is the replacement.
+        Also with Vetera, the HL7 message begins with UTF-8 Byte Order Mark (BOM) (EF BB BF bytes).
+        We remove them here.
         '''
-        return file_content.replace(b'\r\n', b'\r')
+        r = file_content.replace(b'\r\n', b'\r')
+        if r.startswith(b'\xef\xbb\xbf'):
+            r = r[3:]
+        return r
 
     def monitor_folder(self):
         self._is_running = True

@@ -65,10 +65,12 @@ class TestHl7FolderMonitor(unittest.TestCase):
                 monitor = Hl7FolderMonitor(temp_dir_hl7, {'ORM^O01': orm_handler.handle_orm_message}, 3)
 
                 # we use `\r\n` as newline delimiter because this how Vetera works...
+                # plus TF-8 Byte Order Mark (BOM) (EF BB BF bytes) at the beginning
+                # plus the ä in the description (C3 A4)
                 hl7_str = b"\xef\xbb\xbfMSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r\n"\
                     b"PID|1|999888777||123456789012345|GP.Software^Vetera||20070501|F|||||||||||||||||||||||||||Katze|Balinese|ALTERED|ZH-123|\r\n"\
                     b"ORC|NW||||||||20170731081517||||||||||\r\n"\
-                    b"OBR|||1000000001|HD||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r\n"
+                    b"OBR|||1000000001|\xc3\xa4||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r\n"
 
                 file_path = temp_dir_hl7 + "/test.hl7"
                 f = open(file_path, "wb")

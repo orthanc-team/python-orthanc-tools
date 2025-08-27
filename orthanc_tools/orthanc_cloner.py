@@ -27,6 +27,7 @@ class OrthancCloner(OrthancMonitor):
                  persist_status_path: str = None,
                  polling_interval: float = 1,
                  mode: ClonerMode = ClonerMode.DEFAULT,
+                 trigs_on_stable_study: bool = False,             # if True, cloner will wait the stable age to clone the entire study (in place of instance by instance on new_instance event)
                  destination_peer: str = None,                    # the 'alias' of the destination peer declared in Orthanc configuration.  It must be defined for PEERING and TRANSFER mode
                  destination_dicom: str = None,                   # the 'alias' of the DICOM destination declared in Orthanc configuration.  It must be defined for DICOM moe.
                  scheduler: Scheduler = None,
@@ -47,6 +48,7 @@ class OrthancCloner(OrthancMonitor):
         self._destination_peer = destination_peer
         self._destination_dicom = destination_dicom
         self._mode = mode
+        self._trigs_on_stable_study = trigs_on_stable_study
 
         if self._scheduler:
             logger.info("Night & Week-end mode Enabled : " + str(self._scheduler._run_only_at_night_and_weekend))
@@ -63,9 +65,9 @@ class OrthancCloner(OrthancMonitor):
             if destination_dicom is None:
                 raise ValueError("'destination_dicom' must be defined in DICOM mode")
 
-        if self._mode in [ClonerMode.PEERING, ClonerMode.DEFAULT, ClonerMode.DICOM]:
+        if self._mode in [ClonerMode.PEERING, ClonerMode.DEFAULT, ClonerMode.DICOM] and not self._trigs_on_stable_study:
             self.add_handler(ChangeType.NEW_INSTANCE, self.handle_new_instance)
-        elif self._mode == ClonerMode.TRANSFER:
+        elif self._mode == ClonerMode.TRANSFER or self._trigs_on_stable_study:
             self.add_handler(ChangeType.STABLE_STUDY, self.handle_stable_study)
 
 
@@ -110,8 +112,18 @@ class OrthancCloner(OrthancMonitor):
                     raise Exception(str(transfer_job.info.content))
 
                 logger.info(f"{change_id} transfered study {study_id}")
+            elif self._mode == ClonerMode.DICOM:
+                api_client.modalities.send(target_modality=self._destination_dicom, resources_ids=study_id)
+            elif self._mode == ClonerMode.PEERING:
+                api_client.peers.send(target_peer=self._destination_peer, resources_ids=study_id)
+            elif self._mode == ClonerMode.DEFAULT:
+                instances_ids = api_client.studies.get_instances_ids(study_id)
+                for instance_id in instances_ids:
+                    dicom = api_client.instances.get_file(instance_id)
+                    self._destination.upload(dicom)
+                logger.info(f"{change_id}, copied study {study_id}")
             else:
-                raise NotImplementedError("Only Transfer mode is implemented!")
+                raise NotImplementedError(f"{self._mode} not implemented yet!")
 
         except Exception as ex:
             raise Exception(f"Error while transferring study {study_id}: {str(ex)}")
@@ -140,6 +152,7 @@ if __name__ == '__main__':
     parser.add_argument('--dest_peer', type=str, default=None, help='Orthanc destination peer (peer alias in source Orthanc)')
     parser.add_argument('--dest_dicom', type=str, default=None, help='DICOM destination alias as defined in Orthanc configuration')
     parser.add_argument('--mode', type=str, default=None, help='Cloner Mode (Default, Peering, Transfer)')
+    parser.add_argument('--trigs_on_stable_study', type=bool, default=False, action='store_true', help='if True, cloner will wait the stable age to clone the entire study')
     parser.add_argument('--persist_state_path', type=str, default=None, help='File path where the state of the cloner will be saved (to resume later)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Number of worker threads')
     parser.add_argument('--error_folder_path', type=str, default=None, help='Folder path where to store error reports')
@@ -181,12 +194,17 @@ if __name__ == '__main__':
     else:
         source=OrthancApiClient(source_url, user=source_user, pwd=source_pwd)
 
+    if os.environ.get("TRIGS_ON_STABLE_STUDY", None) is not None:
+        trigs_on_stable_study = os.environ.get("TRIGS_ON_STABLE_STUDY") == "true"
+    else:
+        trigs_on_stable_study = args.trigs_on_stable_study
 
     cloner = OrthancCloner(
         source=source,
         destination=destination,
         persist_status_path=persist_state_path,
         mode=mode,
+        trigs_on_stable_study=trigs_on_stable_study,
         destination_peer=dest_peer,
         destination_dicom=dest_dicom,
         scheduler=scheduler,

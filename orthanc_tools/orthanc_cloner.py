@@ -163,7 +163,7 @@ if __name__ == '__main__':
     parser.add_argument('--dest_peer', type=str, default=None, help='Orthanc destination peer (peer alias in source Orthanc)')
     parser.add_argument('--dest_dicom', type=str, default=None, help='DICOM destination alias as defined in Orthanc configuration')
     parser.add_argument('--mode', type=str, default=None, help='Cloner Mode (Default, Peering, Transfer)')
-    parser.add_argument('--trigs_on_stable_study', type=bool, default=False, action='store_true', help='if True, cloner will wait the stable age to clone the entire study')
+    parser.add_argument('--trigs_on_stable_study', default=False, action='store_true', help='if True, cloner will wait the stable age to clone the entire study')
     parser.add_argument('--success_label', type=str, default=None, help='if present and if trigs_on_stable_study is enabled, this label will be applied in case of forward success')
     parser.add_argument('--failure_label', type=str, default=None, help='if present and if trigs_on_stable_study is enabled, this label will be applied in case of forward failure')
     parser.add_argument('--persist_state_path', type=str, default=None, help='File path where the state of the cloner will be saved (to resume later)')

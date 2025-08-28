@@ -1,3 +1,7 @@
+v 0.17.6
+========
+- fix in parsing of `OrthancCloner` 
+
 v 0.17.5
 ========
 - updgraded `OrthancCloner` to use `stable_study` as a trigger and to allow a labeling at the end of the forward. 

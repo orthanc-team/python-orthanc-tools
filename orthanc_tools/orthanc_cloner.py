@@ -28,6 +28,8 @@ class OrthancCloner(OrthancMonitor):
                  polling_interval: float = 1,
                  mode: ClonerMode = ClonerMode.DEFAULT,
                  trigs_on_stable_study: bool = False,             # if True, cloner will wait the stable age to clone the entire study (in place of instance by instance on new_instance event)
+                 success_label: str = None,                       # if present and if trigs_on_stable_study is enabled, this label will be applied in case of forward success
+                 failure_label: str = None,                       # if present and if trigs_on_stable_study is enabled, this label will be applied in case of forward failure
                  destination_peer: str = None,                    # the 'alias' of the destination peer declared in Orthanc configuration.  It must be defined for PEERING and TRANSFER mode
                  destination_dicom: str = None,                   # the 'alias' of the DICOM destination declared in Orthanc configuration.  It must be defined for DICOM moe.
                  scheduler: Scheduler = None,
@@ -49,6 +51,8 @@ class OrthancCloner(OrthancMonitor):
         self._destination_dicom = destination_dicom
         self._mode = mode
         self._trigs_on_stable_study = trigs_on_stable_study
+        self._success_label = success_label
+        self._failure_label = failure_label
 
         if self._scheduler:
             logger.info("Night & Week-end mode Enabled : " + str(self._scheduler._run_only_at_night_and_weekend))
@@ -125,7 +129,14 @@ class OrthancCloner(OrthancMonitor):
             else:
                 raise NotImplementedError(f"{self._mode} not implemented yet!")
 
+            if self._success_label is not None:
+                api_client.studies.delete_label(study_id, self._failure_label)
+                api_client.studies.add_label(study_id, self._success_label)
+
         except Exception as ex:
+            if self._failure_label is not None:
+                api_client.studies.delete_label(study_id, self._success_label)
+                api_client.studies.add_label(study_id, self._failure_label)
             raise Exception(f"Error while transferring study {study_id}: {str(ex)}")
 
 # examples:
@@ -153,6 +164,8 @@ if __name__ == '__main__':
     parser.add_argument('--dest_dicom', type=str, default=None, help='DICOM destination alias as defined in Orthanc configuration')
     parser.add_argument('--mode', type=str, default=None, help='Cloner Mode (Default, Peering, Transfer)')
     parser.add_argument('--trigs_on_stable_study', type=bool, default=False, action='store_true', help='if True, cloner will wait the stable age to clone the entire study')
+    parser.add_argument('--success_label', type=str, default=None, help='if present and if trigs_on_stable_study is enabled, this label will be applied in case of forward success')
+    parser.add_argument('--failure_label', type=str, default=None, help='if present and if trigs_on_stable_study is enabled, this label will be applied in case of forward failure')
     parser.add_argument('--persist_state_path', type=str, default=None, help='File path where the state of the cloner will be saved (to resume later)')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Number of worker threads')
     parser.add_argument('--error_folder_path', type=str, default=None, help='Folder path where to store error reports')
@@ -173,6 +186,8 @@ if __name__ == '__main__':
     dest_peer = os.environ.get("DEST_PEER", args.dest_peer)
     dest_dicom = os.environ.get("DEST_DICOM", args.dest_dicom)
     mode = os.environ.get("MODE", args.mode)
+    success_label = os.environ.get("SUCCESS_LABEL", args.success_label)
+    failure_label = os.environ.get("FAILURE_LABEL", args.failure_label)
     persist_state_path = os.environ.get("PERSIST_STATE_PATH", args.persist_state_path)
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     error_folder_path = os.environ.get("ERROR_FOLDER_PATH", args.error_folder_path)
@@ -205,6 +220,8 @@ if __name__ == '__main__':
         persist_status_path=persist_state_path,
         mode=mode,
         trigs_on_stable_study=trigs_on_stable_study,
+        success_label=success_label,
+        failure_label=failure_label,
         destination_peer=dest_peer,
         destination_dicom=dest_dicom,
         scheduler=scheduler,

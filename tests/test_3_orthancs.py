@@ -144,6 +144,50 @@ class Test3Orthancs(unittest.TestCase):
 
         self.assertEqual(len(self.oa.instances.get_all_ids()), len(self.ob.instances.get_all_ids()))
 
+    def test_cloner_dicom_trigs_on_stable_study_with_labeling_OK(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        cloner = OrthancCloner(source=self.oa,
+                               destination_dicom='orthanc-b',
+                               mode=ClonerMode.DICOM,
+                               trigs_on_stable_study=True,
+                               success_label="OK",
+                               failure_label="KO")
+
+        study = self.oa.studies.get(self.oa.studies.get_all_ids()[0])
+        helpers.wait_until(lambda: study.is_stable, timeout=5)
+
+        cloner.execute()
+
+        study = self.oa.studies.get(self.oa.studies.get_all_ids()[0])
+        self.assertEqual(study.labels[0], "OK")
+
+    def test_cloner_dicom_trigs_on_stable_study_with_labeling_KO(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        cloner = OrthancCloner(source=self.oa,
+                               destination_dicom='inexistent',
+                               mode=ClonerMode.DICOM,
+                               trigs_on_stable_study=True,
+                               success_label="OK",
+                               failure_label="KO",
+                               max_retries=1)
+
+        study = self.oa.studies.get(self.oa.studies.get_all_ids()[0])
+        helpers.wait_until(lambda: study.is_stable, timeout=5)
+
+        cloner.execute()
+
+        study = self.oa.studies.get(self.oa.studies.get_all_ids()[0])
+        self.assertEqual(study.labels[0], "KO")
+
+
     def test_monitor(self):
         self.oa.delete_all_content()
         processed_instances = []

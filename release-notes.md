@@ -1,3 +1,7 @@
+v 0.17.5
+========
+- updgraded `OrthancCloner` to use `stable_study` as a trigger and to allow a labeling at the end of the forward. 
+
 v 0.17.4
 ========
 - updated `hl7 folder monitor` to work with Vetera software 

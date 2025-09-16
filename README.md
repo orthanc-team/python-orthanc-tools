@@ -60,7 +60,7 @@ services:
 #            DEST_PWD: "pwd"
             MODE: "Default"
             PERSIST_STATE_PATH: "/status/status.txt"
-            WORKERS_THREAD_COUNT: "6"
+            WORKER_THREADS_COUNT: "6"
 #            VERBOSE_ENABLED: "true"
             ERROR_FOLDER_PATH: "/status"
             MAX_RETRIES: "3"

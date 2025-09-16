@@ -1,3 +1,7 @@
+v 0.17.7
+========
+-  improved WL hl7 messages cleanup (Vetera)
+
 v 0.17.6
 ========
 - fix in parsing of `OrthancCloner` 

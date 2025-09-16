@@ -4,10 +4,14 @@ import unittest
 import hl7  # https://python-hl7.readthedocs.org/en/latest/
 from orthanc_tools import hl7Lib
 import re
+import shutil
 from orthanc_tools import Hl7FolderMonitor
 import tempfile
 from orthanc_api_client import helpers
 from orthanc_tools import Hl7WorklistParserVetera, DicomWorklistBuilder, Hl7OrmWorklistMsgHandler
+import pathlib
+
+here = pathlib.Path(__file__).parent.resolve()
 
 def hl7_echo_message_handler(incoming_hl7_message: str) -> hl7.Message:
     """
@@ -109,6 +113,33 @@ class TestHl7FolderMonitor(unittest.TestCase):
                 f.close()
 
                 self.assertEqual(1, len(os.listdir(temp_dir_hl7)))
+
+                monitor.start()
+
+                # wait until the hl7 file has been deleted, so that, the wl file should have been created
+                helpers.wait_until(lambda: len(os.listdir(temp_dir_hl7)) == 0, 4)
+
+                self.assertEqual(1, len(os.listdir(temp_dir_wl)))
+                monitor.stop()
+
+    def test_worklist_creation_carriage_return(self):
+        # start a monitor that will check the folder and create the wl file
+        # some messages from Vetera contains a carriage return in the middle of a segment...
+
+        with tempfile.TemporaryDirectory() as temp_dir_hl7:
+            with tempfile.TemporaryDirectory() as temp_dir_wl:
+                orm_parser = Hl7WorklistParserVetera()
+                worklist_builder = DicomWorklistBuilder(folder=temp_dir_wl)
+                orm_handler = Hl7OrmWorklistMsgHandler(parser=orm_parser, builder=worklist_builder)
+
+                hl7_folder_source = here / "stimuli"
+
+                for file in os.listdir(hl7_folder_source):
+                    src_file = os.path.join(hl7_folder_source, file)
+                    if os.path.isfile(src_file):
+                        shutil.copy2(src_file, temp_dir_hl7)
+
+                monitor = Hl7FolderMonitor(temp_dir_hl7, {'ORM^O01': orm_handler.handle_orm_message}, 3)
 
                 monitor.start()
 

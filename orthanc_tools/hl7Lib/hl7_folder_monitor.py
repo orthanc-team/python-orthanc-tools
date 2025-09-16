@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, re
 import time
 from threading import Thread
 import hl7
@@ -39,10 +39,12 @@ class Hl7FolderMonitor:
         `\r`. here is the replacement.
         Also with Vetera, the HL7 message begins with UTF-8 Byte Order Mark (BOM) (EF BB BF bytes).
         We remove them here.
+        Finally, (Vetera) we remove the carriage return if present in the middle of nowhere (not just after a '|').
         '''
         r = file_content.replace(b'\r\n', b'\r')
         if r.startswith(b'\xef\xbb\xbf'):
             r = r[3:]
+        r = re.sub(b'(?<!\|)\r', b'', r)
         return r
 
     def monitor_folder(self):

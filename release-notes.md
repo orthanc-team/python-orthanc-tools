@@ -1,3 +1,7 @@
+v 0.17.8
+========
+-  made worklist parser more tolerant to missing info
+
 v 0.17.7
 ========
 -  improved WL hl7 messages cleanup (Vetera)

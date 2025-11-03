@@ -1,4 +1,4 @@
-v 0.17.8
+v 0.17.9
 ========
 -  made worklist parser more tolerant to missing info
 

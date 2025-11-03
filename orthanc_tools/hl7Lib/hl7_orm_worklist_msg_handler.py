@@ -32,13 +32,19 @@ class Hl7OrmWorklistMsgHandler:
         logger.info("received message:{eol}{message}".format(message = str(message).replace('\r', os.linesep), eol = os.linesep))
         hl7_request = hl7.parse(message)  # we need to parse it here only the build the response
 
-        values = self._parser.parse(hl7_message = message)
         try:
-            logger.info("generating file...")
-            worklistFilePath = self._builder.generate(values)
+            values = self._parser.parse(hl7_message = message)
         except Exception as e:
-            logger.error("file not generated: {exception}".format(exception=e))
-        logger.info("generated file: {path}".format(path = worklistFilePath))
+            logger.error("problem during parsing: {exception}".format(exception=e))
+            values = None
+
+        if values is not None:
+            try:
+                logger.info("generating file...")
+                worklistFilePath = self._builder.generate(values)
+                logger.info("generated file: {path}".format(path = worklistFilePath))
+            except Exception as e:
+                logger.error("file not generated: {exception}".format(exception=e))
 
         hl7_response = hl7.parse('MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1\rMSA|AA|{message_id}'.format(  # TODO: handle encoding
             sending_application = hl7_request['MSH.F5.R1.C1'],

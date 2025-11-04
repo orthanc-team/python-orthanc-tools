@@ -49,13 +49,15 @@ class TestHl7Server(unittest.TestCase):
         self.assertFalse(server.is_running())
 
     def test_echo(self):
+        port_number = 2102  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+
         # start a server that will echo all ORU^R01 messages and return an error message for all other message types
-        with MLLPServer('localhost', 2000, {
+        with MLLPServer('localhost', port_number, {
             'ORU^R01': (hl7_echo_message_handler,),
             'ERR': (hl7_default_error_handler,)
         }) as server:
             # validate that ORU^R01 messages are echoed
-            with MLLPClient('localhost', 2000) as client:
+            with MLLPClient('localhost', port_number) as client:
                 hl7_oru_r01_request = hl7.parse(
                     "MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORU^R01|exp_ANE_5|P|2.3.1\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456")
                 response = client.send(hl7_oru_r01_request)
@@ -64,7 +66,7 @@ class TestHl7Server(unittest.TestCase):
                 self.assertEqual(hl7_oru_r01_request, hl7_response)
 
             # validate that other messages returns an negative acknowledge (error generated in the server)
-            with MLLPClient('localhost', 2000) as client:
+            with MLLPClient('localhost', port_number) as client:
                 hl7_other_request = hl7.parse(
                     "MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||-------|exp_ANE_5|P|2.3.1\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456")
                 response = client.send(hl7_other_request)
@@ -74,14 +76,16 @@ class TestHl7Server(unittest.TestCase):
                 self.assertEqual('No Handler found for message type -------', hl7_response['MSA.3'])
 
     def test_new_doc_message(self): # non-regression test because, at some point, the last segment was considered invalid by the client
+        port_number = 2103  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+
         # start a server that will echo all ORU^R01 messages and return an error message for all other message types
-        with MLLPServer('localhost', 2001, {
+        with MLLPServer('localhost', port_number, {
             'ORU^R01': (hl7_echo_message_handler,),
             'ERR': (hl7_default_error_handler,)
         }) as server:
 
             # validate that the newDoc message is echoed
-            with MLLPClient('localhost', 2001) as client:
+            with MLLPClient('localhost', port_number) as client:
                 hl7_oru_r01_request = hl7.parse(
                     "MSH|^~\&|INTERHOSP|OSIMIS|NEWDOC|CHR|201612051719||ORU^R01|634017193866620135CX|P|2.3.1|||AL|AL|BE|ASCII\rPID|1||9011071DJ01|||DOE^JOHN\rOBR|1||000000001|RXD|||201301081234||||||||||||||||||P||||||||\rOBX|1|ED|DICTEE||CITAPOLUS^APPLICATION^TXT^^Protocole réalisé à partir de InterHosp.\\.br\\Seule l'image est disponible via l'interface web\\.br\\"
                 )
@@ -90,7 +94,7 @@ class TestHl7Server(unittest.TestCase):
                 hl7_response = hl7.parse(response)
                 self.assertEqual(hl7_oru_r01_request, hl7_response)
 
-            with MLLPClient('localhost', 2001) as client:
+            with MLLPClient('localhost', port_number) as client:
 
                 # same test by constructing the message another way
                 MSH = hl7.Segment(hl7Lib.HL7_FIELD_SEPARATOR, [hl7.Field(hl7Lib.HL7_ALL_SEPARATORS[1], ['MSH'])])
@@ -141,14 +145,16 @@ class TestHl7Server(unittest.TestCase):
 
 
     def test_message_one_byte_at_a_time(self): # Avignon sends the first byte then, the rest of the message -> this made our server crash
+        port_number = 2104  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+
         # start a server that will echo all ORU^R01 messages and return an error message for all other message types
-        with MLLPServer('localhost', 2003, {
+        with MLLPServer('localhost', port_number, {
             'ORU^R01': (hl7_echo_message_handler,),
             'ERR': (hl7_default_error_handler,)
         }) as server:
 
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(('localhost', 2003))
+            s.connect(('localhost', port_number))
             s.send(b'\x0b')
             bytes_message = "MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORU^R01|exp_ANE_5|P|2.3.1\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456\r".encode('iso-8859-1')
             s.send(bytes_message)

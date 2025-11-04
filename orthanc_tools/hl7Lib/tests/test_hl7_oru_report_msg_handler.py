@@ -31,7 +31,7 @@ class TestHl7OruReportMsgHandler(unittest.TestCase):
         original_instance_id = self.oa.upload_file(here / "tests/stimuli/CT_small.dcm")[0]
         original_study_id = self.oa.instances.get_parent_study_id(original_instance_id)
 
-        port_number = 2001  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
+        port_number = 2101  # there are currently some issues when trying to reuse the same port in 2 tests (it's probably not freed soon enough -> let's use another port for each test)
 
         parser = Hl7ReportParser()
         orthanc_client = OrthancApiClient('http://localhost:10042', user='test', pwd='test')

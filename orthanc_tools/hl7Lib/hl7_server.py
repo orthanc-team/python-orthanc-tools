@@ -198,6 +198,7 @@ class MLLPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
         if self.thread is not None:
             self.shutdown()
+            self.server_close()
             self.thread.join()
             self.thread = None
 

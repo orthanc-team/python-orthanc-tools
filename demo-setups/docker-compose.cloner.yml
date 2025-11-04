@@ -1,7 +1,5 @@
 # start the demo with
 #   docker-compose -f docker-compose.cloner.yml up
-version: "3.1"
-
 services:
 
     orthanc-a:

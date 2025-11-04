@@ -42,7 +42,6 @@ python3 -m orthanc_tools.orthanc_cloner --source_url=http://192.168.0.10:8042 --
 
 or, inside a docker-compose file:
 ```yaml
-version: "3"
 services:
     orthanc-cloner:
         image: orthancteam/python-orthanc-tools:0.6.0

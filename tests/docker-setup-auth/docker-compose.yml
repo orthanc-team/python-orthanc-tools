@@ -1,5 +1,3 @@
-version: "3"
-
 # Warning: in this setup, there is no binding between Orthanc (actually simply basic auth) and auth service!
 # Because this would require an api key for a user and this is not so fast to implement and not neeeded for
 # the considered tests...

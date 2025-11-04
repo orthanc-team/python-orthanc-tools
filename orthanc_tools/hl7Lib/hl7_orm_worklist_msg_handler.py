@@ -46,7 +46,7 @@ class Hl7OrmWorklistMsgHandler:
             except Exception as e:
                 logger.error("file not generated: {exception}".format(exception=e))
 
-        hl7_response = hl7.parse('MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1\rMSA|AA|{message_id}'.format(  # TODO: handle encoding
+        hl7_response = hl7.parse(r'MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1' + '\r' + 'MSA|AA|{message_id}'.format(  # TODO: handle encoding
             sending_application = hl7_request['MSH.F5.R1.C1'],
             receiving_application = hl7_request['MSH.F3.R1.C1'],
             receiving_facility = hl7_request['MSH.F4.R1.C1'],

@@ -12,9 +12,8 @@
     },
     "doctor-role": {
       "authorized-labels": [
-        "OLD",
-        "TEST",
-        "OLD2"
+        "OLD2",
+        "TEST"
       ],
       "permissions": [
         "view",
@@ -25,7 +24,7 @@
     },
     "external-role": {
       "authorized-labels": [
-        "OLD"
+        "OLD2"
       ],
       "permissions": [
         "view",
@@ -35,7 +34,6 @@
   },
   "available-labels": [
     "TEST",
-    "OLD2",
-    "OLD"
+    "OLD2"
   ]
 }

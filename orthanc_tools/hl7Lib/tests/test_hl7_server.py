@@ -21,7 +21,7 @@ def hl7_default_error_handler(incoming_hl7_message: str, error_description: str)
     This is a 'stupid' handler that just returns a simple error message
     """
     hl7_response = hl7.parse(
-            "MSH|^~\&|CATH|StJohn|AcmeHIS|StJohn|20061019172719||ACK^O01|MSGID12349876|P|2.3\rMSA|AR|MSGID12349876|{error}".format(error = error_description))
+            r"MSH|^~\&|CATH|StJohn|AcmeHIS|StJohn|20061019172719||ACK^O01|MSGID12349876|P|2.3" + "\rMSA|AR|MSGID12349876|{error}".format(error = error_description))
     return hl7_response
 
 
@@ -59,7 +59,7 @@ class TestHl7Server(unittest.TestCase):
             # validate that ORU^R01 messages are echoed
             with MLLPClient('localhost', port_number) as client:
                 hl7_oru_r01_request = hl7.parse(
-                    "MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORU^R01|exp_ANE_5|P|2.3.1\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456")
+                    r"MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORU^R01|exp_ANE_5|P|2.3.1" + "\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456")
                 response = client.send(hl7_oru_r01_request)
                 hl7_response = hl7.parse(response)
 
@@ -68,7 +68,7 @@ class TestHl7Server(unittest.TestCase):
             # validate that other messages returns an negative acknowledge (error generated in the server)
             with MLLPClient('localhost', port_number) as client:
                 hl7_other_request = hl7.parse(
-                    "MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||-------|exp_ANE_5|P|2.3.1\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456")
+                    r"MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||-------|exp_ANE_5|P|2.3.1" + "\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456")
                 response = client.send(hl7_other_request)
                 hl7_response = hl7.parse(response)
 
@@ -87,7 +87,7 @@ class TestHl7Server(unittest.TestCase):
             # validate that the newDoc message is echoed
             with MLLPClient('localhost', port_number) as client:
                 hl7_oru_r01_request = hl7.parse(
-                    "MSH|^~\&|INTERHOSP|OSIMIS|NEWDOC|CHR|201612051719||ORU^R01|634017193866620135CX|P|2.3.1|||AL|AL|BE|ASCII\rPID|1||9011071DJ01|||DOE^JOHN\rOBR|1||000000001|RXD|||201301081234||||||||||||||||||P||||||||\rOBX|1|ED|DICTEE||CITAPOLUS^APPLICATION^TXT^^Protocole réalisé à partir de InterHosp.\\.br\\Seule l'image est disponible via l'interface web\\.br\\"
+                    r"MSH|^~\&|INTERHOSP|OSIMIS|NEWDOC|CHR|201612051719||ORU^R01|634017193866620135CX|P|2.3.1|||AL|AL|BE|ASCII" + "\rPID|1||9011071DJ01|||DOE^JOHN\rOBR|1||000000001|RXD|||201301081234||||||||||||||||||P||||||||\rOBX|1|ED|DICTEE||CITAPOLUS^APPLICATION^TXT^^Protocole réalisé à partir de InterHosp.\\.br\\Seule l'image est disponible via l'interface web\\.br\\"
                 )
 
                 response = client.send(hl7_oru_r01_request)
@@ -125,7 +125,7 @@ class TestHl7Server(unittest.TestCase):
                 hl7_message['PID.F6.R1'] = 'DOE^JOHN'
 
                 hl7_message['OBR.F1.R1'] = '1'  # Set ID
-                hl7_message['OBR.F3.R1'] = re.sub("\D", "",'IHPCHU0000001')  # keep only the digits in the accessionNumber    '{{{uuid}}}'.format(uuid = str(uuid.uuid1())) # accessionNumber    # filler order number  must be either a 40bit number or a windows guid {43495441-4445-4C4C-4500-110036216380}.  CHU000000001 is not a valid id
+                hl7_message['OBR.F3.R1'] = re.sub(r"\D", "",'IHPCHU0000001')  # keep only the digits in the accessionNumber    '{{{uuid}}}'.format(uuid = str(uuid.uuid1())) # accessionNumber    # filler order number  must be either a 40bit number or a windows guid {43495441-4445-4C4C-4500-110036216380}.  CHU000000001 is not a valid id
                 hl7_message['OBR.F4.R1'] = 'RXD'  # universalServiceId
                 hl7_message['OBR.F7.R1'] = '201301081234'
                 hl7_message['OBR.F25.R1'] = 'P'  # result status: F=final, P=preliminary
@@ -156,7 +156,7 @@ class TestHl7Server(unittest.TestCase):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(('localhost', port_number))
             s.send(b'\x0b')
-            bytes_message = "MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORU^R01|exp_ANE_5|P|2.3.1\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456\r".encode('iso-8859-1')
+            bytes_message = (r"MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORU^R01|exp_ANE_5|P|2.3.1" + "\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456\r").encode('iso-8859-1')
             s.send(bytes_message)
             s.send(b'\x1c')
             s.send(b'\x0d')

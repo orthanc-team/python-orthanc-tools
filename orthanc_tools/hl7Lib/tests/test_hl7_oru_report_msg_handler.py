@@ -51,7 +51,7 @@ class TestHl7OruReportMsgHandler(unittest.TestCase):
             # validate that ORU messages do create new series with embedded pdf
             with MLLPClient('localhost', port_number) as client:
                 hl7_request = hl7.parse(
-                    "\x0bMSH|^~\&|CHLC_CR|CHLC_CR|HM_2792|HM_2792|20210412151547||ORU^R01^ORU_R01|1932e882-d525-4735-98a7-3882daed5866|P|2.5|||||FRA|8859/1\r"
+                    "\x0bMSH|^~\\&|CHLC_CR|CHLC_CR|HM_2792|HM_2792|20210412151547||ORU^R01^ORU_R01|1932e882-d525-4735-98a7-3882daed5866|P|2.5|||||FRA|8859/1\r"
                     "PID|1||00007130^^^GAP&^PI~P379.241588^^^ECSIMAGING^PI||LEnnn^Lpppp^^^^^D~LEnnn^Lpppp^^^^^L||19710101010000|F||||||||M|||||||||||||N\r"
                     "PV1||E||R||||||||||1|||||001191473|||||||||||||||||||||||||20210412162300|\r"
                     "OBR|||1.3.6.1.4.1.5962.1.2.1.20040119072730.12322^ECSIMAGING|TX^THORAX^ECS|||20210412171505|||||||||579^URGENCES^Ch Le Cateau^^^^^^CHLC_CR^L^^^EI||A312.114589725||1041314||||||||||||10002226354^DESMETTRE ^Claude^^^^^^ASIP-SANTE-PS&1.2.250.1.71.4.2.1&ISO^L^^^RPPS|||||||||||||||1^Cabinet le Cateau-Cambresis^ECSIMAGING|\r"
@@ -104,7 +104,7 @@ class TestHl7OruReportMsgHandler(unittest.TestCase):
             # validate that ORU messages do create new series with embedded pdf
             with MLLPClient('localhost', port_number) as client:
                 hl7_request = hl7.parse(
-                    "\x0bMSH|^~\&|CHLC_CR|CHLC_CR|HM_2792|HM_2792|20210412151547||ORU^R01^ORU_R01|1932e882-d525-4735-98a7-3882daed5866|P|2.5|||||FRA|8859/1\r"
+                    "\x0bMSH|^~\\&|CHLC_CR|CHLC_CR|HM_2792|HM_2792|20210412151547||ORU^R01^ORU_R01|1932e882-d525-4735-98a7-3882daed5866|P|2.5|||||FRA|8859/1\r"
                     "PID|1||00007130^^^GAP&^PI~P379.241588^^^ECSIMAGING^PI||LEnnn^Lpppp^^^^^D~LEnnn^Lpppp^^^^^L||19710101010000|F||||||||M|||||||||||||N\r"
                     "PV1||E||R||||||||||1|||||001191473|||||||||||||||||||||||||20210412162300|\r"
                     "OBR|||1.3.6.1.4.1.5962.1.2.1.20040119072730.12322^ECSIMAGING|TX^THORAX^ECS|||20210412171505|||||||||579^URGENCES^Ch Le Cateau^^^^^^CHLC_CR^L^^^EI||A312.114589725||1041314||||||||||||10002226354^DESMETTRE ^Claude^^^^^^ASIP-SANTE-PS&1.2.250.1.71.4.2.1&ISO^L^^^RPPS|||||||||||||||1^Cabinet le Cateau-Cambresis^ECSIMAGING|\r"

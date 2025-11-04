@@ -43,7 +43,7 @@ class TestHl7FolderMonitor(unittest.TestCase):
             monitor = Hl7FolderMonitor(temp_dir, {'ORM^O01': hl7_echo_message_handler}, 3)
 
             # validate that ORM^O01 messages has been received
-            hl7_str = "MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORM^O01|exp_ANE_5|P|2.3.1\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456"
+            hl7_str = r"MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORM^O01|exp_ANE_5|P|2.3.1" + "\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456"
 
             file_path = temp_dir + "/test.hl7"
             f = open(file_path, "w")
@@ -71,7 +71,7 @@ class TestHl7FolderMonitor(unittest.TestCase):
                 # we use `\r\n` as newline delimiter because this how Vetera works...
                 # plus TF-8 Byte Order Mark (BOM) (EF BB BF bytes) at the beginning
                 # plus the ä in the description (C3 A4)
-                hl7_str = b"\xef\xbb\xbfMSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r\n"\
+                hl7_str = b"\xef\xbb\xbfMSH|^~\\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r\n"\
                     b"PID|1|999888777||123456789012345|GP.Software^Vetera||20070501|F|||||||||||||||||||||||||||Katze|Balinese|ALTERED|ZH-123|\r\n"\
                     b"ORC|NW||||||||20170731081517||||||||||\r\n"\
                     b"OBR|||1000000001|\xc3\xa4||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r\n"
@@ -102,7 +102,7 @@ class TestHl7FolderMonitor(unittest.TestCase):
                 monitor = Hl7FolderMonitor(temp_dir_hl7, {'ORM^O01': orm_handler.handle_orm_message}, 3)
 
                 # regular `\r`
-                hl7_str = "MSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r"\
+                hl7_str = r"MSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||" + "\r"\
                     "PID|1|999888777||123456789012345|GP.Söftware^Vetera||20070501|F|||||||||||||||||||||||||||Katze|Balinese|ALTERED|ZH-123|\r"\
                     "ORC|NW||||||||20170731081517||||||||||\r"\
                     "OBR|||1000000001|HD||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r"

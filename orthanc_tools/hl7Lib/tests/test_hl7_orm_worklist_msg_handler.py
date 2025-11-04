@@ -84,7 +84,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
             ) as server:
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
-                    source_binary_message = (b"\x0bMSH|^~\&|QDOC|HL7V1.1|AGFA|AGFA|20170505112549||ORM^O01|03139638|P|2.3.1||||||8859/1\r"
+                    source_binary_message = (b"\x0bMSH|^~\\&|QDOC|HL7V1.1|AGFA|AGFA|20170505112549||ORM^O01|03139638|P|2.3.1||||||8859/1\r"
                                            b"PID|||123456Q||DUBOIS^Jean||19201231|M|||RUE DE LA STATION 14^^VILLAGE^^4999^BE||||||||12345678901\r"
                                            b"ORC|SC||N4568254^NDB||IP||^^^20170505111800^^R|||C123456||123456^DOCTEUR^NICOLA|||||^^L\r"
                                            b"OBR|||N4568254^NDB|CTCRANE^CT c\xe9r\xe9bral^QDOC^^^QUADRAT||20170505111800|20170505111800||||||||^^^NEURO CERV|123456^DOCTEUR^NICOLA||0897456|0897456|0897456|||||||^^^20170505111800^^R|||||||^^^NDB^CT NDB||20170505111800\r"
@@ -124,7 +124,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
-                        "\x0bMSH|^~\&|myhospital.org|myhospital.org|||2017-06-08 07:31:13.123456||ORM^O01|123456|P|2.3.1|||||||||\r"
+                        "\x0bMSH|^~\\&|myhospital.org|myhospital.org|||2017-06-08 07:31:13.123456||ORM^O01|123456|P|2.3.1|||||||||\r"
                         "PID|||201102956^^^myhospital.org||VANILL\xc9^LAURA^^^Mme^^L|MAIDEN^^^^^^L|19521103|F|||RUE MARIE CURIE^BRUXELLES^^74850^99100|||||D|||272110608803615||||||||||20150930000000|Y|\r"
                         "PV1||N|||||||||||||||\r"
                         "ORC|NW|723085|123456||SC|||||||DOCTOR_CODE^DOCTOR^NAME||\r"
@@ -168,7 +168,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
-                        "\x0bMSH|^~\&|ECSIMAGING|CORADIX|BEA|BEA|20201001140735||ORM^O01^ORM_O01|6af22cb1-38af-4dc7-93d5-83e749394237|P|2.3.1|||||FRA|8859/15|FRA||\r"
+                        "\x0bMSH|^~\\&|ECSIMAGING|CORADIX|BEA|BEA|20201001140735||ORM^O01^ORM_O01|6af22cb1-38af-4dc7-93d5-83e749394237|P|2.3.1|||||FRA|8859/15|FRA||\r"
                         "PID|1||5343197^^^ECSIMAGING^PI||LLOxxx^Simxxx^^^^^D~LLOxxx^Simxxx^^^^^L||19550812000000|F|||2 rue ^^THUIR^^66300^^H||^^PH^^^^^^^^^0404040404~^^CP^^^^^^^^^0606060606|||U||A1.02412251^^^ECSIMAGING^AN||||||||^^||^^||\r"
                         "PV1||O||R||||Docteur^Traitant|||||||||||A1.02412251^^^ECSIMAGING^VN|||||||||||||||||||||||||20201001134400||||||||\r"
                         "ORC|NW|3264557^ECSIMAGING|3264557^ECSIMAGING|2412251^ECSIMAGING|||1^^^20201001141000|||||Docteur^Quenotte|||20201001141000||||||||||\r"
@@ -232,7 +232,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 # validate that ADT messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
-                        "\x0bMSH|^~\&|OAZIS||||20230404090644||ADT^A04|01370309|P|2.3||||||8859/1\r"
+                        "\x0bMSH|^~\\&|OAZIS||||20230404090644||ADT^A04|01370309|P|2.3||||||8859/1\r"
                         "EVN|A04|20230404090644|||AGIRMANSPOL|202304040906\r"
                         "PID|1||341410|91041739368^^^^NN|Moraloa^Salva Bernard^^^Monsieur||19910417|U|||Rue No\xe9 11^^VISE^^4200^BE^H||0499/244732^^CP||FR|U||20624682|0000000000|91041739368||||||BE||||N\r"
                         "PD1||||16409914^GILON^PIERRE||||||||N\r"
@@ -291,7 +291,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 # validate that ADT messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
-                        "\x0bMSH|^~\&|AssistoVetMaestro|AssistoVetSystems|Echographie|Philips|20231109114936||ORM^O01|20231109114936-111717488|P|2.3.1|\r"
+                        "\x0bMSH|^~\\&|AssistoVetMaestro|AssistoVetSystems|Echographie|Philips|20231109114936||ORM^O01|20231109114936-111717488|P|2.3.1|\r"
                         "PID|||3951-1^^^MYPACS|250268731025243^|BENARD^HORUS|Maverick|20120824|M|Chien|Berger belge malinois|20 Rue des Moulins - 45430 MARDIE||||||||||||||||ALTERED\r"
                         "PV1||O||||||M^Alfred Canard^rue des Sorbiers - 4800 Verviers|||||||||||||||||||||||\r"
                         "ORC|NW|181416|181416||SC||^^^20231109114936||||||||||\r"
@@ -353,7 +353,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 # validate that ADT messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
-                        "\x0bMSH|^~\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r"
+                        "\x0bMSH|^~\\&|VETERA|VETERA|conquest|conquest|20170731081517||ORM^O01|1000000001|P|2.5.0|||||\r"
                         "PID|1|999888777||123456789012345|GP.Software^Vetera||20070501|F|||||||||||||||||||||||||||Katze|Balinese|ALTERED|ZH-123|\r"
                         "ORC|NW||||||||20170731081517||||||||||\r"
                         "OBR|||1000000001|my-description-ä-ö-ß||20170731081517|||||||||||||||DX|||ZUG||||||||Dr. P. Muster||||\r"

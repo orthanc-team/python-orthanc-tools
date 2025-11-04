@@ -65,5 +65,5 @@ class TestHl7MessageValidator(unittest.TestCase):
 
         # valid HL7 message
         validator = Hl7MessageValidator()
-        message = validator.validate(b'\x0bMSH|^~\&|CATH|StJohn|AcmeHIS|StJohn|20061019172719||ACK^O01|MSGID12349876|P|2.3\rMSA|AR|MSGID12349876|error\r\x1c\x0d')
-        self.assertEqual('MSH|^~\&|CATH|StJohn|AcmeHIS|StJohn|20061019172719||ACK^O01|MSGID12349876|P|2.3\rMSA|AR|MSGID12349876|error\r', message)
+        message = validator.validate(b'\x0bMSH|^~\\&|CATH|StJohn|AcmeHIS|StJohn|20061019172719||ACK^O01|MSGID12349876|P|2.3\rMSA|AR|MSGID12349876|error\r\x1c\x0d')
+        self.assertEqual(r'MSH|^~\&|CATH|StJohn|AcmeHIS|StJohn|20061019172719||ACK^O01|MSGID12349876|P|2.3' + '\rMSA|AR|MSGID12349876|error\r', message)

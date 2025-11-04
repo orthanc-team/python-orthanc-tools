@@ -44,7 +44,7 @@ class Hl7FolderMonitor:
         r = file_content.replace(b'\r\n', b'\r')
         if r.startswith(b'\xef\xbb\xbf'):
             r = r[3:]
-        r = re.sub(b'(?<!\|)\r', b'', r)
+        r = re.sub(b'(?<!\\|)\r', b'', r)
         return r
 
     def monitor_folder(self):
@@ -109,7 +109,7 @@ def default_message_handler(message):
 #
 #     hl7_request = hl7.parse(message)  # we need to re-parse it here only the build the response
 #
-#     hl7_response = hl7.parse('MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1\rMSA|AR|{message_id}|{error}'.format(  # TODO: handle encoding
+#     hl7_response = hl7.parse(r'MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1\rMSA|AR|{message_id}|{error}'.format(  # TODO: handle encoding
 #         sending_application = hl7_request['MSH.F5.R1.C1'],
 #         receiving_application = hl7_request['MSH.F3.R1.C1'],
 #         receiving_facility = hl7_request['MSH.F4.R1.C1'],

@@ -71,3 +71,10 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         skip-existing: true
+
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      timeout-minutes: 15
+      with:
+        limit-access-to-actor: true

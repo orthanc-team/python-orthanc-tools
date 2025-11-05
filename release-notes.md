@@ -1,6 +1,7 @@
-v 0.17.9
+v 0.17.10
 ========
--  made worklist parser more tolerant to missing info
+-  fixed the tests
+-  made worklists parser more tolerant to missing info
 
 v 0.17.7
 ========

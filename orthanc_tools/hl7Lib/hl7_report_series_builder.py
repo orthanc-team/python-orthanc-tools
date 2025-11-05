@@ -27,9 +27,10 @@ class ReportSeriesBuilder:
 
         # TODO: refactor not to use a temporary file but only memory buffers
 
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile() as f:
             # let's build the pdf from the base64 encoded field
             f.write(base64.decodebytes(bytes(values["Base64Report"], "utf-8")))
+            f.flush()
 
             # let's find the study to attach the pdf to
             study_id = self._orthanc_client.studies.lookup(values["StudyInstanceUID"])

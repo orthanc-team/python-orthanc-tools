@@ -31,7 +31,7 @@ class TestHl7OrmWorklistMsgHandler(unittest.TestCase):
                 # validate that ORM messages do create worklist files
                 with MLLPClient('localhost', port_number) as client:
                     hl7_request = hl7.parse(
-                        "\x0bMSH|^~\&|myhospital.org|myhospital.org|||2017-04-25 07:31:13.123456||ORM^O01|269539|P|2.3.1|||||||||\r"
+                        "\x0bMSH|^~\\&|myhospital.org|myhospital.org|||2017-04-25 07:31:13.123456||ORM^O01|269539|P|2.3.1|||||||||\r"
                         "PID|||1234567^^^myhospital.org||VANILL\xc9^LAURA^^^Mme^^L|MAIDEN^^^^^^L|19521103|F|||RUE MARIE CURIE^BRUXELLES^^74850^99100..LONG ADDRESS..1234567890123456789012345678901234567890|||||D|||272110608803615||||||||||20150930000000|Y|\r"
                         "PV1||N||||||REF^DOCTOR^JULIEN|||||||||\r"
                         "ORC|NW|723085|269539||SC|||||||CHUFJEA^CHIFREZE^JEAN FRANCOIS||\r"

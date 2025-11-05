@@ -62,6 +62,9 @@ class TestHl7OruReportMsgHandler(unittest.TestCase):
                 response = client.send(hl7_request)
                 hl7_response = hl7.parse(response)
 
+            # make sure the hl7 response contains the "AA" (meaning "message well processed")
+            self.assertEqual(hl7_response['MSA.F1.R1'],"AA")
+
             # make sure the created pdf is the same as the original
             pdf_instance_id = self.oa.studies.get_pdf_instances(original_study_id)[0]
             with tempfile.NamedTemporaryFile() as f:
@@ -71,8 +74,6 @@ class TestHl7OruReportMsgHandler(unittest.TestCase):
                 original_pdf_file_content = f1.read()
             self.assertEqual(new_pdf_file_content, original_pdf_file_content)
 
-            # make sure the hl7 response contains the "AA" (meaning "message well processed")
-            self.assertEqual(hl7_response['MSA.F1.R1'],"AA")
 
     def test_ried_invalid_reports(self):
         """

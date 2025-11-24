@@ -165,7 +165,7 @@ class OrthancForwarder:
             except exceptions.ConnectionError as ex:
                 logger.info(f"Connection error while handling {resource.type} {resource.resource_id}: {ex.msg}")
             except Exception as ex:
-                logger.exception(f"Error while handling all {resource.type} {resource.resource_id}: {ex.msg}")
+                logger.exception(f"Error while handling all {resource.type} {resource.resource_id}: {str(ex)}")
 
         logger.debug(f"Stopping Forwarder thread {worker_id}")
 
@@ -286,7 +286,7 @@ class OrthancForwarder:
             except exceptions.OrthancApiException as ex:
                 logger.error(f"{instances_set} Error while processing: {ex.msg}")
             except Exception as ex:
-                logger.error(f"{instances_set} Error while processing: {ex.msg}", exc_info=True)
+                logger.error(f"{instances_set} Error while processing: {str(ex)}", exc_info=True)
                 return False
 
         return True

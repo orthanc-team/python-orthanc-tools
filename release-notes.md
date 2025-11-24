@@ -1,3 +1,6 @@
+
+- fix some incorrect exception handling
+
 v 0.17.10
 ========
 -  fixed the tests

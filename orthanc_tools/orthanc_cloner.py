@@ -1,13 +1,19 @@
 import argparse
 import logging
 import os
+import concurrent.futures
 from strenum import StrEnum
 
 from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus, ResourceNotFound
+from requests.exceptions import ConnectionError, Timeout, ChunkedEncodingError
+from urllib3.exceptions import ProtocolError, ReadTimeoutError
 from .helpers.scheduler import Scheduler
 from .orthanc_monitor import OrthancMonitor, ChangeType
 
 logger = logging.getLogger(__name__)
+
+# Default timeout for individual transfer operations (in seconds)
+DEFAULT_TRANSFER_TIMEOUT = 300
 
 
 class ClonerMode(StrEnum):
@@ -34,7 +40,8 @@ class OrthancCloner(OrthancMonitor):
                  destination_dicom: str = None,                   # the 'alias' of the DICOM destination declared in Orthanc configuration.  It must be defined for DICOM moe.
                  scheduler: Scheduler = None,
                  max_retries: int = 5,
-                 error_folder_path: str = None
+                 error_folder_path: str = None,
+                 transfer_timeout: int = DEFAULT_TRANSFER_TIMEOUT  # timeout in seconds for download/upload operations
         ):
         super().__init__(
             api_client=source,
@@ -53,6 +60,7 @@ class OrthancCloner(OrthancMonitor):
         self._trigs_on_stable_study = trigs_on_stable_study
         self._success_label = success_label
         self._failure_label = failure_label
+        self._transfer_timeout = transfer_timeout
 
         if self._scheduler:
             logger.info("Night & Week-end mode Enabled : " + str(self._scheduler._run_only_at_night_and_weekend))
@@ -75,12 +83,40 @@ class OrthancCloner(OrthancMonitor):
             self.add_handler(ChangeType.STABLE_STUDY, self.handle_stable_study)
 
 
+    def _download_with_timeout(self, api_client: OrthancApiClient, instance_id: str):
+        """Download instance file with timeout protection."""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(api_client.instances.get_file, instance_id)
+            try:
+                return future.result(timeout=self._transfer_timeout)
+            except concurrent.futures.TimeoutError:
+                raise TimeoutError(f"Download timed out after {self._transfer_timeout}s for instance {instance_id}")
+
+    def _upload_with_timeout(self, dicom: bytes):
+        """Upload DICOM data with timeout protection."""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self._destination.upload, dicom)
+            try:
+                return future.result(timeout=self._transfer_timeout)
+            except concurrent.futures.TimeoutError:
+                raise TimeoutError(f"Upload timed out after {self._transfer_timeout}s")
+
+    def _log_error_and_skip(self, change_id: int, instance_id: str, error_msg: str):
+        """Log error to file and allow the monitor to advance (don't re-raise)."""
+        logger.warning(f"{change_id}, skipping instance {instance_id}: {error_msg}")
+        if self._error_folder_path:
+            error_file_path = os.path.join(self._error_folder_path, f"{change_id:010d}.NewInstance.error.txt")
+            try:
+                with open(error_file_path, "wt") as f:
+                    f.write(f"Error while cloning instance {instance_id}: {error_msg}")
+            except OSError as ex:
+                logger.error(f"Could not write error report to file \"{ex.filename}\": {ex.strerror}")
+
     def handle_new_instance(self, change_id, instance_id, api_client: OrthancApiClient):
         try:
             if self._mode == ClonerMode.DEFAULT:
-                dicom = api_client.instances.get_file(instance_id)
-
-                self._destination.upload(dicom)
+                dicom = self._download_with_timeout(api_client, instance_id)
+                self._upload_with_timeout(dicom)
                 logger.info(f"{change_id}, copied instance {instance_id}")
             elif self._mode == ClonerMode.PEERING:
                 api_client.peers.send(target_peer=self._destination_peer, resources_ids=instance_id)
@@ -91,13 +127,15 @@ class OrthancCloner(OrthancMonitor):
             # An instance may have been deleted (by a user, a script,...) between the moment we called the /changes route
             # and the moment we try to handle it. So, the `get_file` will return a 404 http error.
             # In this case, simply log the error and do not retry in the OrthancMonitor (don't raise the Exception)
-            if self._error_folder_path:
-                error_file_path = os.path.join(self._error_folder_path, f"{change_id:010d}.NewInstance.error.txt")
-                try:
-                    with open(error_file_path, "wt") as f:
-                        f.write(f"Error while cloning instance {instance_id}: {str(ex)}")
-                except OSError as ex:
-                    raise Exception(f"Could not write error report to file \"{ex.filename}\": {ex.strerror}")
+            self._log_error_and_skip(change_id, instance_id, f"ResourceNotFound: {str(ex)}")
+
+        except TimeoutError as ex:
+            # Transfer timed out - log and skip to prevent blocking the queue
+            self._log_error_and_skip(change_id, instance_id, str(ex))
+
+        except (ConnectionError, Timeout, ChunkedEncodingError, ProtocolError, ReadTimeoutError) as ex:
+            # Connection issues - log and skip to prevent indefinite hanging
+            self._log_error_and_skip(change_id, instance_id, f"Connection error: {type(ex).__name__}: {str(ex)}")
 
         except Exception as ex:
             raise Exception(f"Error while cloning instance {instance_id}: {str(ex)}")
@@ -123,8 +161,8 @@ class OrthancCloner(OrthancMonitor):
             elif self._mode == ClonerMode.DEFAULT:
                 instances_ids = api_client.studies.get_instances_ids(study_id)
                 for instance_id in instances_ids:
-                    dicom = api_client.instances.get_file(instance_id)
-                    self._destination.upload(dicom)
+                    dicom = self._download_with_timeout(api_client, instance_id)
+                    self._upload_with_timeout(dicom)
                 logger.info(f"{change_id}, copied study {study_id}")
             else:
                 raise NotImplementedError(f"{self._mode} not implemented yet!")
@@ -132,6 +170,17 @@ class OrthancCloner(OrthancMonitor):
             if self._success_label is not None:
                 api_client.studies.delete_label(study_id, self._failure_label)
                 api_client.studies.add_label(study_id, self._success_label)
+
+        except (TimeoutError, ConnectionError, Timeout, ChunkedEncodingError, ProtocolError, ReadTimeoutError) as ex:
+            # Connection/timeout issues - apply failure label and re-raise for retry
+            logger.warning(f"{change_id}, connection issue for study {study_id}: {type(ex).__name__}: {str(ex)}")
+            if self._failure_label is not None:
+                try:
+                    api_client.studies.delete_label(study_id, self._success_label)
+                    api_client.studies.add_label(study_id, self._failure_label)
+                except Exception:
+                    pass  # Best effort labeling
+            raise Exception(f"Connection error while transferring study {study_id}: {type(ex).__name__}: {str(ex)}")
 
         except Exception as ex:
             if self._failure_label is not None:
@@ -170,6 +219,7 @@ if __name__ == '__main__':
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Number of worker threads')
     parser.add_argument('--error_folder_path', type=str, default=None, help='Folder path where to store error reports')
     parser.add_argument('--max_retries', type=int, default=5, help='Number of retries in case of error')
+    parser.add_argument('--transfer_timeout', type=int, default=DEFAULT_TRANSFER_TIMEOUT, help='Timeout in seconds for download/upload operations (default: 300)')
 
     Scheduler.add_parser_arguments(parser)
 
@@ -192,6 +242,7 @@ if __name__ == '__main__':
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     error_folder_path = os.environ.get("ERROR_FOLDER_PATH", args.error_folder_path)
     max_retries = int(os.environ.get("MAX_RETRIES", args.max_retries))
+    transfer_timeout = int(os.environ.get("TRANSFER_TIMEOUT", str(args.transfer_timeout)))
 
     scheduler = Scheduler.create_from_args_and_env_var(args)
 
@@ -227,7 +278,8 @@ if __name__ == '__main__':
         scheduler=scheduler,
         worker_threads_count=worker_threads_count,
         error_folder_path=error_folder_path,
-        max_retries=max_retries
+        max_retries=max_retries,
+        transfer_timeout=transfer_timeout
     )
 
     cloner.execute(existing_changes_only=False)

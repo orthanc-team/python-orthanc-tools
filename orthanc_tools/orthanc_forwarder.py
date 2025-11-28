@@ -462,7 +462,13 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    valid_modes = [m.value for m in ForwarderMode]
+    valid_modes = {m.value for m in ForwarderMode}
+
+    def _parse_mode(mode_value: str, context: str) -> ForwarderMode:
+        normalized = mode_value.lower()
+        if normalized not in valid_modes:
+            raise ValueError(f"Invalid mode '{mode_value}' for {context}. Allowed modes: {sorted(valid_modes)}")
+        return ForwarderMode(normalized)
 
     parser = argparse.ArgumentParser(description='Forwards everything Orthanc receives to another Orthanc peer, a DICOM modality or DicomWeb server.')
 
@@ -470,11 +476,18 @@ if __name__ == '__main__':
     add_parser_argument_w_alias(parser, '--source_user', type=str, default=None, help='Orthanc source user name')
     add_parser_argument_w_alias(parser, '--source_pwd', type=str, default=None, help='Orthanc source password')
     add_parser_argument_w_alias(parser, '--source_api_key', type=str, default=None, help='Orthanc source api-key')
-    add_parser_argument_w_alias(parser, '--destination', type=str, default=None, help='Orthanc destination alias')
+    add_parser_argument_w_alias(
+        parser,
+        '--destination',
+        type=str,
+        action='append',
+        default=[],
+        help='Destination alias with optional mode override (alias[:mode]). Repeat flag to add multiple destinations.'
+    )
     add_parser_argument_w_alias(parser, '--worker_threads_count', type=int, default=1, help='Number of worker threads')
     add_parser_argument_w_alias(parser, '--polling_interval', type=int, default=1, help='Polling interval (in seconds)')
     add_parser_argument_w_alias(parser, '--trigger', type=str, default=None, help='NewInstance or StableStudy')
-    add_parser_argument_w_alias(parser, '--mode', type=str, default='dicom', help=f'Forwarder mode. One of: {", ".join(valid_modes)}')
+    add_parser_argument_w_alias(parser, '--mode', type=str, default='dicom', help=f'Default forwarder mode. One of: {", ".join(sorted(valid_modes))}')
 
     args = parser.parse_args()
 
@@ -482,7 +495,21 @@ if __name__ == '__main__':
     source_user = os.environ.get("SOURCE_USER", args.source_user)
     source_pwd = os.environ.get("SOURCE_PWD", args.source_pwd)
     source_api_key = os.environ.get("SOURCE_API_KEY", args.source_api_key)
-    destination = os.environ.get("DESTINATION", args.destination)
+    destinations_env = os.environ.get("DESTINATIONS")
+    destination_env = os.environ.get("DESTINATION")
+    dest_from_args = args.destination or []
+    raw_destinations = []
+
+    if destinations_env:
+        raw_destinations = [d.strip() for d in destinations_env.split(",") if d.strip()]
+    elif destination_env:
+        raw_destinations = [destination_env.strip()]
+    elif dest_from_args:
+        for dest_entry in dest_from_args:
+            raw_destinations.extend([d.strip() for d in dest_entry.split(",") if d.strip()])
+
+    if not raw_destinations:
+        raise ValueError("At least one destination must be provided via --destination, DESTINATION, or DESTINATIONS.")
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
     polling_interval_in_seconds = int(os.environ.get("POLLING_INTERVAL", str(args.polling_interval)))
     trigger = os.environ.get("TRIGGER", args.trigger)
@@ -496,10 +523,32 @@ if __name__ == '__main__':
     else:
         raise ValueError("Trigger parameter not valid!")
 
-    # Validate mode
-    if mode_str not in valid_modes:
-        raise ValueError(f"Invalid mode: {mode_str}. Allowed modes: {valid_modes}")
-    chosen_mode = ForwarderMode(mode_str)
+    # Validate default mode
+    chosen_mode = _parse_mode(mode_str, "default mode (--mode/MODE)")
+
+    def _build_destination(entry: str) -> ForwarderDestination:
+        destination_spec = entry.strip()
+        if not destination_spec:
+            raise ValueError("Destination entries cannot be blank.")
+
+        destination_name = destination_spec
+        destination_mode = chosen_mode
+
+        if ":" in destination_spec:
+            name_part, mode_part = destination_spec.split(":", 1)
+            destination_name = name_part.strip()
+            mode_part = mode_part.strip()
+
+            if not destination_name:
+                raise ValueError(f"Destination alias is missing before ':' in '{destination_spec}'.")
+
+            if mode_part:
+                destination_mode = _parse_mode(mode_part, f"destination '{destination_name}'")
+
+        if not destination_name:
+            raise ValueError(f"Destination alias is missing in '{destination_spec}'.")
+
+        return ForwarderDestination(destination=destination_name, forwarder_mode=destination_mode)
 
     # Create API client
     if source_api_key is not None:
@@ -507,9 +556,11 @@ if __name__ == '__main__':
     else:
         api_client = OrthancApiClient(source_url, user=source_user, pwd=source_pwd, pool_maxsize=max(10, worker_threads_count), pool_block=True)
 
+    forwarder_destinations = [_build_destination(dest) for dest in raw_destinations]
+
     forwarder = OrthancForwarder(
         source=api_client,
-        destinations=[ForwarderDestination(destination=destination, forwarder_mode=chosen_mode)],
+        destinations=forwarder_destinations,
         trigger=trigger,
         worker_threads_count=worker_threads_count,
         polling_interval_in_seconds=polling_interval_in_seconds

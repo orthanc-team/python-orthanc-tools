@@ -51,28 +51,32 @@ class Hl7FolderMonitor:
         self._is_running = True
 
         while self._is_running is True:
-            # get files from folder
-            for path in os.listdir(self._folder_path):
-                full_path = os.path.join(self._folder_path, path)
+            try:
+                # get files from folder
+                for path in os.listdir(self._folder_path):
+                    full_path = os.path.join(self._folder_path, path)
 
-                # quick parse and call handler if present
-                with open(full_path, 'rb') as f:
-                    file_content_binary = f.read()
-                    file_content_binary = self.clean_file_content(file_content_binary)
-                    file_content = file_content_binary.decode('utf-8')
-                    message = self._parser.parse(file_content)
-                    message_type = message['message_type']
-                    if message_type in self._handlers:
-                        self._handlers[message_type](file_content)
-                    else:
-                        logger.error(f"No handler found for {message_type} message. Keeping file for debug...")
-                        continue
+                    # quick parse and call handler if present
+                    with open(full_path, 'rb') as f:
+                        file_content_binary = f.read()
+                        file_content_binary = self.clean_file_content(file_content_binary)
+                        file_content = file_content_binary.decode('utf-8')
+                        message = self._parser.parse(file_content)
+                        message_type = message['message_type']
+                        if message_type in self._handlers:
+                            self._handlers[message_type](file_content)
+                        else:
+                            logger.error(f"No handler found for {message_type} message. Keeping file for debug...")
+                            continue
 
-                # delete file
-                os.remove(full_path)
+                    # delete file
+                    os.remove(full_path)
 
-            # wait interval before next check
-            time.sleep(self._interval)
+                # wait interval before next check
+                time.sleep(self._interval)
+            except Exception as ex:
+                logger.error(f"Error while in folder monitor: {str(ex)}")
+                break
 
         self._is_running = False
 

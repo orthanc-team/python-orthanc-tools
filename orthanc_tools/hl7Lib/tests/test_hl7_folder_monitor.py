@@ -177,3 +177,23 @@ class TestHl7FolderMonitor(unittest.TestCase):
 
                 self.assertEqual(0, len(os.listdir(temp_dir_wl)))
                 monitor.stop()
+
+    def test_error_and_stop(self):
+        # start a monitor that will check a non-existing folder and then stop
+        with tempfile.TemporaryDirectory() as temp_dir:
+            monitor = Hl7FolderMonitor(temp_dir + "/unknown-folder/", {'ORM^O01': hl7_echo_message_handler}, 3)
+
+            hl7_str = r"MSH|^~\&|TOTO|TUTU|SOFTNAME|CHABC|201602011049||ORM^O01|exp_ANE_5|P|2.3.1" + "\rPID|1||8123456DK01||DUPONT^ALBERT ANTHONY|||||||||||||123456"
+
+            file_path = temp_dir + "/test.hl7"
+            f = open(file_path, "w")
+            f.write(hl7_str)
+            f.close()
+            self.assertEqual(1, len(os.listdir(temp_dir)))
+
+            monitor.start()
+
+            # wait until the monitor stops because the monitored folder doesn't exist
+            helpers.wait_until(lambda: monitor.is_running() is False, 4)
+            self.assertFalse(monitor.is_running())
+            monitor.stop()

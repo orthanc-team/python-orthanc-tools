@@ -8,6 +8,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def run_in_separate_thread(deleter):
+    deleter.execute()
 
 class OldFilesDeleter:
     """
@@ -74,7 +76,8 @@ class OldFilesDeleter:
 
         # create monitoring thread
         self._thread = threading.Thread(
-            target = self.execute,
+            target = run_in_separate_thread,
+            args= (self,),
             name = 'OldFilesDeleter Thread'
         )
         self._thread.start()

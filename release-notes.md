@@ -1,5 +1,5 @@
 
-v 0.17.12
+v 0.17.11
 ========
 - fix some incorrect exception handling
 - stop the `Hl7FolderMonitor` in case of error

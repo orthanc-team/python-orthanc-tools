@@ -33,13 +33,15 @@ class OrthancFolderImporter:
                  state_path: str,
                  labels_list: List[str] = None,
                  max_retries: int = 8,
-                 worker_threads_count: int = multiprocessing.cpu_count() - 1  # by default, use all CPUs but one for compression
+                 worker_threads_count: int = multiprocessing.cpu_count() - 1,  # by default, use all CPUs but one for compression
+                 skip_extensions: List[str] = None
                  ):
         self._api_client = api_client
         self._folder_path = folder_path
         self._labels_list = labels_list
         self._errors_path = errors_path # will contain the list of all the files path not correctly uploaded
         self._state_path = state_path # will contain the list of all the folders correctly uploaded
+        self._skip_extensions = [ext.lower() for ext in skip_extensions] if skip_extensions else []
 
         self._worker_threads_count = worker_threads_count
         self._worker_threads = []
@@ -76,6 +78,11 @@ class OrthancFolderImporter:
 
         # file path case
         if os.path.isfile(path_to_upload):
+            # check skip extensions
+            _, ext = os.path.splitext(path_to_upload)
+            if ext.lower() in self._skip_extensions:
+                logger.info(f"Skipping file with extension {ext}: {path_to_upload}")
+                return
 
             # zip file case
             if "zip" in path_to_upload and zipfile.is_zipfile(path_to_upload):
@@ -227,6 +234,7 @@ if __name__ == '__main__':
     parser.add_argument('--state_path', type=str, help='Path of the file which will contain the list of all the folder correctly uploaded.')
     parser.add_argument('--max_retries', type=int, default=8, help='Maximum number of attempts for a file upload.')
     parser.add_argument('--worker_threads_count', type=int, default=1, help='Worker threads count')
+    parser.add_argument('--skip_extensions', type=str, default=None, help='List of extensions to skip, separated by a comma.')
 
     args = parser.parse_args()
 
@@ -236,10 +244,16 @@ if __name__ == '__main__':
     api_key = os.environ.get("ORTHANC_API_KEY", args.api_key)
     folder_path = os.environ.get("FOLDER_PATH", args.folder_path)
     labels_list = os.environ.get("LABELS_LIST", args.labels_list)
-    errors_path = os.environ.get("ERRORS_PATH", args.errors_path)
-    state_path = os.environ.get("STATE_PATH", args.state_path)
+    errors_path = os.environ.get("ERRORS_PATH", os.environ.get("ERROR_FOLDER_PATH", args.errors_path))
+    state_path = os.environ.get("STATE_PATH", os.environ.get("PERSIST_STATE_PATH", args.state_path))
     max_retries = int(os.environ.get("MAX_RETRIES", str(args.max_retries)))
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
+    skip_extensions = os.environ.get("SKIP_EXTENSIONS", args.skip_extensions)
+
+    if skip_extensions:
+        skip_extensions = [ext.strip() for ext in skip_extensions.split(",") if ext.strip()]
+    else:
+        skip_extensions = []
 
     o = None
     if api_key is not None:
@@ -254,7 +268,8 @@ if __name__ == '__main__':
         errors_path=errors_path,
         state_path=state_path,
         max_retries=max_retries,
-        worker_threads_count=worker_threads_count
+        worker_threads_count=worker_threads_count,
+        skip_extensions=skip_extensions
     )
 
     importer.execute()

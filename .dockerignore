@@ -1,0 +1,24 @@
+# Keep the build context small: tests/data aren't needed to build/install the package
+
+# VCS / tooling
+.git
+.github
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Python packaging outputs
+build/
+dist/
+*.egg-info/
+
+# Not needed in the image
+release-notes.md
+
+# Large fixtures / local demos
+# (Package tests are not required for runtime images)
+tests/
+orthanc_tools/tests/

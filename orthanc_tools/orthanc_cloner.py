@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-import concurrent.futures
 from strenum import StrEnum
 
 from orthanc_api_client import OrthancApiClient, ResourceType, JobStatus, ResourceNotFound
@@ -84,22 +83,20 @@ class OrthancCloner(OrthancMonitor):
 
 
     def _download_with_timeout(self, api_client: OrthancApiClient, instance_id: str):
-        """Download instance file with timeout protection."""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(api_client.instances.get_file, instance_id)
-            try:
-                return future.result(timeout=self._transfer_timeout)
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError(f"Download timed out after {self._transfer_timeout}s for instance {instance_id}")
+        """Download instance file with timeout protection (no extra threads to avoid shutdown issues)."""
+        try:
+            return api_client.instances.get_file(instance_id, timeout=self._transfer_timeout)
+        except TypeError:
+            # Fallback for older orthanc_api_client that doesn't accept timeout kwarg
+            return api_client.instances.get_file(instance_id)
 
     def _upload_with_timeout(self, dicom: bytes):
-        """Upload DICOM data with timeout protection."""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(self._destination.upload, dicom)
-            try:
-                return future.result(timeout=self._transfer_timeout)
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError(f"Upload timed out after {self._transfer_timeout}s")
+        """Upload DICOM data with timeout protection (no extra threads to avoid shutdown issues)."""
+        try:
+            return self._destination.upload(dicom, timeout=self._transfer_timeout)
+        except TypeError:
+            # Fallback for older orthanc_api_client that doesn't accept timeout kwarg
+            return self._destination.upload(dicom)
 
     def _log_error_and_skip(self, change_id: int, instance_id: str, error_msg: str):
         """Log error to file and allow the monitor to advance (don't re-raise)."""
@@ -137,6 +134,9 @@ class OrthancCloner(OrthancMonitor):
             # Connection issues - log and skip to prevent indefinite hanging
             self._log_error_and_skip(change_id, instance_id, f"Connection error: {type(ex).__name__}: {str(ex)}")
 
+        except RuntimeError as ex:
+            # If Python is shutting down we cannot spawn new work; log and re-raise a clearer message
+            raise Exception(f"Instance {instance_id} not cloned because runtime is shutting down: {str(ex)}")
         except Exception as ex:
             raise Exception(f"Error while cloning instance {instance_id}: {str(ex)}")
 

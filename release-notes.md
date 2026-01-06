@@ -1,6 +1,7 @@
-v 0.17.12
+v 0.17.13
 ========
 - added `--polling_interval` CLI option and `POLLING_INTERVAL` env var to the `OrthancForwarder`
+- upgraded api-client from `0.18.8` to `0.22.2`
 
 v 0.17.11
 ========

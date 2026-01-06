@@ -1,3 +1,6 @@
+v 0.17.12
+========
+- added `--polling_interval` CLI option and `POLLING_INTERVAL` env var to the `OrthancForwarder`
 
 v 0.17.11
 ========

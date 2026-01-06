@@ -472,6 +472,7 @@ if __name__ == '__main__':
     add_parser_argument_w_alias(parser, '--source_api_key', type=str, default=None, help='Orthanc source api-key')
     add_parser_argument_w_alias(parser, '--destination', type=str, default=None, help='Orthanc destination alias')
     add_parser_argument_w_alias(parser, '--worker_threads_count', type=int, default=1, help='Number of worker threads')
+    add_parser_argument_w_alias(parser, '--polling_interval', type=int, default=1, help='Polling interval (in seconds)')
     add_parser_argument_w_alias(parser, '--trigger', type=str, default=None, help='NewInstance or StableStudy')
     add_parser_argument_w_alias(parser, '--mode', type=str, default='dicom', help=f'Forwarder mode. One of: {", ".join(valid_modes)}')
 
@@ -483,6 +484,7 @@ if __name__ == '__main__':
     source_api_key = os.environ.get("SOURCE_API_KEY", args.source_api_key)
     destination = os.environ.get("DESTINATION", args.destination)
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))
+    polling_interval_in_seconds = int(os.environ.get("POLLING_INTERVAL", str(args.polling_interval)))
     trigger = os.environ.get("TRIGGER", args.trigger)
     mode_str = os.environ.get("MODE", args.mode)
 
@@ -509,7 +511,8 @@ if __name__ == '__main__':
         source=api_client,
         destinations=[ForwarderDestination(destination=destination, forwarder_mode=chosen_mode)],
         trigger=trigger,
-        worker_threads_count=worker_threads_count
+        worker_threads_count=worker_threads_count,
+        polling_interval_in_seconds=polling_interval_in_seconds
     )
 
     forwarder.execute()

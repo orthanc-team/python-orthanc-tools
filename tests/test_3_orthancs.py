@@ -526,10 +526,11 @@ class Test3Orthancs(unittest.TestCase):
         populator_b.execute()
 
         # transfer a few instances randomly before launching the comparator to make sur it acts correctly on incomplete series ...
-        instances_a = self.oa.instances.get_all_ids()
-        instances_b = self.ob.instances.get_all_ids()
-        self.oa.modalities.send('orthanc-b', [instances_a[0], instances_a[2], instances_a[4]])
-        self.ob.modalities.send('orthanc-a', [instances_b[0], instances_b[2], instances_b[4]])
+        # but make sure we don't transfer instances from all studies
+        instances_study_a = self.oa.studies.get_instances_ids(self.oa.studies.get_all_ids()[0])
+        instances_study_b = self.ob.studies.get_instances_ids(self.ob.studies.get_all_ids()[0])
+        self.oa.modalities.send('orthanc-b', [instances_study_a[0], instances_study_a[2], instances_study_a[4]])
+        self.ob.modalities.send('orthanc-a', [instances_study_b[0], instances_study_b[2], instances_study_b[4]])
 
         # run the comparator with B as the modality and make sure
         # everything in A goes to B

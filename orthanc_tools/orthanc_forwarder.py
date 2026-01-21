@@ -163,7 +163,7 @@ class OrthancForwarder:
                 self._resources_to_process.task_done()  # tell the queue the item has been processed
 
             except exceptions.ConnectionError as ex:
-                logger.info(f"Connection error while handling {resource.type} {resource.resource_id}: {ex.msg}")
+                logger.info(f"Connection error while handling {resource.type} {resource.resource_id}: {str(ex)}")
             except Exception as ex:
                 logger.exception(f"Error while handling all {resource.type} {resource.resource_id}: {str(ex)}")
 
@@ -284,7 +284,7 @@ class OrthancForwarder:
 
                 logger.info(f"{instances_set} Processing ... done")
             except exceptions.OrthancApiException as ex:
-                logger.error(f"{instances_set} Error while processing: {ex.msg}")
+                logger.error(f"{instances_set} Error while processing: {str(ex)}")
             except Exception as ex:
                 logger.error(f"{instances_set} Error while processing: {str(ex)}", exc_info=True)
                 return False

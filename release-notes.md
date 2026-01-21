@@ -1,15 +1,19 @@
+v 0.17.15
+=========
+- fix some incorrect exception handling
+
 v 0.17.14
-========
+=========
 - added `--polling_interval` CLI option and `POLLING_INTERVAL` env var to the `OrthancForwarder`
 - upgraded api-client from `0.18.8` to `0.22.2`
 
 v 0.17.11
-========
+=========
 - fix some incorrect exception handling
 - stop the `Hl7FolderMonitor` in case of error
 
 v 0.17.10
-========
+=========
 -  fixed the tests
 -  made worklists parser more tolerant to missing info
 

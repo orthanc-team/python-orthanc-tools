@@ -2,7 +2,7 @@ import os
 import typing
 import pydicom
 from enum import Enum
-
+from typing import List
 
 class DicomElementType(Enum):
     MANDATORY = 1  # for dicom tags that must be there (type 1 or 1c) -> throw an exception if not present
@@ -22,11 +22,12 @@ class DicomWorklistBuilder:
     def customize(self, ds: pydicom.dataset.FileDataset) -> pydicom.dataset.FileDataset:
         return ds
 
-    def generate(self, values: typing.Dict[str, str], file_name: str = None) -> str:
+    def generate(self, values: typing.Dict[str, str], file_name: str = None, entropy_srcs: List[str] = None) -> str:
         """
 
         :param values: a Dictionary object created from an HL7 message.  Keys of the dico shall match pydicom tag names (i.e: AccessionNumber, PatientID, ...)
         :param filename:
+        :entropy_srcs: a SHA512 hash of the supplied list will be used for the UIDs which means the result is deterministic
         :return: the filename created
         """
         assert self._folder is not None or file_name is not None, "Please always provide a folder when creating the builder or provide a filename each time you generate a worklist"
@@ -34,15 +35,15 @@ class DicomWorklistBuilder:
         # now, let's try to build a DWL out of this
         file_meta = pydicom.dataset.Dataset()
         file_meta.MediaStorageSOPClassUID = '1.2.276.0.7230010.3.1.0.1'  # shall we use 1.2.840.10008.5.1.4.31 ?
-        file_meta.MediaStorageSOPInstanceUID = pydicom.uid.generate_uid()
+        file_meta.MediaStorageSOPInstanceUID = pydicom.uid.generate_uid(entropy_srcs=entropy_srcs)
         file_meta.ImplementationClassUID = '1.2.826.0.1.3680043.9.6676.1.0.0.1'  # 1.2.826.0.1.3680043.9.6676. is Osimis prefix
         file_meta.ImplementationVersionName = 'OSIMISHL7DWL'
 
         ds = pydicom.dataset.FileDataset(file_name, {}, file_meta = file_meta, preamble = b'\0' * 128)
         if not "SOPInstanceUID" in values:
-            values["SOPInstanceUID"] = pydicom.uid.generate_uid()
+            values["SOPInstanceUID"] = file_meta.MediaStorageSOPInstanceUID  # same values for these 2 DICOM tags is very common
         if not "StudyInstanceUID" in values:
-            values["StudyInstanceUID"] = pydicom.uid.generate_uid()  # set a default StudyInstanceUID.  It might be overriden from the dwl object
+            values["StudyInstanceUID"] = pydicom.uid.generate_uid(entropy_srcs=[file_meta.MediaStorageSOPInstanceUID])  # set a default StudyInstanceUID.  It might be overriden from the dwl object
 
         # clip patient address at 64 chars (one of the Avignon CT does not handle them)
         patient_address = values.get('PatientAddress')

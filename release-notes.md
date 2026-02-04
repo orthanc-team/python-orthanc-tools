@@ -1,3 +1,7 @@
+v 0.17.16
+=========
+- Added a way to the `DicomWorklistBuilder` to generate deterministic UIDs
+
 v 0.17.15
 =========
 - fix some incorrect exception handling

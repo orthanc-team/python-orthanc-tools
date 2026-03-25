@@ -1,3 +1,7 @@
+v 0.18.0
+=========
+- Added support for the new Worklists plugin in the `DicomWorklistBuilder`
+
 v 0.17.17
 =========
 - Added a way to the `DicomWorklistBuilder` to generate deterministic UIDs

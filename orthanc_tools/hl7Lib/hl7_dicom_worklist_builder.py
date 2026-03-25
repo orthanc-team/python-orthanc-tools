@@ -2,36 +2,99 @@ import os
 import typing
 import pydicom
 from enum import Enum
-from typing import List
+from typing import List, Union
+from pprint import pprint
+
+from orthanc_api_client import OrthancApiClient
 
 class DicomElementType(Enum):
     MANDATORY = 1  # for dicom tags that must be there (type 1 or 1c) -> throw an exception if not present
     REQUIRED = 2  # for dicom tags that are mandatory but accepts null value (type 2 or 2c)
     OPTIONAL = 3  # for dicom tags that are not mandatory (type 3)
 
+base_elements = [
+    ('AccessionNumber', DicomElementType.REQUIRED),
+    ('InstitutionName', DicomElementType.OPTIONAL),
+    ('InstitutionAddress', DicomElementType.OPTIONAL),
+    ('PatientID', DicomElementType.MANDATORY),
+    ('OtherPatientIDs', DicomElementType.OPTIONAL),
+    ('IssuerOfPatientID', DicomElementType.OPTIONAL),
+    ('PatientName', DicomElementType.MANDATORY),
+    ('PatientMotherBirthName', DicomElementType.OPTIONAL),
+    ('PatientAddress', DicomElementType.OPTIONAL),
+    ('PatientBirthDate', DicomElementType.MANDATORY),
+    ('PatientSex', DicomElementType.MANDATORY),
+    ('SOPInstanceUID', DicomElementType.MANDATORY),
+    ('StudyInstanceUID', DicomElementType.MANDATORY),
+    ('RequestingPhysician', DicomElementType.REQUIRED),
+    ('ReferringPhysicianName', DicomElementType.REQUIRED),
+    ('RequestedProcedureDescription', DicomElementType.REQUIRED),
+    ('RequestedProcedureID', DicomElementType.MANDATORY),
+    ('SpecificCharacterSet', DicomElementType.MANDATORY),
+    ('ConfidentialityConstraintOnPatientDataDescription', DicomElementType.OPTIONAL),
+    ('PatientWeight', DicomElementType.OPTIONAL),
+    ('PatientSpeciesDescription', DicomElementType.OPTIONAL),
+    ('PatientBreedDescription', DicomElementType.OPTIONAL),
+    ('ResponsiblePerson', DicomElementType.OPTIONAL),
+    ('PatientSexNeutered', DicomElementType.OPTIONAL),
+    ('BreedRegistrationNumber', DicomElementType.OPTIONAL)
+]
+
+step_elements = [
+    ('Modality', DicomElementType.REQUIRED),
+    ('ScheduledProcedureStepStartDate', DicomElementType.OPTIONAL),
+    ('ScheduledProcedureStepStartTime', DicomElementType.OPTIONAL),
+    ('ReasonForTheRequestedProcedure', DicomElementType.OPTIONAL),
+    ('ReferringPhysicianName', DicomElementType.REQUIRED),
+    ('ScheduledStationAETitle', DicomElementType.MANDATORY),
+    ('ScheduledPerformingPhysicianName', DicomElementType.REQUIRED),
+    ('ScheduledProcedureStepID', DicomElementType.MANDATORY),
+    ('ScheduledStationName', DicomElementType.REQUIRED),
+]
 
 class DicomWorklistBuilder:
 
-    def __init__(self, folder: str = None):
+    def __init__(self, folder: str = None, orthanc_client: OrthancApiClient = None):
         self._folder = folder
+        self._orthanc_client = orthanc_client
 
     def get_folder(self):
         return self._folder
 
-    # to override in derived class to customize the workilist before it is saved to disk
-    def customize(self, ds: pydicom.dataset.FileDataset) -> pydicom.dataset.FileDataset:
-        return ds
+    # to override in derived class to customize the worklist before it is saved to disk
+    def customize(self, values: Union[pydicom.dataset.FileDataset, typing.Dict[str, str]]):
+        if isinstance(values, pydicom.dataset.FileDataset):
+            return values
+        return values
 
     def generate(self, values: typing.Dict[str, str], file_name: str = None, entropy_srcs: List[str] = None) -> str:
         """
-
         :param values: a Dictionary object created from an HL7 message.  Keys of the dico shall match pydicom tag names (i.e: AccessionNumber, PatientID, ...)
         :param filename:
         :entropy_srcs: a SHA512 hash of the supplied list will be used for the UIDs which means the result is deterministic
-        :return: the filename created
+        :return: the filename created or the Orthanc ID if WL are stored into Orthanc
         """
-        assert self._folder is not None or file_name is not None, "Please always provide a folder when creating the builder or provide a filename each time you generate a worklist"
+        assert self._folder is not None or file_name is not None or self._orthanc_client is not None, "Please always provide a folder (or an Orthanc client) when creating the builder or provide a filename each time you generate a worklist"
 
+        # clip patient address at 64 chars (one of the Avignon CT does not handle them)
+        patient_address = values.get('PatientAddress')
+        if patient_address and len(patient_address) > 64:
+            patient_address = patient_address[:60] + "..."
+            values['PatientAddress'] = patient_address
+
+        if self._orthanc_client is  not None:
+            r = self._generate_wl_through_api(values=values, entropy_srcs=entropy_srcs)
+            return r
+
+        elif self._folder is not None or file_name is not None:
+            r = self._generate_file(values=values, file_name=file_name, entropy_srcs=entropy_srcs)
+            return r
+
+        else:
+            raise Exception("Please provide a folder (or an Orthanc client) when creating the builder or provide a filename each time you generate a worklist")
+
+
+    def _generate_file(self, values: typing.Dict[str, str], file_name: str = None, entropy_srcs: List[str] = None):
         # now, let's try to build a DWL out of this
         file_meta = pydicom.dataset.Dataset()
         file_meta.MediaStorageSOPClassUID = '1.2.276.0.7230010.3.1.0.1'  # shall we use 1.2.840.10008.5.1.4.31 ?
@@ -45,38 +108,7 @@ class DicomWorklistBuilder:
         if not "StudyInstanceUID" in values:
             values["StudyInstanceUID"] = pydicom.uid.generate_uid(entropy_srcs=[file_meta.MediaStorageSOPInstanceUID])  # set a default StudyInstanceUID.  It might be overriden from the dwl object
 
-        # clip patient address at 64 chars (one of the Avignon CT does not handle them)
-        patient_address = values.get('PatientAddress')
-        if patient_address and len(patient_address) > 64:
-            patient_address = patient_address[:60] + "..."
-            values['PatientAddress'] = patient_address
-
-        for field_name, element_type in [('AccessionNumber', DicomElementType.REQUIRED),
-                                        ('InstitutionName', DicomElementType.OPTIONAL),
-                                        ('InstitutionAddress', DicomElementType.OPTIONAL),
-                                        ('PatientID', DicomElementType.MANDATORY),
-                                        ('OtherPatientIDs', DicomElementType.OPTIONAL),
-                                        ('IssuerOfPatientID', DicomElementType.OPTIONAL),
-                                        ('PatientName', DicomElementType.MANDATORY),
-                                        ('PatientMotherBirthName', DicomElementType.OPTIONAL),
-                                        ('PatientAddress', DicomElementType.OPTIONAL),
-                                        ('PatientBirthDate', DicomElementType.MANDATORY),
-                                        ('PatientSex', DicomElementType.MANDATORY),
-                                        ('SOPInstanceUID', DicomElementType.MANDATORY),
-                                        ('StudyInstanceUID', DicomElementType.MANDATORY),
-                                        ('RequestingPhysician', DicomElementType.REQUIRED),
-                                        ('ReferringPhysicianName', DicomElementType.REQUIRED),
-                                        ('RequestedProcedureDescription', DicomElementType.REQUIRED),
-                                        ('RequestedProcedureID', DicomElementType.MANDATORY),
-                                        ('SpecificCharacterSet', DicomElementType.MANDATORY),
-                                        ('ConfidentialityConstraintOnPatientDataDescription', DicomElementType.OPTIONAL),
-                                        ('PatientWeight', DicomElementType.OPTIONAL),
-                                        ('PatientSpeciesDescription', DicomElementType.OPTIONAL),
-                                        ('PatientBreedDescription', DicomElementType.OPTIONAL),
-                                        ('ResponsiblePerson', DicomElementType.OPTIONAL),
-                                        ('PatientSexNeutered', DicomElementType.OPTIONAL),
-                                        ('BreedRegistrationNumber', DicomElementType.OPTIONAL)
-                          ]:
+        for field_name, element_type in base_elements:
             self._add_field(ds, values, field_name, element_type)
 
         ds.ReferencedStudySequence = pydicom.sequence.Sequence()
@@ -84,16 +116,7 @@ class DicomWorklistBuilder:
 
         step = pydicom.dataset.Dataset()
         step.ScheduledProcedureStepDescription = values.get('RequestedProcedureDescription')
-        for field_name, element_type in [('Modality', DicomElementType.REQUIRED),
-                                        ('ScheduledProcedureStepStartDate', DicomElementType.OPTIONAL),
-                                        ('ScheduledProcedureStepStartTime', DicomElementType.OPTIONAL),
-                                        ('ReasonForTheRequestedProcedure', DicomElementType.OPTIONAL),
-                                        ('ReferringPhysicianName', DicomElementType.REQUIRED),
-                                        ('ScheduledStationAETitle', DicomElementType.MANDATORY),
-                                        ('ScheduledPerformingPhysicianName', DicomElementType.REQUIRED),
-                                        ('ScheduledProcedureStepID', DicomElementType.MANDATORY),
-                                        ('ScheduledStationName', DicomElementType.REQUIRED),
-                                        ]:
+        for field_name, element_type in step_elements:
             self._add_field(step, values, field_name, element_type)
 
         ds.ScheduledProcedureStepSequence = pydicom.sequence.Sequence([step])
@@ -105,6 +128,35 @@ class DicomWorklistBuilder:
 
         ds.save_as(file_name, enforce_file_format=True)
         return file_name
+
+    def _generate_wl_through_api(self, values: typing.Dict[str, str], entropy_srcs: List[str] = None):
+
+        formatted_values = {}
+
+        for field_name, element_type in base_elements:
+            self._add_value(formatted_values, values, field_name, element_type)
+
+        step = {}
+        for field_name, element_type in step_elements:
+            self._add_value(step, values, field_name, element_type)
+
+        formatted_values["ScheduledProcedureStepSequence"] = [step]
+
+        wl_id = self._orthanc_client.worklists.create(values=formatted_values)
+        return wl_id
+
+    def _add_value(self, output: typing.Dict[str, str], values: typing.Dict[str, str], field_name: str, element_type: DicomElementType):
+        if field_name in values:
+            if values[field_name] is not None:
+                output[field_name] = values.get(field_name)
+            elif element_type == DicomElementType.REQUIRED:
+                output[field_name] = ''
+            elif element_type == DicomElementType.MANDATORY:
+                raise Exception(f"missing field '{field_name}'")  # TODO: raise a dedicated exception
+        elif element_type == DicomElementType.REQUIRED:
+            output[field_name] = ''
+        elif element_type == DicomElementType.MANDATORY:
+            raise Exception(f"missing field '{field_name}'")  # TODO: raise a dedicated exception
 
     def _add_field(self, ds: pydicom.dataset.Dataset, values: typing.Dict[str, str], field_name: str, element_type: DicomElementType):
         if field_name in values:

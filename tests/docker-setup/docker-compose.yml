@@ -1,6 +1,6 @@
 services:
   orthanc-a:
-    image: orthancteam/orthanc:25.4.0
+    image: orthancteam/orthanc:26.1.0
     ports: ["10042:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -14,6 +14,8 @@ services:
       ORTHANC__DICOM_AET: "ORTHANC-A"
       ORTHANC__EXECUTE_LUA_ENABLED: "true"
       ORTHANC__OVERWRITE_INSTANCES: "true"
+      ORTHANC__WORKLISTS__ENABLE: "true"
+      ORTHANC__WORKLISTS__SAVE_IN_ORTHANC_DATABASE: "true"
       ORTHANC__DICOM_MODALITIES: |
         {
           "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
@@ -34,7 +36,7 @@ services:
         }
 
   orthanc-b:
-    image: orthancteam/orthanc:25.4.0
+    image: orthancteam/orthanc:26.1.0
     ports: ["10043:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -49,6 +51,8 @@ services:
       ORTHANC__OVERWRITE_INSTANCES: "true"
       # because we sometimes want to forbid store from non declared modalities
       ORTHANC__DICOM_ALWAYS_ALLOW_STORE: "false"
+      ORTHANC__WORKLISTS__ENABLE: "true"
+      ORTHANC__WORKLISTS__SAVE_IN_ORTHANC_DATABASE: "true"
       ORTHANC__DICOM_MODALITIES: |
         {
           "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],
@@ -69,7 +73,7 @@ services:
         }
 
   orthanc-c:
-    image: orthancteam/orthanc:25.4.0
+    image: orthancteam/orthanc:26.1.0
     ports: ["10044:8042"]
     environment:
       VERBOSE_STARTUP: "true"

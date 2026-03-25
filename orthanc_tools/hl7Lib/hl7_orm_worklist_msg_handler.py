@@ -7,9 +7,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-#TODO: manage the automatic deletion of old files somewhere else
-
-
 class Hl7OrmWorklistMsgHandler:
 
     def __init__(self,
@@ -18,7 +15,7 @@ class Hl7OrmWorklistMsgHandler:
                  encoding: str = 'ascii'  # TODO: currently not used !
                  ):
 
-        assert builder._folder is not None, "You must provide a DicomWorklistBuilder with a folder defined"
+        assert builder._folder is not None or builder._orthanc_client is not None, "You must provide a DicomWorklistBuilder with a folder or an OrthancClient defined!"
         logger.info("Creating ORM worklist message handler")
 
         self._parser = parser
@@ -40,11 +37,11 @@ class Hl7OrmWorklistMsgHandler:
 
         if values is not None:
             try:
-                logger.info("generating file...")
-                worklistFilePath = self._builder.generate(values)
-                logger.info("generated file: {path}".format(path = worklistFilePath))
+                logger.info(f"generating worklist, ({"file" if self._builder._orthanc_client is None else "db record"})...")
+                r = self._builder.generate(values)
+                logger.info(f"generated worklist: {r}")
             except Exception as e:
-                logger.error("file not generated: {exception}".format(exception=e))
+                logger.error("worklist not generated: {exception}".format(exception=e))
 
         hl7_response = hl7.parse(r'MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1' + '\r' + 'MSA|AA|{message_id}'.format(  # TODO: handle encoding
             sending_application = hl7_request['MSH.F5.R1.C1'],

@@ -1,10 +1,14 @@
+v 0.18.1
+=========
+- fix in `DicomWorklistBuilder` and in `hl7_worklist_server_for_orthanc`
+
 v 0.18.0
 =========
-- Added support for the new Worklists plugin in the `DicomWorklistBuilder`
+- added support for the new Worklists plugin in the `DicomWorklistBuilder`
 
 v 0.17.17
 =========
-- Added a way to the `DicomWorklistBuilder` to generate deterministic UIDs
+- added a way to the `DicomWorklistBuilder` to generate deterministic UIDs
 
 v 0.17.15
 =========

@@ -65,10 +65,12 @@ if __name__ == "__main__":
                 'ORM^O01^ORM_O01': (orm_handler.handle_orm_message,)
             }
     ) as mllp_server:
-
-        # configure and start old_files_deleter
-        with OldFilesDeleter(folder_to_monitor = folder, timeout = retention*3600.0, filter = '*.wl', execution_interval = 3600.0) as worklist_cleaner:
-
+        # configure and start old_files_deleter (for folder mode only)
+        if folder is not None:
+            with OldFilesDeleter(folder_to_monitor = folder, timeout = retention*3600.0, filter = '*.wl', execution_interval = 3600.0) as worklist_cleaner:
+                while True:
+                    time.sleep(1)
+        else:
             while True:
                 time.sleep(1)
 

@@ -133,6 +133,9 @@ class DicomWorklistBuilder:
 
         formatted_values = {}
 
+        if not "SOPInstanceUID" in values:
+            values["SOPInstanceUID"] = pydicom.uid.generate_uid(entropy_srcs=entropy_srcs)
+
         for field_name, element_type in base_elements:
             self._add_value(formatted_values, values, field_name, element_type)
 

@@ -37,7 +37,7 @@ class Hl7OrmWorklistMsgHandler:
 
         if values is not None:
             try:
-                logger.info(f"generating worklist, ({"file" if self._builder._orthanc_client is None else "db record"})...")
+                logger.info(f"generating worklist, ({'file' if self._builder._orthanc_client is None else 'db record'})...")
                 r = self._builder.generate(values)
                 logger.info(f"generated worklist: {r}")
             except Exception as e:

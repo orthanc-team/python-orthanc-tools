@@ -1,3 +1,7 @@
+Pending changes
+===============
+- `OrthancCloner` now starts in `Default` mode if not specified.
+
 v 0.18.1
 =========
 - fix in `DicomWorklistBuilder` and in `hl7_worklist_server_for_orthanc`

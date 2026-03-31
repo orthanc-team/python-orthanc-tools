@@ -1,6 +1,6 @@
 import argparse
 import logging
-from orthanc_api_client import OrthancApiClient
+from orthanc_api_client import OrthancApiClient, exceptions
 from typing import List
 import zipfile
 import tempfile
@@ -55,6 +55,17 @@ class OrthancFolderImporter:
             self._max_retries = max_retries
 
         self._lock = threading.Lock()
+        self._orthanc_is_down = False
+        self._orthanc_lock = threading.Lock()
+
+    def _wait_until_orthanc_is_ready(self):
+        """Pauses all threads until Orthanc is reachable again."""
+        with self._orthanc_lock:
+            if not self._api_client.is_alive():
+                logger.warning("Orthanc is unreachable. Pausing all worker threads...")
+                while not self._api_client.is_alive():
+                    time.sleep(5)
+                logger.info("Orthanc is back up! Resuming workers.")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
@@ -119,7 +130,13 @@ class OrthancFolderImporter:
                         instance_orthanc_ids = self._api_client.upload(buffer, ignore_errors=True)
 
                         if len(instance_orthanc_ids) == 0:
-                            logger.error(f"File not uploaded: {path_to_upload}.")
+                            # If we got nothing back, it might be a file error OR Orthanc is actually down
+                            # and the ignore_errors=True swallowed a connection error.
+                            if not self._api_client.is_alive():
+                                self._wait_until_orthanc_is_ready()
+                                continue # retry this same file
+
+                            logger.error(f"File not uploaded (likely invalid DICOM): {path_to_upload}.")
                             self.add_file_name_in_errors_log(file_path=path_to_upload)
                             break
                         # we label for each instance, not at the end of the study, so that there is never an unlabeled image in Orthanc
@@ -127,6 +144,22 @@ class OrthancFolderImporter:
                             study_orthanc_id = self._api_client.instances.get_parent_study_id(instance_orthanc_ids[0])
                             self._api_client.studies.add_labels(orthanc_id=study_orthanc_id, labels=self._labels_list)
                         break
+                    except (exceptions.ConnectionError, exceptions.OrthancApiException) as e:
+                        # Handle connection issues without consuming retry count
+                        if not self._api_client.is_alive():
+                            logger.warning(f"Connection error: {str(e)}. Waiting for Orthanc...")
+                            self._wait_until_orthanc_is_ready()
+                            continue # Try the same file again
+
+                        # If it's a different Orthanc error (e.g. 400 Bad Request), treat as a normal retry/fail
+                        if retry_count == self._max_retries:
+                            logger.error(f"Error while uploading this file: {path_to_upload}. Exception: {str(e)}")
+                            logger.error(f"too many attempts, logging the file name...")
+                            self.add_file_name_in_errors_log(file_path=path_to_upload)
+                            break
+                        else:
+                            retry_count += 1
+                            logger.warning(f"Error while uploading this file, retrying...: {path_to_upload}. Exception: {str(e)}")
                     except Exception as e:
                         if retry_count == self._max_retries:
                             logger.error(f"Error while uploading this file: {path_to_upload}. Exception: {str(e)}")

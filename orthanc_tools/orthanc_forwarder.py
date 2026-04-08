@@ -29,6 +29,10 @@ class ForwarderDestination:
     forwarder_mode: ForwarderMode           # the mode to use to forward to the destination
     alternate_destination: str = None       # an alternate destination in case this one can not be contacted
 
+    @property
+    def retry_key(self) -> str:
+        return f"{self.forwarder_mode}:{self.destination}"
+
 @dataclass
 class ResourceToForward:
     type: str
@@ -300,8 +304,9 @@ class OrthancForwarder:
 
         for dest in self._destinations:
             try:
+                destination_retry_key = dest.retry_key
 
-                if dest.destination not in already_sent_to_destinations:
+                if destination_retry_key not in already_sent_to_destinations:
                     logger.info(f"{instances_set} Sending to {dest.destination} using {dest.forwarder_mode}")
                     self._forward_to_destination(
                         instances_set=instances_set,
@@ -311,7 +316,7 @@ class OrthancForwarder:
                 else:
                     logger.info(f"{instances_set} Sending ... already sent to {dest.destination} using {dest.forwarder_mode}")
 
-                sent_to_destinations.append(dest.destination)
+                sent_to_destinations.append(destination_retry_key)
                 if self._on_instances_set_forwarded:
                     self._on_instances_set_forwarded(instances_set=instances_set,
                                                      destination=dest.destination)

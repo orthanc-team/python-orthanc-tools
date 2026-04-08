@@ -16,6 +16,17 @@ import threading
 # python -m orthanc_tools.orthanc_folder_importer --url=https://pacs.orthanc.team/orthanc/ --api_key=**************** --folder_path=C:\\Orthanc --state_path=C:\\orthanc-migration\\status.txt --errors_path=C:\\orthanc-migration\\errors.txt --max_retries=2
 
 logger = logging.getLogger(__name__)
+DEFAULT_ERRORS_LOG_FILENAME = "errors.txt"
+
+
+def resolve_errors_path(errors_path: str = None, error_folder_path: str = None):
+    if errors_path:
+        return errors_path
+
+    if error_folder_path:
+        return os.path.join(error_folder_path, DEFAULT_ERRORS_LOG_FILENAME)
+
+    return None
 
 class OrthancFolderImporter:
     '''
@@ -70,6 +81,12 @@ class OrthancFolderImporter:
         self.stop()
 
     def add_file_name_in_errors_log(self, file_path):
+        if not self._errors_path:
+            logger.warning(f"No errors log path configured, skipping error logging for {file_path}")
+            return
+        errors_dir = os.path.dirname(self._errors_path)
+        if errors_dir:
+            os.makedirs(errors_dir, exist_ok=True)
         with open(self._errors_path, "at") as f:
             f.write(file_path + "\n")
 
@@ -276,7 +293,10 @@ if __name__ == '__main__':
     api_key = os.environ.get("ORTHANC_API_KEY", args.api_key)
     folder_path = os.environ.get("FOLDER_PATH", args.folder_path)
     labels_list = os.environ.get("LABELS_LIST", args.labels_list)
-    errors_path = os.environ.get("ERRORS_PATH", os.environ.get("ERROR_FOLDER_PATH", args.errors_path))
+    errors_path = resolve_errors_path(
+        errors_path=os.environ.get("ERRORS_PATH", args.errors_path),
+        error_folder_path=os.environ.get("ERROR_FOLDER_PATH")
+    )
     state_path = os.environ.get("STATE_PATH", os.environ.get("PERSIST_STATE_PATH", args.state_path))
     max_retries = int(os.environ.get("MAX_RETRIES", str(args.max_retries)))
     worker_threads_count = int(os.environ.get("WORKER_THREADS_COUNT", str(args.worker_threads_count)))

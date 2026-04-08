@@ -15,6 +15,14 @@ logger = logging.getLogger(__name__)
 DEFAULT_TRANSFER_TIMEOUT = 300
 
 
+def _should_fallback_without_timeout(error: TypeError) -> bool:
+    error_message = str(error)
+    return "timeout" in error_message and (
+        "unexpected keyword argument" in error_message
+        or "got an unexpected keyword argument" in error_message
+    )
+
+
 class ClonerMode(StrEnum):
 
     DEFAULT = 'Default'             # download instance and reupload them in new orthanc
@@ -86,16 +94,20 @@ class OrthancCloner(OrthancMonitor):
         """Download instance file with timeout protection (no extra threads to avoid shutdown issues)."""
         try:
             return api_client.instances.get_file(instance_id, timeout=self._transfer_timeout)
-        except TypeError:
+        except TypeError as ex:
             # Fallback for older orthanc_api_client that doesn't accept timeout kwarg
+            if not _should_fallback_without_timeout(ex):
+                raise
             return api_client.instances.get_file(instance_id)
 
     def _upload_with_timeout(self, dicom: bytes):
         """Upload DICOM data with timeout protection (no extra threads to avoid shutdown issues)."""
         try:
             return self._destination.upload(dicom, timeout=self._transfer_timeout)
-        except TypeError:
+        except TypeError as ex:
             # Fallback for older orthanc_api_client that doesn't accept timeout kwarg
+            if not _should_fallback_without_timeout(ex):
+                raise
             return self._destination.upload(dicom)
 
     def _log_error_and_skip(self, change_id: int, instance_id: str, error_msg: str):
@@ -279,6 +291,5 @@ if __name__ == '__main__':
     )
 
     cloner.execute(existing_changes_only=False)
-
 
 

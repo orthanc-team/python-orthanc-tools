@@ -105,6 +105,9 @@ extensions to ignore during import (e.g. `.cne,.bmp,.ini`).
 The importer is resilient to Orthanc restarts: if a connection is lost, all worker threads pause
 and automatically resume once Orthanc is reachable again.
 
+For importer error logging, use `ERRORS_PATH` to point to a log file. If you set
+`ERROR_FOLDER_PATH`, the importer writes to `errors.txt` inside that folder.
+
 
 ## Implement a simple forwarder
 

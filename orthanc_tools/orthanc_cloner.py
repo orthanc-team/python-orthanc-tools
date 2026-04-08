@@ -126,13 +126,9 @@ class OrthancCloner(OrthancMonitor):
             # In this case, simply log the error and do not retry in the OrthancMonitor (don't raise the Exception)
             self._log_error_and_skip(change_id, instance_id, f"ResourceNotFound: {str(ex)}")
 
-        except TimeoutError as ex:
-            # Transfer timed out - log and skip to prevent blocking the queue
-            self._log_error_and_skip(change_id, instance_id, str(ex))
-
-        except (ConnectionError, Timeout, ChunkedEncodingError, ProtocolError, ReadTimeoutError) as ex:
-            # Connection issues - log and skip to prevent indefinite hanging
-            self._log_error_and_skip(change_id, instance_id, f"Connection error: {type(ex).__name__}: {str(ex)}")
+        except (TimeoutError, ConnectionError, Timeout, ChunkedEncodingError, ProtocolError, ReadTimeoutError) as ex:
+            # Connection/timeout issues - re-raise so the monitor retries (consistent with handle_stable_study)
+            raise Exception(f"Connection error while cloning instance {instance_id}: {type(ex).__name__}: {str(ex)}")
 
         except RuntimeError as ex:
             # If Python is shutting down we cannot spawn new work; log and re-raise a clearer message

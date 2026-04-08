@@ -55,7 +55,6 @@ class OrthancFolderImporter:
             self._max_retries = max_retries
 
         self._lock = threading.Lock()
-        self._orthanc_is_down = False
         self._orthanc_lock = threading.Lock()
 
     def _wait_until_orthanc_is_ready(self):

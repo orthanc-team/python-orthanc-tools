@@ -1,3 +1,14 @@
+Pending changes
+===============
+- `OrthancCloner`: added `--transfer_timeout` / `TRANSFER_TIMEOUT` for configurable download/upload timeouts (default: 300s).
+- `OrthancCloner`: improved error handling for connection errors and timeouts (logged, retried, and written to error folder).
+- `OrthancForwarder`: added multi-destination support with per-destination mode override (`alias:mode` syntax).
+- `OrthancForwarder`: added `DESTINATIONS` env var for comma-separated destination list.
+- `OrthancFolderImporter`: added `--skip_extensions` / `SKIP_EXTENSIONS` to ignore files by extension.
+- `OrthancFolderImporter`: worker threads now pause and resume automatically when Orthanc is unreachable.
+- `OrthancMonitor`: fixed logger formatting error in exception handler.
+- Simplified Dockerfile with `.dockerignore` for smaller build context.
+
 v 0.18.4
 ========
 - All classes that have `worker_threads_count` configuration now increase

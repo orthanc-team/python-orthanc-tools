@@ -91,24 +91,27 @@ class OrthancCloner(OrthancMonitor):
 
 
     def _download_with_timeout(self, api_client: OrthancApiClient, instance_id: str):
-        """Download instance file with timeout protection (no extra threads to avoid shutdown issues)."""
+        path = f"instances/{instance_id}/file"
         try:
-            return api_client.instances.get_file(instance_id, timeout=self._transfer_timeout)
+            return api_client.get_binary(path, timeout=self._transfer_timeout)
         except TypeError as ex:
-            # Fallback for older orthanc_api_client that doesn't accept timeout kwarg
             if not _should_fallback_without_timeout(ex):
                 raise
-            return api_client.instances.get_file(instance_id)
+            return api_client.get_binary(path)
 
     def _upload_with_timeout(self, dicom: bytes):
-        """Upload DICOM data with timeout protection (no extra threads to avoid shutdown issues)."""
         try:
-            return self._destination.upload(dicom, timeout=self._transfer_timeout)
+            response = self._destination.post('instances', data=dicom, timeout=self._transfer_timeout)
         except TypeError as ex:
-            # Fallback for older orthanc_api_client that doesn't accept timeout kwarg
             if not _should_fallback_without_timeout(ex):
                 raise
-            return self._destination.upload(dicom)
+            response = self._destination.post('instances', data=dicom)
+
+        response_json = response.json()
+        if isinstance(response_json, list):
+            return [x['ID'] for x in response_json]
+
+        return [response_json['ID']]
 
     def _log_error_and_skip(self, change_id: int, instance_id: str, error_msg: str):
         """Log error to file and allow the monitor to advance (don't re-raise)."""
@@ -291,5 +294,3 @@ if __name__ == '__main__':
     )
 
     cloner.execute(existing_changes_only=False)
-
-

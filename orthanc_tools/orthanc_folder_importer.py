@@ -17,6 +17,8 @@ import threading
 
 logger = logging.getLogger(__name__)
 DEFAULT_ERRORS_LOG_FILENAME = "errors.txt"
+ORTHANC_READY_RECHECK_DELAY_SECONDS = 5
+ORTHANC_READY_MAX_CHECKS = 12
 
 
 def resolve_errors_path(errors_path: str = None, error_folder_path: str = None):
@@ -68,14 +70,21 @@ class OrthancFolderImporter:
         self._lock = threading.Lock()
         self._orthanc_lock = threading.Lock()
 
-    def _wait_until_orthanc_is_ready(self):
-        """Pauses all threads until Orthanc is reachable again."""
+    def _wait_until_orthanc_is_ready(self) -> bool:
+        """Pause briefly for transient outages and return whether Orthanc recovered."""
         with self._orthanc_lock:
-            if not self._api_client.is_alive():
-                logger.warning("Orthanc is unreachable. Pausing all worker threads...")
-                while not self._api_client.is_alive():
-                    time.sleep(5)
-                logger.info("Orthanc is back up! Resuming workers.")
+            if self._api_client.is_alive():
+                return True
+
+            logger.warning("Orthanc is unreachable. Pausing all worker threads...")
+            for _ in range(ORTHANC_READY_MAX_CHECKS):
+                time.sleep(ORTHANC_READY_RECHECK_DELAY_SECONDS)
+                if self._api_client.is_alive():
+                    logger.info("Orthanc is back up! Resuming workers.")
+                    return True
+
+            logger.error("Orthanc is still unreachable after waiting; treating this as a failed upload attempt.")
+            return False
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
@@ -149,8 +158,9 @@ class OrthancFolderImporter:
                             # If we got nothing back, it might be a file error OR Orthanc is actually down
                             # and the ignore_errors=True swallowed a connection error.
                             if not self._api_client.is_alive():
-                                self._wait_until_orthanc_is_ready()
-                                continue # retry this same file
+                                if self._wait_until_orthanc_is_ready():
+                                    continue # retry this same file
+                                raise exceptions.ConnectionError(f"Orthanc remained unreachable while uploading {path_to_upload}")
 
                             logger.error(f"File not uploaded (likely invalid DICOM): {path_to_upload}.")
                             self.add_file_name_in_errors_log(file_path=path_to_upload)
@@ -164,8 +174,8 @@ class OrthancFolderImporter:
                         # Handle connection issues without consuming retry count
                         if not self._api_client.is_alive():
                             logger.warning(f"Connection error: {str(e)}. Waiting for Orthanc...")
-                            self._wait_until_orthanc_is_ready()
-                            continue # Try the same file again
+                            if self._wait_until_orthanc_is_ready():
+                                continue # Try the same file again
 
                         # If it's a different Orthanc error (e.g. 400 Bad Request), treat as a normal retry/fail
                         if retry_count == self._max_retries:

@@ -51,6 +51,17 @@ class Test3Orthancs(unittest.TestCase):
     def tearDownClass(cls):
         subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup")
 
+    def _replace_study_description(self, api_client, instance_ids, study_description):
+        for instance_id in instance_ids:
+            modified = api_client.instances.modify(
+                instance_id,
+                replace_tags={"StudyDescription": study_description},
+                keep_tags=['SOPInstanceUID', 'SeriesInstanceUID', 'StudyInstanceUID'],
+                force=True,
+            )
+            replaced_instance_ids = api_client.upload(buffer=modified)
+            self.assertEqual(instance_id, replaced_instance_ids[0])
+
     def test_cloner_default(self):
         self.oa.delete_all_content()
         self.ob.delete_all_content()
@@ -652,6 +663,62 @@ class Test3Orthancs(unittest.TestCase):
                     # check it has been removed from Orthanc A
                     self.assertEqual(0, len(self.oa.instances.get_all_ids()))
 
+    def test_orthanc_forwarder_filtered_destination_forwards_only_matching_studies(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+        self.oc.delete_all_content()
+
+        instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
+        self._replace_study_description(self.oa, instances_ids, "ai brain screening")
+
+        with OrthancForwarder(
+            source=self.oa,
+            destinations=[
+                ForwarderDestination(destination="orthanc-b", forwarder_mode=ForwarderMode.DICOM),
+                ForwarderDestination(
+                    destination="orthanc-c",
+                    forwarder_mode=ForwarderMode.DICOM,
+                    study_description_match_type="regex",
+                    study_description_pattern="^AI BRAIN"
+                )
+            ],
+            trigger=ChangeType.STABLE_STUDY,
+            polling_interval_in_seconds=0.1
+        ) as forwarder:
+            helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
+
+        self.assertEqual(len(instances_ids), len(self.ob.instances.get_all_ids()))
+        self.assertEqual(len(instances_ids), len(self.oc.instances.get_all_ids()))
+        self.assertEqual(0, len(self.oa.instances.get_all_ids()))
+
+    def test_orthanc_forwarder_filtered_destination_skips_empty_study_description(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+        self.oc.delete_all_content()
+
+        instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
+        self._replace_study_description(self.oa, instances_ids, "")
+
+        with OrthancForwarder(
+            source=self.oa,
+            destinations=[
+                ForwarderDestination(destination="orthanc-b", forwarder_mode=ForwarderMode.DICOM),
+                ForwarderDestination(
+                    destination="orthanc-c",
+                    forwarder_mode=ForwarderMode.DICOM,
+                    study_description_match_type="substring",
+                    study_description_pattern="ai"
+                )
+            ],
+            trigger=ChangeType.STABLE_STUDY,
+            polling_interval_in_seconds=0.1
+        ) as forwarder:
+            helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
+
+        self.assertEqual(len(instances_ids), len(self.ob.instances.get_all_ids()))
+        self.assertEqual(0, len(self.oc.instances.get_all_ids()))
+        self.assertEqual(0, len(self.oa.instances.get_all_ids()))
+
 
     def test_orthanc_forwarder_filter_and_process(self):
         self.ob.delete_all_content()  # destination
@@ -1149,4 +1216,3 @@ class Test3Orthancs(unittest.TestCase):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     unittest.main()
-

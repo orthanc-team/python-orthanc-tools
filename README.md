@@ -70,6 +70,9 @@ volumes:
 
 ```
 
+`TRANSFER_TIMEOUT` / `--transfer_timeout` applies to Default-mode instance download/upload calls.
+Peer, transfer-plugin, and DICOM modes use the corresponding Orthanc operation behavior.
+
 ### OrthancCloner performance
 
 Here are a set of measures performed during a long transfer between 2 VMs running on Azure using OrthancCloner v 0.6.3.
@@ -102,8 +105,9 @@ $ docker exec -it xxxx bash
 The `--skip_extensions` flag (or `SKIP_EXTENSIONS` env var) accepts a comma-separated list of file
 extensions to ignore during import (e.g. `.cne,.bmp,.ini`).
 
-The importer is resilient to Orthanc restarts: if a connection is lost, all worker threads pause
-and automatically resume once Orthanc is reachable again.
+The importer is resilient to short Orthanc restarts: if a connection is lost, all worker threads pause
+for a bounded reconnect window and resume once Orthanc is reachable again. If Orthanc stays unreachable
+after that window, the current upload attempt is treated as failed and follows the normal retry/error-log flow.
 
 For importer error logging, use `ERRORS_PATH` to point to a log file. If you set
 `ERROR_FOLDER_PATH`, the importer writes to `errors.txt` inside that folder.
@@ -124,7 +128,8 @@ python3 -m orthanc_tools.orthanc_forwarder --source_url=http://192.168.0.10:8042
 ### Multiple destinations
 
 You can forward to multiple destinations at once. Each destination can optionally override the default mode
-using the `alias:mode` syntax:
+using the `alias:mode` syntax. With the CLI, you can pass one `--destination` flag per destination or
+comma-separate multiple destinations in one flag:
 
 ```shell
 # Forward to two DICOM destinations
@@ -132,13 +137,33 @@ python3 -m orthanc_tools.orthanc_forwarder --source_url=http://localhost:8042 --
 
 # Forward to one peer and one DICOM destination with different modes
 python3 -m orthanc_tools.orthanc_forwarder --source_url=http://localhost:8042 --destination=peer_a:peering --destination=modality_b:dicom --trigger=StableStudy
+
+# Equivalent comma-separated form
+python3 -m orthanc_tools.orthanc_forwarder --source_url=http://localhost:8042 --destination=peer_a:peering,modality_b:dicom --trigger=StableStudy
+
+# Forward everything to two destinations, plus only AI-tagged studies to a third one
+python3 -m orthanc_tools.orthanc_forwarder --source_url=http://localhost:8042 --destination=peer_a:peering --destination=modality_b:dicom --destination=ai_service:dicom:substring:AI --trigger=StableStudy
 ```
 
 Using environment variables (useful in docker-compose):
 
 - `DESTINATION`: single destination alias (backward compatible)
-- `DESTINATIONS`: comma-separated list of destinations with optional mode overrides (e.g. `peer_a:peering,modality_b:dicom`)
+- `DESTINATIONS`: comma-separated list of destinations with optional mode overrides and Study Description filters (e.g. `peer_a:peering,modality_b:dicom,ai_service:dicom:regex:^AI[ _-]`)
 - `MODE`: default forwarding mode when no per-destination override is specified
+
+Study Description filters are evaluated per study and are case-insensitive:
+
+- `alias:mode:substring:pattern`: forward only if `StudyDescription` contains `pattern`
+- `alias:mode:regex:pattern`: forward only if `StudyDescription` matches the regex
+- `alias::substring:pattern`: use the global `MODE` with a Study Description filter
+
+If a filter pattern contains commas in `DESTINATIONS`, wrap that destination entry in double quotes, for example:
+`DESTINATIONS='peer_a:peering,"ai_service:dicom:substring:CT, ABDOMEN"'`
+
+The same quoting rule applies when comma-separating multiple destinations in one CLI flag.
+
+If a study has no `StudyDescription`, filtered destinations are skipped while unfiltered destinations still receive the study.
+If no destination is eligible after filtering, the source data is kept and marked terminal so it is not retried forever.
 
 
 ## migrate DICOM Data from a modality to another

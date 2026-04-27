@@ -119,6 +119,11 @@ The forwarder simply forwards the content of an Orthanc to another DICOM destina
 the instances.  This is usefull for, e.g. implementing an Inbox in front of a PACS that does some
 `IngestTranscoding` and/or applies sanitization in a lua script or a python plugin.
 
+When using `--trigger=StableStudy`, the forwarder only handles studies after Orthanc reports them as
+stable. Configure Orthanc's `StableAge` on the source Orthanc to control how long Orthanc waits after
+the last received instance before a study is considered complete. For example, `StableAge: 60` waits
+about one minute after the last incoming instance before forwarding can start.
+
 from a shell (single destination):
 
 ```shell

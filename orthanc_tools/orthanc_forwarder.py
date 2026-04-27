@@ -11,7 +11,7 @@ from strenum import StrEnum
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
-from orthanc_api_client import OrthancApiClient, InstancesSet, ResourceType, exceptions
+from orthanc_api_client import OrthancApiClient, InstancesSet, ResourceType, ResourceNotFound, exceptions
 from .orthanc_monitor import ChangeType
 
 logger = logging.getLogger(__name__)
@@ -314,8 +314,20 @@ class OrthancForwarder:
         self.stop()
 
     def _handle_study(self, study_id: str, api_client):
+        if self._trigger == ChangeType.STABLE_STUDY and not self._is_study_stable(study_id, api_client):
+            logger.debug(f"Study {study_id} is not stable yet")
+            return
+
         instances_set = InstancesSet.from_study(api_client=api_client, study_id=study_id)
         self.handle_instances_set(instances_set)
+
+    def _is_study_stable(self, study_id: str, api_client) -> bool:
+        try:
+            study = api_client.studies.get(study_id)
+            return study.is_stable
+        except ResourceNotFound:
+            logger.debug(f"Study {study_id} disappeared before it could be handled")
+            return False
 
     def _handle_series(self, series_id: str, api_client):
         instances_set = InstancesSet.from_series(api_client=api_client, series_id=series_id)

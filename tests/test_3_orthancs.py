@@ -719,6 +719,27 @@ class Test3Orthancs(unittest.TestCase):
         self.assertEqual(0, len(self.oc.instances.get_all_ids()))
         self.assertEqual(0, len(self.oa.instances.get_all_ids()))
 
+    def test_orthanc_forwarder_logs_sender_aet_from_dicom_origin(self):
+        self.oa.delete_all_content()
+        self.ob.delete_all_content()
+        self.oc.delete_all_content()
+
+        instances_ids = self.ob.upload_file(here / "stimuli/CT_small.dcm")
+
+        with self.assertLogs("orthanc_tools.orthanc_forwarder", level="INFO") as logs:
+            with OrthancForwarder(
+                source=self.oa,
+                destinations=[ForwarderDestination(destination="orthanc-c", forwarder_mode=ForwarderMode.DICOM)],
+                trigger=ChangeType.STABLE_STUDY,
+                polling_interval_in_seconds=0.1
+            ) as forwarder:
+                self.ob.modalities.send(target_modality='orthanc-a', resources_ids=instances_ids)
+                helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
+
+        self.assertEqual(len(instances_ids), len(self.oc.instances.get_all_ids()))
+        self.assertEqual(0, len(self.oa.instances.get_all_ids()))
+        self.assertIn("SenderAET=ORTHANC-B", "\n".join(logs.output))
+
 
     def test_orthanc_forwarder_filter_and_process(self):
         self.ob.delete_all_content()  # destination

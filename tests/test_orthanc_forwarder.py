@@ -154,7 +154,92 @@ class FakeInstancesSet:
             processor(mock.sentinel.api_client, instance_id)
 
 
+class TestOrthancForwarderLogContext(unittest.TestCase):
+
+    def test_log_context_includes_patient_id_and_sender_aet(self):
+        source = mock.MagicMock()
+        study = mock.MagicMock()
+        study.patient_main_dicom_tags = {"PatientID": "PATIENT-1"}
+        source.instances.get_parent_study_id.return_value = "study-1"
+        source.instances.get_string_metadata.return_value = "MODALITY-A"
+        source.studies.get.return_value = study
+        forwarder = OrthancForwarder(
+            source=source,
+            destinations=[ForwarderDestination(destination="orthanc-b", forwarder_mode=ForwarderMode.DICOM)]
+        )
+
+        self.assertEqual(
+            "PatientID=PATIENT-1 SenderAET=MODALITY-A",
+            forwarder._get_instances_set_log_context(FakeInstancesSet())
+        )
+
+        source.instances.get_parent_study_id.assert_called_once_with("instance-1")
+        source.studies.get.assert_called_once_with("study-1")
+        source.instances.get_string_metadata.assert_called_once_with(
+            "instance-1",
+            metadata_name="RemoteAET",
+            default_value=None
+        )
+
+    def test_log_context_uses_unknown_when_patient_id_is_missing(self):
+        source = mock.MagicMock()
+        study = mock.MagicMock()
+        study.patient_main_dicom_tags = {}
+        source.instances.get_parent_study_id.return_value = "study-1"
+        source.instances.get_string_metadata.return_value = "MODALITY-A"
+        source.studies.get.return_value = study
+        forwarder = OrthancForwarder(
+            source=source,
+            destinations=[ForwarderDestination(destination="orthanc-b", forwarder_mode=ForwarderMode.DICOM)]
+        )
+
+        self.assertEqual(
+            "PatientID=unknown SenderAET=MODALITY-A",
+            forwarder._get_instances_set_log_context(FakeInstancesSet())
+        )
+
+    def test_log_context_uses_unknown_when_sender_aet_is_unavailable(self):
+        source = mock.MagicMock()
+        study = mock.MagicMock()
+        study.patient_main_dicom_tags = {"PatientID": "PATIENT-1"}
+        source.instances.get_parent_study_id.return_value = "study-1"
+        source.instances.get_string_metadata.side_effect = Exception("missing metadata")
+        source.studies.get.return_value = study
+        forwarder = OrthancForwarder(
+            source=source,
+            destinations=[ForwarderDestination(destination="orthanc-b", forwarder_mode=ForwarderMode.DICOM)]
+        )
+
+        self.assertEqual(
+            "PatientID=PATIENT-1 SenderAET=unknown",
+            forwarder._get_instances_set_log_context(FakeInstancesSet())
+        )
+
+
 class TestOrthancForwarderFilteringBehavior(unittest.TestCase):
+
+    def test_overridden_forward_and_delete_keep_original_signatures(self):
+        class CustomForwarder(OrthancForwarder):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.deleted_instances_set = None
+
+            def forward(self, instances_set, already_sent_to_destinations):
+                return ["dicom:orthanc-b::"], ["dicom:orthanc-b::"]
+
+            def delete(self, instances_set):
+                self.deleted_instances_set = instances_set
+
+        forwarder = CustomForwarder(
+            source=mock.MagicMock(),
+            destinations=[ForwarderDestination(destination="orthanc-b", forwarder_mode=ForwarderMode.DICOM)]
+        )
+        instances_set = FakeInstancesSet()
+
+        with mock.patch.object(forwarder, "_get_instances_set_log_context", return_value="PatientID=1 SenderAET=AET"):
+            forwarder.handle_instances_set(instances_set)
+
+        self.assertIs(instances_set, forwarder.deleted_instances_set)
 
     def test_forward_does_not_lookup_study_description_when_no_destination_is_filtered(self):
         forwarder = OrthancForwarder(

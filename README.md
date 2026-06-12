@@ -141,7 +141,7 @@ By default, the generator always generates the same data, use a different seed i
 From a shell:
 
 ```shell
-python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --password=pwd --studies=5000 --seed=42
+python3 -m orthanc_tools.orthanc_test_db_populator --url=http://192.168.0.10:8042 --user=user --password=pwd --studies=5000 --series=2 --instances=100 --workers=5 --api_key=1234 --from_study_date=20150101 --to_study_date=20151231 --seed=42 --image_content_type=Random/Flat --image_width=256 --image_height=256
 ```
 
 ## purge old studies from an Orthanc

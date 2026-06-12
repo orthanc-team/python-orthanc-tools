@@ -1,6 +1,7 @@
-Pending changes
-===============
+v 0.18.2
+========
 - `OrthancCloner` now starts in `Default` mode if not specified.
+- `OrthancTestDbPopulator` new arguments: `image_width`, `image_height` and `image_content_type`
 
 v 0.18.1
 =========

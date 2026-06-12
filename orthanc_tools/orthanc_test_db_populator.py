@@ -41,7 +41,10 @@ class OrthancTestDbPopulator:
                  from_study_date: datetime.date = datetime.date(2000, 1, 1),     # StudyDate for generated studies
                  to_study_date: datetime.date = datetime.date(2022, 4, 21),        # StudyDate for generated studies
                  worker_threads_count: int = 1,
-                 modality: str = None                       # to for ce the type of modality
+                 modality: str = None,                      # to force the type of modality
+                 image_width: int = 2,
+                 image_height: int = 2,
+                 image_content_type: helpers.TestImageContent = helpers.TestImageContent.FLAT
                  ):
 
         self._api_client = api_client
@@ -56,6 +59,9 @@ class OrthancTestDbPopulator:
         self._worker_threads_count = worker_threads_count
         self._queue = queue.Queue(worker_threads_count + 1)
         self._modality = modality
+        self._image_width = image_width
+        self._image_height = image_height
+        self._image_content_type = image_content_type
 
     def generate_random_name(self) -> str:
         # generate a pseudo name
@@ -199,7 +205,10 @@ class OrthancTestDbPopulator:
                 for instance_counter in range(0, instances_count):
                     tags = self.generate_instance_tags(tags, instance_counter, series_counter, study_counter)
 
-                    dicom = helpers.generate_test_dicom_file(width=2, height=2, tags=tags)
+                    dicom = helpers.generate_test_dicom_file(width=self._image_width, 
+                                                             height=self._image_height, 
+                                                             image_content=self._image_content_type,
+                                                             tags=tags)
                     instance_id = self._api_client.upload(buffer=dicom)[0]
 
             study_id = self._api_client.instances.get_parent_study_id(instance_id)
@@ -231,6 +240,10 @@ if __name__ == '__main__':
     parser.add_argument('--from_study_date', type=str, default="20000101", help='Minimum date for StudyDates YYYYMMDD')
     parser.add_argument('--to_study_date', type=str, default="20241231", help='Maximum date for StudyDates YYYYMMDD')
     parser.add_argument('--seed', type=int, default=42, help='Random seed (to make generation repeatable - only if using a single worker)')
+    parser.add_argument('--image_width', type=int, default=2, help='Image width (default = 2)')
+    parser.add_argument('--image_height', type=int, default=2, help='Image height (default = 2)')
+    parser.add_argument('--image_content_type', type=str, default='Flat', help='"Flat" or "Random" image content')
+
     args = parser.parse_args()
 
     url = os.environ.get("ORTHANC_URL", args.url)
@@ -241,6 +254,9 @@ if __name__ == '__main__':
     to_study_date = os.environ.get("TO_STUDY_DATE", args.to_study_date)
     from_study_date = helpers.from_dicom_date(from_study_date)
     to_study_date = helpers.from_dicom_date(to_study_date)
+    image_width = int(os.environ.get("IMAGE_WIDTH", f"{args.image_width}"))
+    image_height = int(os.environ.get("IMAGE_HEIGHT", f"{args.image_height}"))
+    image_content_type = os.environ.get("IMAGE_CONTENT_TYPE", args.image_content_type)
 
     api_client = None
     if api_key is not None:
@@ -256,7 +272,10 @@ if __name__ == '__main__':
         random_seed=args.seed,
         worker_threads_count=args.workers,
         from_study_date=from_study_date,
-        to_study_date=to_study_date
+        to_study_date=to_study_date,
+        image_width=image_width,
+        image_height=image_height,
+        image_content_type=image_content_type
     )
 
     populator.execute()

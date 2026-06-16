@@ -243,9 +243,9 @@ if __name__ == '__main__':
 
     o = None
     if api_key is not None:
-        o=OrthancApiClient(url, headers={"api-key": api_key})
+        o=OrthancApiClient(url, headers={"api-key": api_key}, pool_connections=max(10, worker_threads_count))
     else:
-        o=OrthancApiClient(url, user=user, pwd=password)
+        o=OrthancApiClient(url, user=user, pwd=password, pool_connections=max(10, worker_threads_count))
 
     importer = OrthancFolderImporter(
         api_client=o,

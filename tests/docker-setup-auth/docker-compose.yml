@@ -5,7 +5,7 @@
 
 services:
   orthanc-a:
-    image: orthancteam/orthanc:24.11.0
+    
     ports: ["10042:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -20,7 +20,7 @@ services:
       ORTHANC__OVERWRITE_INSTANCES: "true"
 
   orthanc-auth-service:
-    image: orthancteam/orthanc-auth-service:24.12.0
+    image: orthancteam/orthanc-auth-service
     ports: ["18000:8000"]
     volumes:
       - ./permissions.json:/orthanc_auth_service/permissions.json
@@ -61,7 +61,7 @@ services:
       retries: 10
 
   keycloak:
-    image: orthancteam/orthanc-keycloak:24.12.1
+    image: orthancteam/orthanc-keycloak
     depends_on: [keycloak-db]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: "admin"

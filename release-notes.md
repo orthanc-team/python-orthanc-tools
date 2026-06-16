@@ -1,3 +1,9 @@
+v 0.18.3
+========
+- All classes that have `worker_threads_count` configuration now increase
+  the `pool_connections` of the `OrthancApiClient` to avoid the workers
+  to be limited by the HTTP connections pool size.
+
 v 0.18.2
 ========
 - `OrthancCloner` now starts in `Default` mode if not specified.

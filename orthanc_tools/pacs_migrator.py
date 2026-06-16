@@ -258,9 +258,9 @@ if __name__ == '__main__':
 
     api_client = None
     if api_key is not None:
-        api_client=OrthancApiClient(url, headers={"api-key":api_key})
+        api_client=OrthancApiClient(url, headers={"api-key":api_key}, pool_connections=max(10, worker_threads_count))
     else:
-        api_client=OrthancApiClient(url, user=user, pwd=pwd)
+        api_client=OrthancApiClient(url, user=user, pwd=pwd, pool_connections=max(10, worker_threads_count))
 
     migrator = PacsMigrator(
         api_client=api_client,

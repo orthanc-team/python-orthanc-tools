@@ -3,7 +3,7 @@
 services:
 
     orthanc-a:
-        image: osimis/orthanc:22.9.2
+        image: orthancteam/orthanc:26.6.0
         ports: ["8042:8042"]
         environment:
             ORTHANC__AUTHENTICATION_ENABLED: "false"
@@ -12,7 +12,7 @@ services:
         restart: unless-stopped
 
     orthanc-b:
-        image: osimis/orthanc:22.9.2
+        image: orthancteam/orthanc:26.6.0
         ports: ["8043:8042"]
         environment:
             ORTHANC__AUTHENTICATION_ENABLED: "false"
@@ -21,7 +21,7 @@ services:
         restart: unless-stopped
 
     orthanc-cloner:
-        image: orthancteam/python-orthanc-tools:0.6.1
+        image: orthancteam/python-orthanc-tools:0.18.2
         volumes: ["orthanc-cloner:/status"]
         environment:
             TZ: "Etc/UTC"

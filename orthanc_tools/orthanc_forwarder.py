@@ -503,9 +503,9 @@ if __name__ == '__main__':
 
     # Create API client
     if source_api_key is not None:
-        api_client = OrthancApiClient(source_url, headers={"api-key": source_api_key})
+        api_client = OrthancApiClient(source_url, headers={"api-key": source_api_key}, pool_connections=max(10, worker_threads_count))
     else:
-        api_client = OrthancApiClient(source_url, user=source_user, pwd=source_pwd)
+        api_client = OrthancApiClient(source_url, user=source_user, pwd=source_pwd, pool_connections=max(10, worker_threads_count))
 
     forwarder = OrthancForwarder(
         source=api_client,

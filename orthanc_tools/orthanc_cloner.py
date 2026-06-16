@@ -199,9 +199,9 @@ if __name__ == '__main__':
     if dest_url:
         destination = None
         if dest_api_key is not None:
-            destination=OrthancApiClient(dest_url, headers={"api-key":dest_api_key}, pool_connections=max(10, worker_threads_count))
+            destination=OrthancApiClient(dest_url, headers={"api-key":dest_api_key}, pool_maxsize=max(10, worker_threads_count), pool_block=True)
         else:
-            destination=OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd, pool_connections=max(10, worker_threads_count))
+            destination=OrthancApiClient(dest_url, user=dest_user, pwd=dest_pwd, pool_maxsize=max(10, worker_threads_count), pool_block=True)
     
     source = None
     if source_api_key is not None:

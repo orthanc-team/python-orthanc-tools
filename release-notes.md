@@ -1,8 +1,9 @@
-v 0.18.3
+v 0.18.4
 ========
 - All classes that have `worker_threads_count` configuration now increase
-  the `pool_connections` of the `OrthancApiClient` to avoid the workers
+  the `pool_maxsize` of the `OrthancApiClient` to avoid the workers
   to be limited by the HTTP connections pool size.
+- updated python version in Docker images to 3.14
 
 v 0.18.2
 ========

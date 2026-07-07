@@ -5,7 +5,7 @@
 
 services:
   orthanc-a:
-    
+    image: orthancteam/orthanc
     ports: ["10042:8042"]
     environment:
       VERBOSE_STARTUP: "true"

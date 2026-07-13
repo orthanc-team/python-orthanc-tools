@@ -1,3 +1,6 @@
+v 0.19.0
+========
+
 - new arguments to configure the `Scheduler` with more flexibility:
  - `--run_schedule=...` argument
  - `RUN_SCHEDULE` environment variable

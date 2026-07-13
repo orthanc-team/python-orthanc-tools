@@ -1,3 +1,14 @@
+- new arguments to configure the `Scheduler` with more flexibility:
+ - `--run_schedule=...` argument
+ - `RUN_SCHEDULE` environment variable
+ - Sample Value:
+   ```
+   {
+     "Monday-Saturday": ["0-6", "17-24"],
+     "Sunday": ["0-24"],
+   }
+   ```
+
 v 0.18.4
 ========
 - All classes that have `worker_threads_count` configuration now increase

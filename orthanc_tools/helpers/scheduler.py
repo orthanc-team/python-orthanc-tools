@@ -1,37 +1,172 @@
 import os
 import time
 import logging
+import json
+from dataclasses import dataclass
+from typing import Optional, List, Dict
+from datetime import datetime
+
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class RunningPeriod:
+    from_hour: int
+    to_hour: int
+    weekday: int  # 0=Sunday, 1=Monday, ..., 6=Saturday
+
+    def __str__(self):
+        return f"{self.day_to_string(self.weekday)}: [{self.from_hour}-{self.to_hour}]"
+
+    @classmethod
+    def day_from_string(cls, weekday: str) -> int:
+        weekday_map = {
+            "Monday": 0,
+            "Tuesday": 1,
+            "Wednesday": 2,
+            "Thursday": 3,
+            "Friday": 4,
+            "Saturday": 5,
+            "Sunday": 6,
+        }
+        if weekday not in weekday_map:
+            raise ValueError(f"Invalid schedule: unknown 'day': {weekday}")
+        
+        return weekday_map[weekday]
+
+    @classmethod
+    def day_to_string(cls, weekday: int) -> str:
+        weekday_map = {
+            0: "Monday",
+            1: "Tuesday",
+            2: "Wednesday",
+            3: "Thursday",
+            4: "Friday",
+            5: "Saturday",
+            6: "Sunday",
+        }
+        if weekday not in weekday_map:
+            raise ValueError(f"Invalid schedule: unknown 'day': {weekday}")
+        
+        return weekday_map[weekday]
+
+    @classmethod
+    def from_string(cls, weekday: int, period: str) -> "RunningPeriod":
+
+        hours = period.split("-")
+        if len(hours) != 2:
+            raise ValueError(f"Invalid schedule: invalid period format: {period}")
+
+        from_hour = int(hours[0])
+        to_hour = int(hours[1])
+
+        if from_hour < 0 or from_hour > 24:
+            raise ValueError(f"Invalid schedule: from_hour: {from_hour}")
+        if to_hour < 0 or to_hour > 24:
+            raise ValueError(f"Invalid schedule: to_hour: {to_hour}")
+
+        if to_hour <= from_hour:
+            raise ValueError(f"Invalid schedule: to_hour <= from_hour: {to_hour} <= {from_hour}")
+
+        return cls(from_hour, to_hour, weekday)
+
+    def is_in_period(self) -> bool:
+        now = datetime.now()
+        if now.weekday() != self.weekday:
+            return False
+        return self.from_hour <= now.hour < self.to_hour
+
+
+# sample schedule:
+# {
+#   "Monday": ["0-6", "20-24"],
+#   "Tuesday": ["0-6", "20-24"],
+#   "Wednesday": ["0-6", "20-24"],
+#   "Thursday": ["0-6", "20-24"],
+#   "Friday": ["0-6", "20-24"],
+#   "Saturday": ["0-24"],
+#   "Sunday": ["0-24"]
+# }
+@dataclass
+class RunningPeriods:
+    _periods: List[RunningPeriod] = None
+
+    def __post_init__(self):
+        if self._periods is None:
+            self._periods = []
+
+    def __str__(self):
+        str_periods = []
+        for p in self._periods:
+            str_periods.append(str(p))
+        return ", ".join(str_periods)
+
+    def load(self, schedule_configuration: Dict[str, List[str]]) -> None:
+        for weekday, periods in schedule_configuration.items():
+            weekdays = []
+            if "-" in weekday:
+                from_day = RunningPeriod.day_from_string(weekday.split('-')[0].strip())
+                to_day = RunningPeriod.day_from_string(weekday.split('-')[1].strip())
+
+                if from_day >= to_day:
+                    raise ValueError(f"Invalid schedule: from_day >= to_day: {from_day} >= {to_day} ({weekday})")
+
+                weekdays = range(from_day, to_day)
+            else:
+                weekdays = [RunningPeriod.day_from_string(weekday)]
+
+            for wd in weekdays:
+                for period in periods:
+                    self._periods.append(RunningPeriod.from_string(wd, period))
+
+    def append(self, weekday: str, period: str):
+        self._periods.append(RunningPeriod.from_string(weekday, period))
+
+    def is_in_period(self) -> bool:
+        if not self._periods:
+            return True  # if no config: always run
+        return any(period.is_in_period() for period in self._periods)
 
 
 class Scheduler:
     """
     Helper class to run a task only at certain time of the day
     """
+    _running_periods: RunningPeriods
 
-    def __init__(self, night_start_hour: int = 19, night_end_hour: int = 7, run_only_at_night_and_weekend: bool = False):
-        self._night_start_hour = night_start_hour
-        self._night_end_hour = night_end_hour
-        self._run_only_at_night_and_weekend = run_only_at_night_and_weekend
+    def __init__(self, night_start_hour: int = 19, night_end_hour: int = 7, run_only_at_night_and_weekend: bool = False, run_schedule: Optional[Dict[str, List[str]]] = None):
+        self._running_periods = RunningPeriods()
+
+        if run_schedule is not None:
+            self._running_periods.load(schedule_configuration=run_schedule)
+        elif run_only_at_night_and_weekend:
+            json_schedule = {
+                "Monday": [f"0-{night_end_hour}", f"{night_start_hour}-24"],
+                "Tuesday": [f"0-{night_end_hour}", f"{night_start_hour}-24"],
+                "Wednesday": [f"0-{night_end_hour}", f"{night_start_hour}-24"],
+                "Thursday": [f"0-{night_end_hour}", f"{night_start_hour}-24"],
+                "Friday": [f"0-{night_end_hour}", f"{night_start_hour}-24"],
+                "Saturday": ["0-24"],
+                "Sunday": ["0-24"]
+            }
+            self._running_periods.load(schedule_configuration=json_schedule)
 
     def wait_right_time_to_run(self):
-        if self._run_only_at_night_and_weekend:
-            is_right_time = False
-            while not is_right_time:
-                now = time.localtime()
-                if now.tm_wday <= 4 and self._night_end_hour <= now.tm_hour < self._night_start_hour:
-                    is_right_time = False
-                    logger.info("waiting 10 min for the night or week-end to come")
-                    time.sleep(600)
-                else:
-                    is_right_time = True
+        while not self._running_periods.is_in_period():
+            logger.info("waiting 10 min for the right scheduled time to come")
+            time.sleep(600)
+
+
+    def __str__(self):
+        return str(self._running_periods)
 
 
     @classmethod
     def add_parser_arguments(cls, parser):
-        parser.add_argument('--run_only_at_night_and_weekend', default=False, action='store_true', help='enables script only at night')
+        parser.add_argument('--run_only_at_night_and_weekend', default=False, action='store_true', help='enables script only at night or weekend')
         parser.add_argument('--night_start_hour', type=int, default=19, help='Night start hour')
         parser.add_argument('--night_end_hour', type=int, default=6, help='Night start hour')
+        parser.add_argument('--run_schedule', type=str, default=None, help='Run on schedule sample: {"Monday": ["0-6", "20-24"], .., "Sunday": ["0-24"]}')
 
     @classmethod
     def create_from_args_and_env_var(cls, args):
@@ -41,9 +176,11 @@ class Scheduler:
             run_only_at_night_and_weekend = os.environ.get("RUN_ONLY_AT_NIGHT_AND_WEEKEND") == "true"
         else:
             run_only_at_night_and_weekend = args.run_only_at_night_and_weekend
+        run_schedule = json.loads(os.environ.get("RUN_SCHEDULE", str(args.run_schedule)))
 
         return Scheduler(
             night_start_hour=night_start_hour,
             night_end_hour=night_end_hour,
-            run_only_at_night_and_weekend=run_only_at_night_and_weekend
+            run_only_at_night_and_weekend=run_only_at_night_and_weekend,
+            run_schedule=run_schedule
         )

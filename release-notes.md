@@ -1,16 +1,9 @@
-v 0.19.0
+v 0.19.1
 ========
 
-- new arguments to configure the `Scheduler` with more flexibility:
- - `--run_schedule=...` argument
- - `RUN_SCHEDULE` environment variable
- - Sample Value:
-   ```
-   {
-     "Monday-Saturday": ["0-6", "17-24"],
-     "Sunday": ["0-24"],
-   }
-   ```
+- new arguments/environment variables to configure the `Scheduler` with more flexibility:
+ - `--timezone=Etc/UTC` or `TZ=Europe/Paris` to define the Scheduler timezone
+ - `--run_schedule='{"Monday-Sunday": ["0-7", "18-24"]}'` or `RUN_SCHEDULE='{"Monday-Saturday": ["0-7", "18-24"], "Sunday": ["0-24"]}'`
 
 v 0.18.4
 ========

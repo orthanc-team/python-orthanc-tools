@@ -37,20 +37,18 @@ cloner.execute(existing_changes_only=False)
 from a shell:
 
 ```shell
-python3 -m orthanc_tools.orthanc_cloner --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_url=http://192.168.0.10:8042 --dest_user=user --dest_pwd=pwd --run_only_at_night_and_weekend=true --night_start_hour=19 --night_end_hour=6
+python3 -m orthanc_tools.orthanc_cloner --source_url=http://192.168.0.10:8042 --source_user=user --source_pwd=pwd --dest_url=http://192.168.0.10:8042 --dest_user=user --dest_pwd=pwd --timezone=Europe/Paris --run_schedule='{"Monday-Friday": ["0-7", "18-24"], "Saturday-Sunday": ["0-24"]}'
 ```
 
 or, inside a docker-compose file:
 ```yaml
 services:
     orthanc-cloner:
-        image: orthancteam/python-orthanc-tools:0.6.0
+        image: orthancteam/python-orthanc-tools:0.19.1
         volumes: ["orthanc-cloner:/status"]
         environment:
             TZ: "Etc/UTC"
-            RUN_ONLY_AT_NIGHT_AND_WEEKEND: "true"
-            NIGHT_START_HOUR: "15"
-            NIGHT_END_HOUR: "6"
+            RUN_SCHEDULE: '{"Monday-Friday": ["0-7", "18-24"], "Saturday-Sunday": ["0-24"]}'
             SOURCE_URL: "http://orthanc-a:8042"
 #            SOURCE_USER: "user"
 #            SOURCE_PWD: "pwd"
@@ -120,7 +118,7 @@ $ docker exec -it xxxx bash
 
 /# pip3 install orthanc-tools
 
-/# python3 -m orthanc_tools.pacs_migrator --url=http://localhost:8042 --user=user --password=pwd --destination_modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --run_only_at_night_and_weekend --night_start_hour=18 --night_end_hour=6
+/# python3 -m orthanc_tools.pacs_migrator --url=http://localhost:8042 --user=user --password=pwd --destination_modality=orthanc-debug --from_study_date=20000101 --to_study_date=20191231 --timezone=Europe/Paris --run_schedule='{"Monday-Friday": ["0-7", "18-24"], "Saturday-Sunday": ["0-24"]}'
 
 ```
 
@@ -128,7 +126,7 @@ $ docker exec -it xxxx bash
 
 Running in a Docker environment:
 ```
-$ docker run -d --name comparator --network=mysetup_default python:3.9 bash -c "pip3 install orthanc-tools && python3 -u -m orthanc_tools.orthanc_comparator --level=Instance --url=http://pacs-2022:8042 --modality=pacs-2017 --from_study_date=20220201 --to_study_date=20220302 --transfer_missing_to_modality --ignore_missing_from_orthanc --run_only_at_night_and_weekend --night_start_hour=19 --night_end_hour=6"
+$ docker run -d --name comparator --network=mysetup_default python:3.14 bash -c "pip3 install orthanc-tools && python3 -u -m orthanc_tools.orthanc_comparator --level=Instance --url=http://pacs-2022:8042 --modality=pacs-2017 --from_study_date=20220201 --to_study_date=20220302 --transfer_missing_to_modality --ignore_missing_from_orthanc --run_only_at_night_and_weekend --night_start_hour=19 --night_end_hour=6"
 
 ```
 

@@ -2,18 +2,39 @@ import os
 import time
 import logging
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List, Dict
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(init=False)
 class RunningPeriod:
     from_hour: int
     to_hour: int
     weekday: int  # 0=Sunday, 1=Monday, ..., 6=Saturday
+    timezone: ZoneInfo = ZoneInfo("Etc/UTC")
+
+    def __init__(self, weekday: int, period: str, timezone: ZoneInfo):
+        hours = period.split("-")
+        if len(hours) != 2:
+            raise ValueError(f"Invalid schedule: invalid period format: {period}")
+
+        self.from_hour = int(hours[0])
+        self.to_hour = int(hours[1])
+
+        if self.from_hour < 0 or self.from_hour > 24:
+            raise ValueError(f"Invalid schedule: from_hour: {self.from_hour}")
+        if self.to_hour < 0 or self.to_hour > 24:
+            raise ValueError(f"Invalid schedule: to_hour: {self.to_hour}")
+
+        if self.to_hour <= self.from_hour:
+            raise ValueError(f"Invalid schedule: to_hour <= from_hour: {self.to_hour} <= {self.from_hour}")
+        
+        self.timezone = timezone
+        self.weekday = weekday
 
     def __str__(self):
         return f"{self.day_to_string(self.weekday)}: [{self.from_hour}-{self.to_hour}]"
@@ -50,28 +71,8 @@ class RunningPeriod:
         
         return weekday_map[weekday]
 
-    @classmethod
-    def from_string(cls, weekday: int, period: str) -> "RunningPeriod":
-
-        hours = period.split("-")
-        if len(hours) != 2:
-            raise ValueError(f"Invalid schedule: invalid period format: {period}")
-
-        from_hour = int(hours[0])
-        to_hour = int(hours[1])
-
-        if from_hour < 0 or from_hour > 24:
-            raise ValueError(f"Invalid schedule: from_hour: {from_hour}")
-        if to_hour < 0 or to_hour > 24:
-            raise ValueError(f"Invalid schedule: to_hour: {to_hour}")
-
-        if to_hour <= from_hour:
-            raise ValueError(f"Invalid schedule: to_hour <= from_hour: {to_hour} <= {from_hour}")
-
-        return cls(from_hour, to_hour, weekday)
-
     def is_in_period(self) -> bool:
-        now = datetime.now()
+        now = datetime.now(self.timezone)
         if now.weekday() != self.weekday:
             return False
         return self.from_hour <= now.hour < self.to_hour
@@ -79,27 +80,19 @@ class RunningPeriod:
 
 # sample schedule:
 # {
-#   "Monday": ["0-6", "20-24"],
-#   "Tuesday": ["0-6", "20-24"],
-#   "Wednesday": ["0-6", "20-24"],
-#   "Thursday": ["0-6", "20-24"],
-#   "Friday": ["0-6", "20-24"],
-#   "Saturday": ["0-24"],
-#   "Sunday": ["0-24"]
+#   "Monday-Friday": ["0-6", "20-24"],
+#   "Saturday-Sunday": ["0-24"]
 # }
-@dataclass
+@dataclass()
 class RunningPeriods:
-    _periods: List[RunningPeriod] = None
-
-    def __post_init__(self):
-        if self._periods is None:
-            self._periods = []
+    periods: List[RunningPeriod] = field(default_factory=list)
+    timezone: ZoneInfo = ZoneInfo("Etc/UTC")
 
     def __str__(self):
         str_periods = []
-        for p in self._periods:
+        for p in self.periods:
             str_periods.append(str(p))
-        return ", ".join(str_periods)
+        return f"tz = {self.timezone} --> " + ", ".join(str_periods)
 
     def load(self, schedule_configuration: Dict[str, List[str]]) -> None:
         for weekday, periods in schedule_configuration.items():
@@ -117,15 +110,12 @@ class RunningPeriods:
 
             for wd in weekdays:
                 for period in periods:
-                    self._periods.append(RunningPeriod.from_string(wd, period))
-
-    def append(self, weekday: str, period: str):
-        self._periods.append(RunningPeriod.from_string(weekday, period))
+                    self.periods.append(RunningPeriod(wd, period, self.timezone))
 
     def is_in_period(self) -> bool:
-        if not self._periods:
+        if not self.periods:
             return True  # if no config: always run
-        return any(period.is_in_period() for period in self._periods)
+        return any(period.is_in_period() for period in self.periods)
 
 
 class Scheduler:
@@ -134,8 +124,14 @@ class Scheduler:
     """
     _running_periods: RunningPeriods
 
-    def __init__(self, night_start_hour: int = 19, night_end_hour: int = 7, run_only_at_night_and_weekend: bool = False, run_schedule: Optional[Dict[str, List[str]]] = None):
-        self._running_periods = RunningPeriods()
+    def __init__(self, 
+                 night_start_hour: int = 19, 
+                 night_end_hour: int = 7, 
+                 run_only_at_night_and_weekend: bool = False, 
+                 run_schedule: Optional[Dict[str, List[str]]] = None,
+                 timezone: ZoneInfo = ZoneInfo("Etc/UTC")
+                 ):
+        self._running_periods = RunningPeriods(timezone=timezone)
 
         if run_schedule is not None:
             self._running_periods.load(schedule_configuration=run_schedule)
@@ -167,9 +163,12 @@ class Scheduler:
         parser.add_argument('--night_start_hour', type=int, default=19, help='Night start hour')
         parser.add_argument('--night_end_hour', type=int, default=6, help='Night start hour')
         parser.add_argument('--run_schedule', type=str, default=None, help='Run on schedule sample: {"Monday": ["0-6", "20-24"], .., "Sunday": ["0-24"]}')
+        parser.add_argument('--timezone', type=str, default="Utc/UTC", help='Timezone for the schedule')
 
     @classmethod
     def create_from_args_and_env_var(cls, args):
+        tz = os.environ.get("TZ", args.timezone)
+
         night_start_hour = int(os.environ.get("NIGHT_START_HOUR", str(args.night_start_hour)))
         night_end_hour = int(os.environ.get("NIGHT_END_HOUR", str(args.night_end_hour)))
         if os.environ.get("RUN_ONLY_AT_NIGHT_AND_WEEKEND", None) is not None:
@@ -182,5 +181,6 @@ class Scheduler:
             night_start_hour=night_start_hour,
             night_end_hour=night_end_hour,
             run_only_at_night_and_weekend=run_only_at_night_and_weekend,
-            run_schedule=run_schedule
+            run_schedule=run_schedule,
+            timezone=ZoneInfo(tz)
         )

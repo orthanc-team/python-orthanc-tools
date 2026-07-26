@@ -9,7 +9,15 @@ Pending changes
 - `OrthancFolderImporter`: added `--skip_extensions` / `SKIP_EXTENSIONS` to ignore files by extension.
 - `OrthancFolderImporter`: worker threads now pause and resume automatically when Orthanc is unreachable.
 - `OrthancMonitor`: fixed logger formatting error in exception handler.
+- `Scheduler`: fixed optional schedule parsing, inclusive weekday ranges, the default timezone, and Python 3.8 compatibility.
 - Simplified Dockerfile with `.dockerignore` for smaller build context.
+
+v 0.19.1
+========
+
+- new arguments/environment variables to configure the `Scheduler` with more flexibility:
+ - `--timezone=Etc/UTC` or `TZ=Europe/Paris` to define the Scheduler timezone
+ - `--run_schedule='{"Monday-Sunday": ["0-7", "18-24"]}'` or `RUN_SCHEDULE='{"Monday-Saturday": ["0-7", "18-24"], "Sunday": ["0-24"]}'`
 
 v 0.18.4
 ========

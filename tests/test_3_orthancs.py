@@ -1,6 +1,7 @@
 import threading
 import time
 import sys
+import io
 import pprint
 import unittest
 import subprocess
@@ -16,6 +17,7 @@ import pathlib
 import os
 import logging
 import unittest
+import pydicom
 
 from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, IdsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner, OrthancFolderImporter, OrthancSyncher
 
@@ -33,25 +35,41 @@ logger.addHandler(ch)
 forwarder_count_failed = 0
 forwarder_count_success = 0
 
+
+def wait_until_monotonic(predicate, timeout, polling_interval=0.1):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(polling_interval)
+    return False
+
+
 class Test3Orthancs(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup")
-        subprocess.run(["docker", "compose", "up", "-d"], cwd=here/"docker-setup")
+        cls._uses_external_orthancs = os.environ.get("ORTHANC_TEST_EXTERNAL") == "1"
+        orthanc_host = os.environ.get("ORTHANC_TEST_HOST", "localhost")
 
-        cls.oa = OrthancApiClient('http://localhost:10042', user='test', pwd='test')
+        if not cls._uses_external_orthancs:
+            subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup", check=True)
+            subprocess.run(["docker", "compose", "up", "-d"], cwd=here/"docker-setup", check=True)
+
+        cls.oa = OrthancApiClient(f'http://{orthanc_host}:10042', user='test', pwd='test')
         cls.oa.wait_started()
-        cls.ob = OrthancApiClient('http://localhost:10043', user='test', pwd='test')
+        cls.ob = OrthancApiClient(f'http://{orthanc_host}:10043', user='test', pwd='test')
         cls.ob.wait_started()
-        cls.oc = OrthancApiClient('http://localhost:10044', user='test', pwd='test')
+        cls.oc = OrthancApiClient(f'http://{orthanc_host}:10044', user='test', pwd='test')
         cls.oc.wait_started()
 
     @classmethod
     def tearDownClass(cls):
-        subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup")
+        if not cls._uses_external_orthancs:
+            subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup", check=True)
 
     def _replace_study_description(self, api_client, instance_ids, study_description):
+        modified_instances = []
         for instance_id in instance_ids:
             modified = api_client.instances.modify(
                 instance_id,
@@ -59,8 +77,27 @@ class Test3Orthancs(unittest.TestCase):
                 keep_tags=['SOPInstanceUID', 'SeriesInstanceUID', 'StudyInstanceUID'],
                 force=True,
             )
+            modified_dataset = pydicom.dcmread(io.BytesIO(modified))
+            self.assertEqual(study_description, modified_dataset.StudyDescription)
+            modified_instances.append((instance_id, modified))
+
+        for instance_id, _ in modified_instances:
+            api_client.instances.delete(orthanc_id=instance_id)
+
+        self.assertTrue(
+            wait_until_monotonic(
+                lambda: not set(instance_ids).intersection(api_client.instances.get_all_ids()),
+                timeout=5,
+            )
+        )
+
+        for instance_id, modified in modified_instances:
             replaced_instance_ids = api_client.upload(buffer=modified)
             self.assertEqual(instance_id, replaced_instance_ids[0])
+            self.assertEqual(
+                study_description,
+                api_client.instances.get_tags(instance_id).get("StudyDescription"),
+            )
 
     def test_cloner_default(self):
         self.oa.delete_all_content()
@@ -633,9 +670,20 @@ class Test3Orthancs(unittest.TestCase):
                     # upload once the forwarder is running
                     instances_ids = self.oa.upload_folder(here / "stimuli/MR/Brain")
 
-                    # wait until the source is empty (= the forwarder has completed its job)
-                    helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
+                    # Wait for both sides to settle. Orthanc can briefly report no studies
+                    # while deleted instances are still visible through the instances route.
+                    forwarding_completed = wait_until_monotonic(
+                        lambda: (
+                            len(self.oa.instances.get_all_ids()) == 0
+                            and len(self.ob.instances.get_all_ids()) == len(instances_ids)
+                        ),
+                        timeout=30,
+                    )
 
+                    self.assertTrue(
+                        forwarding_completed,
+                        f"Forwarding did not complete for mode={mode}, trigger={trigger}",
+                    )
                     self.assertEqual(len(instances_ids), len(self.ob.instances.get_all_ids()))
                     # check it has been removed from Orthanc A
                     self.assertEqual(0, len(self.oa.instances.get_all_ids()))
@@ -685,8 +733,16 @@ class Test3Orthancs(unittest.TestCase):
             trigger=ChangeType.STABLE_STUDY,
             polling_interval_in_seconds=0.1
         ) as forwarder:
-            helpers.wait_until(lambda: len(self.oa.studies.get_all_ids()) == 0, timeout=30)
+            forwarding_completed = wait_until_monotonic(
+                lambda: (
+                    len(self.oa.instances.get_all_ids()) == 0
+                    and len(self.ob.instances.get_all_ids()) == len(instances_ids)
+                    and len(self.oc.instances.get_all_ids()) == len(instances_ids)
+                ),
+                timeout=30,
+            )
 
+        self.assertTrue(forwarding_completed)
         self.assertEqual(len(instances_ids), len(self.ob.instances.get_all_ids()))
         self.assertEqual(len(instances_ids), len(self.oc.instances.get_all_ids()))
         self.assertEqual(0, len(self.oa.instances.get_all_ids()))

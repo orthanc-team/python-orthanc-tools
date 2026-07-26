@@ -70,7 +70,7 @@ class OrthancCloner(OrthancMonitor):
         self._transfer_timeout = transfer_timeout
 
         if self._scheduler:
-            logger.info("Night & Week-end mode Enabled : " + str(self._scheduler._run_only_at_night_and_weekend))
+            logger.info("Scheduler : " + str(self._scheduler))
 
         logger.info("Migrating with {n} threads".format(n=self._worker_threads_count))
 

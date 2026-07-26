@@ -28,7 +28,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/guides/single-sourcing-package-version/
-    version='0.18.4',  # Required
+    version='0.19.1',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -135,6 +135,7 @@ setup(
         'hl7==0.4.2',
         'six',
         'schedule==1.2.0',
+        'backports.zoneinfo; python_version < "3.9"',
         'pika',
         'inquirer',
         'paramiko'

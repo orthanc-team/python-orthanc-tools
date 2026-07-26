@@ -21,13 +21,12 @@ services:
         restart: unless-stopped
 
     orthanc-cloner:
-        image: orthancteam/python-orthanc-tools
+        image: orthancteam/python-orthanc-tools:0.19.1
         volumes: ["orthanc-cloner:/status"]
         environment:
-            TZ: "Etc/UTC"
-            RUN_ONLY_AT_NIGHT_AND_WEEKEND: "false"
-            NIGHT_START_HOUR: "15"
-            NIGHT_END_HOUR: "6"
+#            TZ: "Etc/UTC"
+            TZ: "Europe/Paris"
+            RUN_SCHEDULE: '{"Monday-Saturday": ["0-7", "18-24"], "Sunday": ["0-24"]}'
             SOURCE_URL: "http://orthanc-a:8042"
 #            SOURCE_USER: "user"
 #            SOURCE_PWD: "pwd"

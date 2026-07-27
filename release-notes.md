@@ -1,6 +1,10 @@
+v 0.20.0
+========
+- BREAKING_CHANGE `OrthancCleaner` can now filter on `Accession Number`. Rules file format has changed.
+
+
 v 0.19.1
 ========
-
 - new arguments/environment variables to configure the `Scheduler` with more flexibility:
  - `--timezone=Etc/UTC` or `TZ=Europe/Paris` to define the Scheduler timezone
  - `--run_schedule='{"Monday-Sunday": ["0-7", "18-24"]}'` or `RUN_SCHEDULE='{"Monday-Saturday": ["0-7", "18-24"], "Sunday": ["0-24"]}'`

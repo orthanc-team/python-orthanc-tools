@@ -974,10 +974,6 @@ class Test3Orthancs(unittest.TestCase):
         )
         populator.execute()
 
-        old_study_id = self.oa.studies.get_all_ids()[0]
-
-        self.oa.studies.modify(orthanc_id=old_study_id, replace_tags={"AccessionNumber": "acc-nr"})
-
         # ...and a "recent" future study
         populator = OrthancTestDbPopulator(
             api_client=self.oa,
@@ -991,14 +987,18 @@ class Test3Orthancs(unittest.TestCase):
 
         studies_ids = self.oa.studies.get_all_ids()
 
+        # let's assign the acc nr to both studies
+        for id in studies_ids:
+            self.oa.studies.modify(orthanc_id=id, replace_tags={"AccessionNumber": "acc-nr"})
+
         cleaner = OrthancCleaner(api_client=self.oa, execution_time=None,
                                  labels_file_path=here / "stimuli/labels.csv")
 
         cleaner.execute()
 
         # we would like to check that the recent study is still there and the old one is gone,
+        # event they both have the required acc nr
         self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
-        self.assertNotEqual(old_study_id, self.oa.studies.get_all_ids()[0])
 
 
     def test_folder_importer(self):

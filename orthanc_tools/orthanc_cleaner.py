@@ -1,19 +1,21 @@
 '''
 # Summary
-This script will clean the Orthanc by deleting the oldest studies according to the labels applied on them, and
-potentially to the modality type.
+This script will clean the Orthanc by deleting the oldest studies according to the labels applied on them (or the acc nr value),
+and potentially to the modality type.
 
 # How it works
 The script will run every day at specified time.
 It will read a configuration file defining what should be done:
 
-LABEL1,6,
-LABEL2,12,
-LABEL2,4,CT
+LABEL1,6,,
+LABEL2,12,,
+LABEL2,4,CT,
+,6,,acc-nr
 
 With that sample, all studies with the LABEL1 and older than 6 weeks will be deleted
 all studies with the LABEL2 and older than 12 weeks will be deleted;
-all studies which have CT in the 'ModalitiesInStudy' tag and older than 4 weeks will be deleted;
+all studies with the LABEL2, which have CT in the 'ModalitiesInStudy' tag and older than 4 weeks will be deleted;
+all studies with or without a label, older than 6 weeks and with an AccessionNumber value equal to "acc-nr" will be deleted
 
 Note: studies are deleted only if they were uploaded/modified in Orthanc before the retention period
 '''

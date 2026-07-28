@@ -93,7 +93,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     parser = argparse.ArgumentParser(
-        description='Clean the Orthanc by deleting the oldest studies according to the labels applied on them.')
+        description='Check that every single instance of an Orthanc has actually a file in the storage location.')
     parser.add_argument('--orthanc_url', type=str, default=None, help='Orthanc source url')
     parser.add_argument('--orthanc_user', type=str, default=None, help='Orthanc source user name')
     parser.add_argument('--orthanc_pwd', type=str, default=None, help='Orthanc source password')
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     orthanc_user = os.environ.get("ORTHANC_USER", args.orthanc_user)
     orthanc_pwd = os.environ.get("ORTHANC_PWD", args.orthanc_pwd)
     orthanc_api_key = os.environ.get("ORTHANC_API_KEY", args.orthanc_api_key)
-    missing_files_list_file_path = os.environ.get("MISSING_FILES_LIST_FILE_PATH", args.labels_file_path)
+    missing_files_list_file_path = os.environ.get("MISSING_FILES_LIST_FILE_PATH", args.missing_files_list_file_path)
 
     api_client = None
     if orthanc_api_key is not None:

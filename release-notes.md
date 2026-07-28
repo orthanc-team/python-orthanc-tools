@@ -1,7 +1,10 @@
+v 0.21.0
+========
+- added the `OrthancFilesChecker` to check the presence of the files in the Orthanc storage
+
 v 0.20.0
 ========
 - BREAKING_CHANGE `OrthancCleaner` can now filter on `Accession Number`. Rules file format has changed.
-
 
 v 0.19.1
 ========

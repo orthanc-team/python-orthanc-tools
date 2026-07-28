@@ -1,4 +1,4 @@
-v 0.21.0
+v 0.21.1
 ========
 - added the `OrthancFilesChecker` to check the presence of the files in the Orthanc storage
 

@@ -53,8 +53,7 @@ class OrthancFilesChecker:
             # for each instance
             for instance_id in instances_ids:
                 try:
-                    a = self._api_client.instances.get_file(instance_id)
-                    i=0
+                    self._api_client.instances.get_file(instance_id)
                 except:
                     study = self._api_client.studies.get(orthanc_id=study_id)
                     self.add_study_to_list(study)

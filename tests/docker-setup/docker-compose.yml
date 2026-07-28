@@ -16,6 +16,7 @@ services:
       ORTHANC__OVERWRITE_INSTANCES: "true"
       ORTHANC__WORKLISTS__ENABLE: "true"
       ORTHANC__WORKLISTS__SAVE_IN_ORTHANC_DATABASE: "true"
+      ORTHANC__MAXIMUM_STORAGE_CACHE_SIZE: 0
       ORTHANC__DICOM_MODALITIES: |
         {
           "orthanc-a": ["ORTHANC-A", "orthanc-a", 4242],

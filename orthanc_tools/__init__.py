@@ -12,6 +12,7 @@ from .orthanc_downloader import *
 from .orthanc_warmer import OrthancWarmer
 from .label_modifier import LabelModifier
 from .orthanc_syncher import OrthancSyncher
+from .orthanc_files_checker import OrthancFilesChecker
 
 from .hl7Lib import *
 from .helpers import *

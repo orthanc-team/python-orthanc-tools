@@ -3,6 +3,7 @@ import logging
 import argparse
 import datetime
 from .helpers.scheduler import Scheduler
+from .helpers.environment import get_env_bool
 from orthanc_api_client import helpers
 import logging
 from orthanc_api_client import OrthancApiClient
@@ -399,10 +400,10 @@ if __name__ == '__main__':
     level = os.environ.get("LEVEL", args.level)
     from_study_date = helpers.from_dicom_date(os.environ.get("FROM_STUDY_DATE", args.from_study_date))
     to_study_date = helpers.from_dicom_date(os.environ.get("TO_STUDY_DATE", args.to_study_date))
-    transfer_missing_to_modality = os.environ.get("TRANSFER_MISSING_TO_MODALITY", args.transfer_missing_to_modality)
-    ignore_missing_from_orthanc = os.environ.get("IGNORE_MISSING_FROM_ORTHANC", args.ignore_missing_from_orthanc)
-    retrieve_missing_from_orthanc = os.environ.get("RETRIEVE_MISSING_FROM_ORTHANC", args.retrieve_missing_from_orthanc)
-    ignore_missing_on_modality = os.environ.get("IGNORE_MISSING_ON_MODALITY", args.ignore_missing_on_modality)
+    transfer_missing_to_modality = get_env_bool("TRANSFER_MISSING_TO_MODALITY", args.transfer_missing_to_modality)
+    ignore_missing_from_orthanc = get_env_bool("IGNORE_MISSING_FROM_ORTHANC", args.ignore_missing_from_orthanc)
+    retrieve_missing_from_orthanc = get_env_bool("RETRIEVE_MISSING_FROM_ORTHANC", args.retrieve_missing_from_orthanc)
+    ignore_missing_on_modality = get_env_bool("IGNORE_MISSING_ON_MODALITY", args.ignore_missing_on_modality)
     error_log_file_path = os.environ.get("ERROR_LOG_FILE_PATH", args.error_log_file_path)
     days_to_compare = os.environ.get("DAYS_TO_COMPARE", args.days_to_compare)
     if days_to_compare is not None:

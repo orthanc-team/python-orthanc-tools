@@ -1,15 +1,16 @@
-import os, time
-import logging
 import argparse
-import tempfile
 import datetime
+import logging
+import os
+import tempfile
+import time
 from typing import List
 
-from .helpers.scheduler import Scheduler
 from orthanc_api_client import helpers
-import logging
 from orthanc_api_client import OrthancApiClient
 import schedule
+
+from .helpers.scheduler import Scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -95,12 +96,12 @@ class OrthancSyncher:
 
             # ...finally, if nothing is in the args, we will process the entire content of Orthanc...
             else:
-                self._run_till_last_update_1 = datetime.datetime(year=2025, month=1, day=1, hour=1, minute=1, second=1)
+                self._run_till_last_update_1 = self._initial_last_update()
 
             if run_till_last_update_2 is not None:
                 self._run_till_last_update_2 = run_till_last_update_2
             else:
-                self._run_till_last_update_2 = datetime.datetime(year=2025, month=1, day=1, hour=1, minute=1, second=1)
+                self._run_till_last_update_2 = self._initial_last_update()
 
         self._execution_time = execution_time
         self._execution_day = execution_day
@@ -110,6 +111,33 @@ class OrthancSyncher:
             self._periodic_mode_enabled = True
 
         self._batch_size = orthanc_queries_batch_size
+
+    @staticmethod
+    def _initial_last_update():
+        return datetime.datetime(year=1950, month=1, day=1, hour=1, minute=1, second=1)
+
+    def _write_status_values(self, last_update_values):
+        status_path = os.path.abspath(self._persist_status_path)
+        status_folder = os.path.dirname(status_path)
+        temp_file_descriptor, temp_file_path = tempfile.mkstemp(
+            dir=status_folder,
+            prefix=f".{os.path.basename(status_path)}.",
+            suffix=".tmp",
+            text=True,
+        )
+        try:
+            with os.fdopen(temp_file_descriptor, "w") as status_file:
+                status_file.writelines(
+                    datetime.datetime.strftime(value, "%Y-%m-%d %H:%M:%S") + "\n"
+                    for value in last_update_values
+                )
+                status_file.flush()
+                os.fsync(status_file.fileno())
+            os.replace(temp_file_path, status_path)
+        except Exception:
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            raise
 
     def _read_status_from_file(self):
         """
@@ -122,17 +150,17 @@ class OrthancSyncher:
         try:
             with open(self._persist_status_path) as f:
                 last_update_strings = f.read().splitlines()
-        except (ValueError, FileNotFoundError):  # if can not read, use 1-1-1950
+
+            if len(last_update_strings) != 2:
+                raise ValueError("Status file must contain exactly two LastUpdate values")
+
+            last_update_1 = datetime.datetime.strptime(last_update_strings[0], "%Y-%m-%d %H:%M:%S")
+            last_update_2 = datetime.datetime.strptime(last_update_strings[1], "%Y-%m-%d %H:%M:%S")
+        except (OSError, ValueError):  # if can not read, use 1-1-1950
             logger.warning("Could not read LastUpdate values from file, running till at 01-01-1950")
-            first_january_1950 = datetime.datetime(year=1950, month=1, day=1, hour=1, minute=1, second=1)
-
-            with open(self._persist_status_path, 'w') as f:
-                full_line = datetime.datetime.strftime(first_january_1950, "%Y-%m-%d %H:%M:%S") + '\n'
-                f.writelines([full_line, full_line])
+            first_january_1950 = self._initial_last_update()
+            self._write_status_values([first_january_1950, first_january_1950])
             return first_january_1950, first_january_1950
-
-        last_update_1 = datetime.datetime.strptime(last_update_strings[0], "%Y-%m-%d %H:%M:%S")
-        last_update_2 = datetime.datetime.strptime(last_update_strings[1], "%Y-%m-%d %H:%M:%S")
 
         logger.info(f"Orthanc-1 till value from file = {last_update_1}")
         logger.info(f"Orthanc-2 till value from file = {last_update_2}")
@@ -185,12 +213,18 @@ class OrthancSyncher:
 
         index=0
         while True:
+            if self._scheduler:
+                self._scheduler.wait_right_time_to_run()
+
             # Get a batch of studies
             studies = self.get_studies(orthanc_client=orthanc_source, batch_size=self._batch_size, index=index)
 
             logger.info(f"[{self._current_run}] Processing batch index {index}...")
 
             if index == 0:
+                if len(studies) == 0:
+                    logger.info(f"[{self._current_run}] No studies found, end of this run!")
+                    return last_update_limit
                 new_last_update_limit = studies[0].last_update
 
             for study in studies:
@@ -218,16 +252,18 @@ class OrthancSyncher:
             with open(self._persist_status_path, 'r') as f:
                 last_update_strings = f.read().splitlines()
 
-            # replace values
-            last_update_strings[index] = datetime.datetime.strftime(new_last_update_value, "%Y-%m-%d %H:%M:%S")
+            if len(last_update_strings) != 2:
+                raise ValueError("Status file must contain exactly two LastUpdate values")
 
-            # write file
-            with open(self._persist_status_path, 'w') as f:
-                f.writelines(line + '\n' for line in last_update_strings)
+            last_update_values = [
+                datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                for value in last_update_strings
+            ]
+            last_update_values[index] = new_last_update_value
+            self._write_status_values(last_update_values)
 
-        except (ValueError, FileNotFoundError):
-            logger.error("Could not write LastUpdate values to file!")
-            exit(0)
+        except (OSError, ValueError, IndexError) as ex:
+            raise RuntimeError("Could not write LastUpdate values to file") from ex
 
     def compare_studies(self, orthanc_source: OrthancApiClient, orthanc_destination: OrthancApiClient, orthanc_study_id):
         # check if study is in distant Orthanc
@@ -254,6 +290,10 @@ class OrthancSyncher:
 
     def transfer_instances(self, orthanc_source: OrthancApiClient, orthanc_destination: OrthancApiClient, instances_ids: List[str]):
 
+        if len(instances_ids) == 0:
+            logger.info("No instances to transfer")
+            return
+
         retry_count = 0
         retry_delays = [5, 20, 60, 300, 900, 1800, 3600, 7200]
 
@@ -273,7 +313,7 @@ class OrthancSyncher:
             except Exception as e:
                 if retry_count == 5:
                     logger.error(f"Error while transfering a resource from this study: {orthanc_source.instances.get_parent_study_id(instances_ids[0])}. Exception: {str(e)}")
-                    exit(0)
+                    raise RuntimeError("Could not transfer instances after 6 attempts") from e
                 else:
                     retry_count += 1
                     logger.warning(f"Error while transfering a resource from this study: {orthanc_source.instances.get_parent_study_id(instances_ids[0])}. Exception: {str(e)}")

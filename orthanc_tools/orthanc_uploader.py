@@ -3,7 +3,7 @@ from pathlib import Path
 import logging
 import argparse
 from orthanc_api_client import OrthancApiClient
-import os, time, sys
+import os, time
 import zipfile
 import tempfile
 
@@ -73,19 +73,20 @@ class OrthancUploader:
                             time.sleep(delay)
                         try:
                             # here, we should have only files (and no zip file)
-                            instance_orthanc_ids = orthanc_client.upload_file(full_path, ignore_errors=True)
+                            instance_orthanc_ids = self._api_client.upload_file(full_path, ignore_errors=True)
                             if len(instance_orthanc_ids) == 0:
                                 logger.error(f"File not uploaded: {full_path}.")
                                 break
-                            study_orthanc_id = orthanc_client.instances.get_parent_study_id(instance_orthanc_ids[0])
-                            orthanc_client.studies.add_labels(orthanc_id=study_orthanc_id, labels=labels_list)
+                            study_orthanc_id = self._api_client.instances.get_parent_study_id(instance_orthanc_ids[0])
+                            self._api_client.studies.add_labels(orthanc_id=study_orthanc_id, labels=labels_list)
                             break
                         except Exception as e:
                             retry_count += 1
                             if retry_count == 8:
                                 logger.error(f"Error while uploading this file: {full_path}. Exception: {str(e)}")
-                                logger.error(f"too many attempts, exiting...")
-                                sys.exit(1)
+                                raise RuntimeError(
+                                    f"Too many attempts while uploading {full_path}"
+                                ) from e
                             else:
                                 logger.warning(f"Error while uploading this file, retrying...: {full_path}. Exception: {str(e)}")
             elif os.path.isdir(full_path):
@@ -97,7 +98,7 @@ class OrthancUploader:
         folder_path = self.get_folder(Path(self._path))
 
         # let's get the existing labels
-        labels_list = orthanc_client.get_all_labels()
+        labels_list = self._api_client.get_all_labels()
         orthanc_labels_chosen_list = []
 
         # let the user choose the labels to apply among the existing ones

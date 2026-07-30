@@ -23,7 +23,7 @@ class OrthancWarmer:
 
     def find(self):
         try:
-            o.studies.find(query={'StudyDate': "19500101"})
+            self._api_client.studies.find(query={'StudyDate': "19500101"})
             # 1st of January 1950 is sunday, so probably no results
             self._errors_counter = 0
             logger.debug("Find succeeded!")
@@ -38,7 +38,7 @@ class OrthancWarmer:
 
     def execute(self):
         logger.info("----- Initializing Orthanc Warmer...")
-        schedule.every(interval).minutes.do(self.find)
+        schedule.every(self._interval).minutes.do(self.find)
 
         while True:
             schedule.run_pending()

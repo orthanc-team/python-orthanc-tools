@@ -59,6 +59,22 @@ class TestOldFilesDeleter(TestCase):
             self.assertFalse(os.path.exists(sub_txt_file_path))
             self.assertTrue(os.path.exists(bin_file_path))
 
+    def test_default_filter_ignores_directories(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sub_dir_path = os.path.join(temp_dir, 'subdir')
+            os.mkdir(sub_dir_path)
+            old_file_path = os.path.join(sub_dir_path, 'old.txt')
+            Path(old_file_path).touch()
+            time.sleep(0.2)
+
+            OldFilesDeleter(
+                folder_to_monitor=temp_dir,
+                timeout=0.1,
+            ).execute_once()
+
+            self.assertTrue(os.path.isdir(sub_dir_path))
+            self.assertFalse(os.path.exists(old_file_path))
+
     def test_not_recursive(self):
 
         with tempfile.TemporaryDirectory() as tempDir:

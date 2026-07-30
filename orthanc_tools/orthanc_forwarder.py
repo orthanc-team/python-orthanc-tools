@@ -7,6 +7,7 @@ import os
 import re
 import threading
 import queue
+from collections import Counter
 from strenum import StrEnum
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
@@ -164,6 +165,17 @@ class OrthancForwarder:
 
         self._source = source
         self._destinations = destinations
+        destination_retry_keys = [destination.retry_key for destination in destinations]
+        duplicate_retry_keys = sorted(
+            retry_key
+            for retry_key, count in Counter(destination_retry_keys).items()
+            if count > 1
+        )
+        if duplicate_retry_keys:
+            raise ValueError(
+                "Duplicate forwarder destinations are not allowed: "
+                + ", ".join(duplicate_retry_keys)
+            )
         self._trigger = trigger
         self._max_retry_count_at_startup = max_retry_count_at_startup
         self._polling_interval_in_seconds = polling_interval_in_seconds
@@ -362,6 +374,7 @@ class OrthancForwarder:
                 logger.info(f"{instances_set} Processing ... done")
             except exceptions.OrthancApiException as ex:
                 logger.error(f"{instances_set} Error while processing: {str(ex)}")
+                return False
             except Exception as ex:
                 logger.error(f"{instances_set} Error while processing: {str(ex)}", exc_info=True)
                 return False
@@ -496,6 +509,9 @@ class OrthancForwarder:
         # process
         if not status.processed:
             status.processed = self.process(instances_set)
+            if not status.processed:
+                self._schedule_retry(instances_set, status)
+                return
         else:
             logger.info(f"{instances_set} Skipping processing that has already been performed")
 

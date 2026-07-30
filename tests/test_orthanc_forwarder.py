@@ -78,6 +78,18 @@ class TestOrthancForwarderConfiguration(unittest.TestCase):
         self.assertEqual(ForwarderMode.DICOM, destinations[0].forwarder_mode)
         self.assertEqual(ForwarderMode.TRANSFER, destinations[1].forwarder_mode)
 
+    def test_forwarder_rejects_duplicate_destination_retry_keys(self):
+        duplicate_destinations = [
+            ForwarderDestination(destination="orthanc-b", forwarder_mode=ForwarderMode.DICOM),
+            ForwarderDestination(destination="orthanc-b", forwarder_mode=ForwarderMode.DICOM),
+        ]
+
+        with self.assertRaisesRegex(ValueError, "Duplicate forwarder destinations"):
+            OrthancForwarder(
+                source=mock.MagicMock(),
+                destinations=duplicate_destinations,
+            )
+
     def test_retry_key_includes_filter(self):
         unfiltered = ForwarderDestination(destination="ai", forwarder_mode=ForwarderMode.DICOM)
         filtered = ForwarderDestination(
@@ -217,6 +229,33 @@ class TestOrthancForwarderLogContext(unittest.TestCase):
 
 
 class TestOrthancForwarderFilteringBehavior(unittest.TestCase):
+
+    def test_processing_failure_is_retried_without_forwarding_or_deleting(self):
+        instance_processor = mock.Mock(
+            side_effect=exceptions.OrthancApiException("processing failed")
+        )
+        forwarder = OrthancForwarder(
+            source=mock.MagicMock(),
+            destinations=[
+                ForwarderDestination(
+                    destination="orthanc-b",
+                    forwarder_mode=ForwarderMode.DICOM,
+                )
+            ],
+            instance_processor=instance_processor,
+        )
+        instances_set = FakeInstancesSet()
+
+        with mock.patch.object(forwarder, "forward") as forward:
+            with mock.patch.object(forwarder, "delete") as delete:
+                forwarder.handle_instances_set(instances_set)
+
+        status = forwarder._status[instances_set.id]
+        self.assertFalse(status.processed)
+        self.assertEqual(1, status.retry_count)
+        self.assertIsNotNone(status.next_retry)
+        forward.assert_not_called()
+        delete.assert_not_called()
 
     def test_overridden_forward_and_delete_keep_original_signatures(self):
         class CustomForwarder(OrthancForwarder):

@@ -1,10 +1,9 @@
-from datetime import datetime
-import random
 import socketserver, subprocess, sys, re, socket
 from threading import Thread
 #from hl7Lib import Hl7MessageValidator, UnsupportedMessageType, InvalidHL7Message
 from .hl7_message_validator import Hl7MessageValidator
 from .hl7_error import UnsupportedMessageType, InvalidHL7Message
+from .hl7_ack import build_acknowledgement
 import hl7
 import logging
 
@@ -115,7 +114,7 @@ class _Hl7MllpRequestHandler(socketserver.StreamRequestHandler):
             except KeyError:
                 raise e
             else:
-                response = errHandler(msg, error_description = str(e), *args)
+                response = errHandler(msg, *args, error_description=str(e))
                 return response
 
 
@@ -216,20 +215,12 @@ class MLLPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 def default_message_handler(message):
     return NotImplementedError("Please implement a message handler.")
 
-def handle_error_message(self, message: str, error_description: str = None) -> hl7.Message:
-
-    hl7_request = hl7.parse(message)  # we need to re-parse it here only the build the response
-
-    hl7_response = hl7.parse(r'MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1' + '\rMSA|AR|{message_id}|{error}'.format(  # TODO: handle encoding
-        sending_application = hl7_request['MSH.F5.R1.C1'],
-        receiving_application = hl7_request['MSH.F3.R1.C1'],
-        receiving_facility = hl7_request['MSH.F4.R1.C1'],
-        date_time = datetime.now().strftime("%Y%m%d%H%M%S"),
-        message_id = hl7_request['MSH.F10.R1.C1'],
-        ack_message_id = str(random.randrange(0, 10 ** 15)),
-        error = error_description
-    ))
-    return hl7_response
+def handle_error_message(message: str, error_description: str = None) -> hl7.Message:
+    return build_acknowledgement(
+        request=message,
+        status="AR",
+        error_description=error_description,
+    )
 
 # this is just a very quick usage example that does nothing usefull since it uses abstract handler
 if __name__ == "__main__":

@@ -1,5 +1,8 @@
 import os
+import re
+import tempfile
 import typing
+from pathlib import Path
 import pydicom
 from enum import Enum
 from typing import List, Union
@@ -124,9 +127,33 @@ class DicomWorklistBuilder:
         ds = self.customize(ds)
 
         if file_name is None:  # if no filename provided, save in the folder
-            file_name = os.path.join(self._folder, "{id}.wl".format(id = ds.AccessionNumber))
+            accession_number = str(ds.AccessionNumber)
+            safe_accession_number = re.sub(r"[^A-Za-z0-9._-]+", "_", accession_number).strip(".")
+            if not safe_accession_number:
+                raise ValueError("AccessionNumber cannot be converted to a safe worklist filename")
 
-        ds.save_as(file_name, enforce_file_format=True)
+            worklist_folder = Path(self._folder).resolve()
+            output_path = (worklist_folder / f"{safe_accession_number}.wl").resolve()
+            if output_path.parent != worklist_folder:
+                raise ValueError("Worklist path must remain inside the configured folder")
+            file_name = os.fspath(output_path)
+
+        output_path = Path(file_name)
+        temp_file_descriptor, temp_file_name = tempfile.mkstemp(
+            dir=output_path.parent,
+            prefix=f".{output_path.name}.",
+            suffix=".tmp",
+        )
+        os.close(temp_file_descriptor)
+        try:
+            ds.save_as(temp_file_name, enforce_file_format=True)
+            os.chmod(temp_file_name, 0o644)
+            os.replace(temp_file_name, output_path)
+        except Exception:
+            if os.path.exists(temp_file_name):
+                os.unlink(temp_file_name)
+            raise
+
         return file_name
 
     def _generate_wl_through_api(self, values: typing.Dict[str, str], entropy_srcs: List[str] = None):

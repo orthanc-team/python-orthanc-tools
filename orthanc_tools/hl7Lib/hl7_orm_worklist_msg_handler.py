@@ -1,8 +1,8 @@
 import os, argparse, sys
 from .hl7_worklist_parser import Hl7WorklistParser
 from .hl7_dicom_worklist_builder import DicomWorklistBuilder
-import hl7, random
-from datetime import datetime
+from .hl7_ack import build_acknowledgement
+import hl7
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,27 +29,30 @@ class Hl7OrmWorklistMsgHandler:
         logger.info("received message:{eol}{message}".format(message = str(message).replace('\r', os.linesep), eol = os.linesep))
         hl7_request = hl7.parse(message)  # we need to parse it here only the build the response
 
+        acknowledge_status = "AE"
+        error_description = None
+
         try:
             values = self._parser.parse(hl7_message = message)
         except Exception as e:
             logger.error("problem during parsing: {exception}".format(exception=e))
             values = None
+            error_description = str(e)
 
         if values is not None:
             try:
                 logger.info(f"generating worklist, ({'file' if self._builder._orthanc_client is None else 'db record'})...")
                 r = self._builder.generate(values)
                 logger.info(f"generated worklist: {r}")
+                acknowledge_status = "AA"
             except Exception as e:
                 logger.error("worklist not generated: {exception}".format(exception=e))
+                error_description = str(e)
 
-        hl7_response = hl7.parse(r'MSH|^~\&|{sending_application}||{receiving_application}|{receiving_facility}|{date_time}||ACK^O01|{ack_message_id}|P|2.3||||||8859/1' + '\r' + 'MSA|AA|{message_id}'.format(  # TODO: handle encoding
-            sending_application = hl7_request['MSH.F5.R1.C1'],
-            receiving_application = hl7_request['MSH.F3.R1.C1'],
-            receiving_facility = hl7_request['MSH.F4.R1.C1'],
-            date_time = datetime.now().strftime("%Y%m%d%H%M%S"),
-            message_id = hl7_request['MSH.F10.R1.C1'],
-            ack_message_id = str(random.randrange(0, 10**15))
-        ))
+        hl7_response = build_acknowledgement(
+            request=hl7_request,
+            status=acknowledge_status,
+            error_description=error_description,
+        )
         logger.info("sending response:{eol}{response}".format(response = str(hl7_response).replace('\r', os.linesep), eol = os.linesep))
         return hl7_response

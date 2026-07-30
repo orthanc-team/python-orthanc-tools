@@ -83,9 +83,9 @@ class MLLPClient:
         Returns: a string with the response (without the sb/eb/cr around the message)
         """
         if isinstance(message, hl7.Message):
-            self.socket.send(self.sb + (str(message)).encode(self.encoding) + self.cr + self.eb + self.cr)
+            self.socket.sendall(self.sb + (str(message)).encode(self.encoding) + self.cr + self.eb + self.cr)
         elif isinstance(message, (bytes, bytearray)):
-            self.socket.send(message)
+            self.socket.sendall(message)
         else:
             raise TypeError('message should be hl7.Message or a bytearray (bytes)')
         return self._receive()

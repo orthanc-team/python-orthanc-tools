@@ -12,9 +12,16 @@ Pending changes
 - `Scheduler`: fixed optional schedule parsing, inclusive weekday ranges, the default timezone, and Python 3.8 compatibility.
 - Simplified Dockerfile with `.dockerignore` for smaller build context.
 
+v 0.21.2
+========
+- added the `OrthancFilesChecker` to check the presence of the files in the Orthanc storage
+
+v 0.20.0
+========
+- BREAKING_CHANGE `OrthancCleaner` can now filter on `Accession Number`. Rules file format has changed.
+
 v 0.19.1
 ========
-
 - new arguments/environment variables to configure the `Scheduler` with more flexibility:
  - `--timezone=Etc/UTC` or `TZ=Europe/Paris` to define the Scheduler timezone
  - `--run_schedule='{"Monday-Sunday": ["0-7", "18-24"]}'` or `RUN_SCHEDULE='{"Monday-Saturday": ["0-7", "18-24"], "Sunday": ["0-24"]}'`

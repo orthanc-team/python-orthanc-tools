@@ -1,19 +1,21 @@
 '''
 # Summary
-This script will clean the Orthanc by deleting the oldest studies according to the labels applied on them, and
-potentially to the modality type.
+This script will clean the Orthanc by deleting the oldest studies according to the labels applied on them (or the acc nr value),
+and potentially to the modality type.
 
 # How it works
 The script will run every day at specified time.
 It will read a configuration file defining what should be done:
 
-LABEL1,6,
-LABEL2,12,
-LABEL2,4,CT
+LABEL1,6,,
+LABEL2,12,,
+LABEL2,4,CT,
+,6,,acc-nr
 
 With that sample, all studies with the LABEL1 and older than 6 weeks will be deleted
 all studies with the LABEL2 and older than 12 weeks will be deleted;
-all studies which have CT in the 'ModalitiesInStudy' tag and older than 4 weeks will be deleted;
+all studies with the LABEL2, which have CT in the 'ModalitiesInStudy' tag and older than 4 weeks will be deleted;
+all studies with or without a label, older than 6 weeks and with an AccessionNumber value equal to "acc-nr" will be deleted
 
 Note: studies are deleted only if they were uploaded/modified in Orthanc before the retention period
 '''
@@ -35,11 +37,13 @@ class LabelRule:
     def __init__(self,
                  label_name: str,
                  retention_duration: int,    # unit: week
-                 modality: str = ""
+                 modality: str = "",
+                 accession_number: str = ""
                  ):
         self.label_name = label_name
         self.retention_duration = retention_duration
         self.modality = modality
+        self.accession_number = accession_number
 
 class OrthancCleaner:
 
@@ -55,6 +59,8 @@ class OrthancCleaner:
         self._execution_time = execution_time
         self._labels_file_path = labels_file_path
 
+        self._labels_rules = None
+
     def clean(self):
         '''
         Get information from the csv file (label and retention duration);
@@ -64,14 +70,14 @@ class OrthancCleaner:
 
         # Get the information from  the csv file
         logger.info("Starting daily clean up...")
-        labels_rules = self.parse_csv_file()
+        self._labels_rules = self.parse_csv_file()
 
         logger.info(f"Rules found:")
-        for rule in labels_rules:
-            logger.info(f"Label: {rule.label_name} - {rule.retention_duration} weeks - Modality: {rule.modality}")
+        for rule in self._labels_rules:
+            logger.info(f"Label: {rule.label_name} - {rule.retention_duration} weeks - Modality: {rule.modality} - Acc Nr: {rule.accession_number}")
 
         # get the list of studies to delete
-        studies_ids_to_delete = self.get_studies_to_delete(labels_rules=labels_rules)
+        studies_ids_to_delete = self.get_studies_to_delete(labels_rules=self._labels_rules)
 
         while len(studies_ids_to_delete) > 0:
             
@@ -84,7 +90,7 @@ class OrthancCleaner:
                     logger.error(f"ERROR: {str(ex)}")
             
             # Get one more time the list of studies to delete (because we may have been limited to the value of 'LimitFindResults')
-            studies_ids_to_delete = self.get_studies_to_delete(labels_rules=labels_rules)
+            studies_ids_to_delete = self.get_studies_to_delete(labels_rules=self._labels_rules)
 
         logger.info("Clean up done!")
 
@@ -98,13 +104,19 @@ class OrthancCleaner:
             # Let's compute the date
             limit_date = self.compute_limit_date(label_rule.retention_duration)
 
+            labels = []
+            label_to_search = label_rule.label_name
+            if label_to_search != '':
+                labels.append(label_to_search)
+
             # Query Orthanc based on the date and the label
             studies_to_delete_by_study_date = self._api_client.studies.find(
                 query={
                     'StudyDate': f'-{helpers.to_dicom_date(limit_date)}',
-                    'ModalitiesInStudy': label_rule.modality
+                    'ModalitiesInStudy': label_rule.modality,
+                    'AccessionNumber': label_rule.accession_number
                 },
-                labels=[label_rule.label_name]
+                labels=labels
                 )
 
             # Filter out the old studies which were recently stored in Orthanc
@@ -129,7 +141,7 @@ class OrthancCleaner:
             reader = csv.reader(csv_file)
 
             for row in reader:
-                labels_rules.append(LabelRule(row[0], int(row[1]), row[2]))
+                labels_rules.append(LabelRule(row[0], int(row[1]), row[2], row[3]))
         return labels_rules
 
 

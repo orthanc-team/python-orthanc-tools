@@ -19,7 +19,7 @@ import logging
 import unittest
 import pydicom
 
-from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, IdsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner, OrthancFolderImporter, OrthancSyncher
+from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, IdsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination, OrthancCleaner, OrthancFolderImporter, OrthancSyncher, OrthancFilesChecker
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -1100,6 +1100,51 @@ class Test3Orthancs(unittest.TestCase):
         # only one single study should be kept
         self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
 
+    def test_orthanc_cleaner_with_filter_on_acc_nr(self):
+        self.oa.delete_all_content()
+
+        # We are not able to trick Orthanc to modify the `LastUpdate` value
+        # so let's create studies with dates in the future and
+        # a negative retention period
+
+        # populate Orthanc with and "old" future study...
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=3),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=4)
+        )
+        populator.execute()
+
+        # ...and a "recent" future study
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=14),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=16)
+        )
+        populator.execute()
+
+        studies_ids = self.oa.studies.get_all_ids()
+
+        # let's assign the acc nr to both studies
+        for id in studies_ids:
+            self.oa.studies.modify(orthanc_id=id, replace_tags={"AccessionNumber": "acc-nr"})
+
+        cleaner = OrthancCleaner(api_client=self.oa, execution_time=None,
+                                 labels_file_path=here / "stimuli/labels.csv")
+
+        cleaner.execute()
+
+        # we would like to check that the recent study is still there and the old one is gone,
+        # event they both have the required acc nr
+        self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
+
+
     def test_folder_importer(self):
         self.oa.delete_all_content()
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1287,6 +1332,68 @@ class Test3Orthancs(unittest.TestCase):
 
             syncher.execute()
             self.assertEqual(len(self.oa.instances.get_all_ids()), 108)
+
+
+    def test_files_checker_with_valid_storage(self):
+        self.oa.delete_all_content()
+
+        # populate Orthanc A
+        populator_a = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date(2022, 4, 19),
+            to_study_date=datetime.date(2022, 4, 25)
+        )
+        populator_a.execute()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            missing_files_list_file_path = os.path.join(temp_dir, 'missing.txt')
+
+            # run the checker and
+            checker = OrthancFilesChecker(
+                api_client=self.oa,
+                missing_files_list_file_path=missing_files_list_file_path
+            )
+            checker.execute()
+
+            # check that the file with the list of missing files has not been created
+            self.assertFalse(os.path.isfile(missing_files_list_file_path))
+
+
+    def test_files_checker_with_invalid_storage(self):
+        self.oa.delete_all_content()
+        self.oa.upload_file(here / "stimuli/CT_small.dcm")
+
+        # delete the file from the storage
+        subprocess.run(
+            [
+                "docker",
+                "exec",
+                "docker-setup-orthanc-a-1",
+                "sh",
+                "-c",
+                "find /var/lib/orthanc/db/ -mindepth 1 -depth -type d -name '??' -exec rm -rf {} +",
+            ],
+            check=True,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            missing_files_list_file_path = os.path.join(temp_dir, 'missing.txt')
+
+            # run the checker and
+            checker = OrthancFilesChecker(
+                api_client=self.oa,
+                missing_files_list_file_path=missing_files_list_file_path
+            )
+            checker.execute()
+
+            self.assertTrue(os.path.isfile(missing_files_list_file_path))
+            with open(missing_files_list_file_path, "r") as file:
+                file_content = file.readline()
+                file_content = file_content.replace("\n", "")
+                self.assertEqual(file_content, '1CT1,CompressedSamples^CT1,20040119,e+1,1.3.6.1.4.1.5962.1.2.1.20040119072730.12322')
 
 
 

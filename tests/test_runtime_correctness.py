@@ -3,9 +3,11 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from orthanc_tools.helpers.environment import get_env_bool
+from orthanc_tools.orthanc_monitor import OrthancMonitor
 from orthanc_tools.orthanc_syncher import OrthancSyncher
 from orthanc_tools.orthanc_uploader import OrthancUploader
 from orthanc_tools.orthanc_warmer import OrthancWarmer
@@ -125,6 +127,35 @@ class TestOrthancSyncherSafety(unittest.TestCase):
                 )
 
         self.assertEqual(6, source.instances.get_file.call_count)
+
+
+class TestOrthancMonitorLogging(unittest.TestCase):
+    def test_handler_exception_is_logged_without_masking_original_error(self):
+        monitor = OrthancMonitor(api_client=mock.MagicMock(), max_retries=0)
+        change_type = mock.sentinel.change_type
+        monitor.add_handler(
+            change_type,
+            mock.Mock(side_effect=RuntimeError("handler failed")),
+        )
+        monitor._changes_to_process.put(
+            SimpleNamespace(
+                sequence_id=42,
+                resource_id="resource-id",
+                change_type=change_type,
+            )
+        )
+        monitor._changes_to_process.put(None)
+
+        with self.assertLogs(
+            "orthanc_tools.orthanc_monitor",
+            level="ERROR",
+        ) as captured:
+            monitor._process_changes(worker_id=0)
+
+        self.assertIn(
+            "Unhandled exception in event handler: handler failed",
+            captured.output[0],
+        )
 
 
 if __name__ == "__main__":

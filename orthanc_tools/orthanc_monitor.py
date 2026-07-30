@@ -223,7 +223,7 @@ class OrthancMonitor:
                         processed = True
 
                 except Exception as ex:
-                    logger.exception("Unhandled exception in event handler: ", ex)
+                    logger.exception("Unhandled exception in event handler: %s", ex)
                     last_error = str(ex)
 
                 retries = retries + 1

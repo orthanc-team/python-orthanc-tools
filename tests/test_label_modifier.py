@@ -167,15 +167,24 @@ class TestLabelModifier(unittest.TestCase):
         subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup-auth")
 
     @classmethod
-    def wait_auth_service_started(cls, url, auth):
-        ready = False
-        while not ready:
+    def wait_auth_service_started(cls, url, auth, timeout=120):
+        deadline = time.monotonic() + timeout
+        last_status_code = None
+
+        while time.monotonic() < deadline:
             try:
                 response = requests.get(url=url + "/settings/roles", auth=auth)
                 if response.status_code == 200:
-                    ready = True
-            except Exception as ex:
-                time.sleep(1)
+                    return
+                last_status_code = response.status_code
+            except requests.RequestException:
+                pass
+            time.sleep(1)
+
+        raise TimeoutError(
+            f"Authorization service did not become ready within {timeout} seconds "
+            f"(last status: {last_status_code})"
+        )
 
     def sorting(self, item):
         if isinstance(item, dict):

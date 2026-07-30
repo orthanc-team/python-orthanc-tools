@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.11"
+          - "3.14"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel build
+          python -m pip install -r requirements.txt
+
+      - name: Validate package metadata
+        run: python setup.py egg_info
+
+      - name: Run unit tests
+        run: |
+          python -m unittest orthanc_tools.hl7Lib.tests.test_hl7_folder_monitor
+          python -m unittest orthanc_tools.hl7Lib.tests.test_hl7_message_parser
+          python -m unittest orthanc_tools.hl7Lib.tests.test_hl7_orm_worklist_msg_handler
+          python -m unittest orthanc_tools.hl7Lib.tests.test_hl7_server
+          python -m unittest orthanc_tools.hl7Lib.tests.test_hl7_validator
+          python -m unittest orthanc_tools.hl7Lib.tests.test_hl7_worklist_parser
+          python -m unittest tests/test_old_files_deleter.py
+
+      - name: Build distributions
+        run: python -m build .
+
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel build
+          python -m pip install -r requirements.txt
+
+      - name: Validate package and HL7 behavior
+        run: |
+          python setup.py egg_info
+          python -m unittest discover -s orthanc_tools/hl7Lib/tests
+          python -m unittest tests/test_old_files_deleter.py
+          python -m unittest tests/test_label_modifier.py
+
+      - name: Run three-Orthanc integration tests
+        run: python -m unittest tests/test_3_orthancs.py
+
+      - name: Run replicator integration tests
+        run: python -m unittest tests/test_orthanc_replicator.py
+
+      - name: Build distributions
+        run: python -m build .
+
+      - name: Build production image
+        run: docker build --tag python-orthanc-tools:ci .

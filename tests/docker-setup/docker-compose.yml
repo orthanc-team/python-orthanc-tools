@@ -1,6 +1,6 @@
 services:
   orthanc-a:
-    image: orthancteam/orthanc
+    image: orthancteam/orthanc:26.4.2
     ports: ["10042:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -36,7 +36,7 @@ services:
         }
 
   orthanc-b:
-    image: orthancteam/orthanc
+    image: orthancteam/orthanc:26.4.2
     ports: ["10043:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -73,7 +73,7 @@ services:
         }
 
   orthanc-c:
-    image: orthancteam/orthanc
+    image: orthancteam/orthanc:26.4.2
     ports: ["10044:8042"]
     environment:
       VERBOSE_STARTUP: "true"

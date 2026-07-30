@@ -5,7 +5,7 @@
 
 services:
   orthanc-a:
-    image: orthancteam/orthanc
+    image: orthancteam/orthanc:26.4.2
     ports: ["10042:8042"]
     environment:
       VERBOSE_STARTUP: "true"
@@ -20,7 +20,7 @@ services:
       ORTHANC__OVERWRITE_INSTANCES: "true"
 
   orthanc-auth-service:
-    image: orthancteam/orthanc-auth-service
+    image: orthancteam/orthanc-auth-service:26.4.0
     ports: ["18000:8000"]
     volumes:
       - ./permissions.json:/orthanc_auth_service/permissions.json
@@ -31,7 +31,7 @@ services:
       SECRET_KEY: "change-me-I-am-a-secret-key"
       ENABLE_KEYCLOAK: "true"
       ENABLE_KEYCLOAK_API_KEYS: "true"
-      KEYCLOAK_CLIENT_SECRET: "NPtsEUenl6nw8gJmM886TbvzuGPzvgt9"
+      KEYCLOAK_CLIENT_SECRET: "THPRqk7LVRVxsxcNnOos3cjtLDfIfh0C"
       PUBLIC_ORTHANC_ROOT: "http://orthanc-a:8042/"
       PUBLIC_LANDING_ROOT: "http://orthanc-a:8042/ui/app/token-landing.html"
       USERS: |
@@ -61,7 +61,7 @@ services:
       retries: 10
 
   keycloak:
-    image: orthancteam/orthanc-keycloak
+    image: orthancteam/orthanc-keycloak:26.4.0
     depends_on: [keycloak-db]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: "admin"

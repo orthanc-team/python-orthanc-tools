@@ -1,6 +1,6 @@
 services:
   orthanc-a:
-    image: orthancteam/orthanc
+    image: orthancteam/orthanc:26.4.2
     depends_on:
       broker:
         condition: service_healthy
@@ -23,7 +23,7 @@ services:
 
 
   orthanc-b:
-    image: orthancteam/orthanc
+    image: orthancteam/orthanc:26.4.2
     ports: ["10043:8042"]
     environment:
       VERBOSE_STARTUP: "true"

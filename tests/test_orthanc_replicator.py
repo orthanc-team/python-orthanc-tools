@@ -23,20 +23,27 @@ class TestOrthancReplicator(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup-replicator")
-        subprocess.run(["docker", "compose", "up", "-d"], cwd=here/"docker-setup-replicator")
+        compose_dir = here / "docker-setup-replicator"
+        subprocess.run(["docker", "compose", "down", "-v"], cwd=compose_dir)
+        subprocess.run(["docker", "compose", "up", "-d"], cwd=compose_dir, check=True)
 
-        cls.oa = OrthancApiClient('http://localhost:10042', user='test', pwd='test')
-        cls.oa.wait_started()
-        cls.ob = OrthancApiClient('http://localhost:10043', user='test', pwd='test')
-        cls.ob.wait_started()
+        try:
+            cls.oa = OrthancApiClient('http://localhost:10042', user='test', pwd='test')
+            cls.oa.wait_started()
+            cls.ob = OrthancApiClient('http://localhost:10043', user='test', pwd='test')
+            cls.ob.wait_started()
+            helpers.wait_until(cls.rabbitmq_is_ready, 30)
+        except Exception:
+            subprocess.run(["docker", "compose", "down", "-v"], cwd=compose_dir)
+            raise
 
     @classmethod
     def tearDownClass(cls):
         subprocess.run(["docker", "compose", "down", "-v"], cwd=here/"docker-setup-replicator")
 
-    def get_rabbitmq_connection_params(self):
-        broker_connection_parameters = pika.ConnectionParameters(
+    @staticmethod
+    def get_rabbitmq_connection_params():
+        return pika.ConnectionParameters(
             "localhost", 5672,
             credentials=pika.PlainCredentials("rabbit", "123456"),
             connection_attempts=3,
@@ -45,7 +52,15 @@ class TestOrthancReplicator(unittest.TestCase):
             stack_timeout=None,
             blocked_connection_timeout=None
         )
-        return broker_connection_parameters
+
+    @classmethod
+    def rabbitmq_is_ready(cls):
+        try:
+            connection = pika.BlockingConnection(cls.get_rabbitmq_connection_params())
+            connection.close()
+            return True
+        except pika.exceptions.AMQPError:
+            return False
 
     def get_queue_length(self, queue: str, standby: bool):
         pika_conn_params = self.get_rabbitmq_connection_params()
@@ -100,21 +115,23 @@ class TestOrthancReplicator(unittest.TestCase):
         connection.close()
 
     def get_number_of_running_containers(self):
-        bash_cmd = "docker ps | tail -n +2 | wc -l"
-        running_containers = int(subprocess.check_output(bash_cmd, shell=True))
-        return running_containers
+        container_ids = subprocess.check_output(
+            ["docker", "ps", "--quiet"],
+            text=True
+        )
+        return len(container_ids.splitlines())
 
     def stop_container(self, container_name: str):
-        bash_cmd = f"docker stop {container_name}"
-        subprocess.check_output(bash_cmd, shell=True)
+        subprocess.run(["docker", "stop", container_name], check=True)
 
     def start_container(self, container_name: str):
-        bash_cmd = f"docker start {container_name}"
-        subprocess.check_output(bash_cmd, shell=True)
+        subprocess.run(["docker", "start", container_name], check=True)
 
     def get_container_status(self, container_name: str):
-        bash_cmd = f"docker inspect --format={{{{.State.Health.Status}}}} {container_name}"
-        return subprocess.check_output(bash_cmd, shell=True)
+        return subprocess.check_output(
+            ["docker", "inspect", "--format={{.State.Health.Status}}", container_name],
+            text=True
+        ).strip()
 
     def test_forward_and_delete_instance(self):
 
@@ -258,7 +275,7 @@ class TestOrthancReplicator(unittest.TestCase):
         helpers.wait_until(lambda: self.get_number_of_running_containers() == 3, 10)
 
         # and until the broker is ready to accept connections
-        helpers.wait_until(lambda: str(self.get_container_status("broker")) == "healthy", 15)
+        helpers.wait_until(lambda: self.get_container_status("broker") == "healthy", 15)
 
         # check that everything is now ok by deleting the instance from the orthanc source
         self.oa.delete_all_content()

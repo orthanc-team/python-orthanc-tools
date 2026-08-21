@@ -1012,7 +1012,7 @@ class Test3Orthancs(unittest.TestCase):
             self.assertEqual(4, len(self.oa.instances.get_all_ids()))
             with open(state_path, 'r') as file:
                 lines = file.readlines()
-                self.assertEqual(3, len(lines))
+                self.assertEqual(4, len(lines))
 
     def test_folder_importer_with_labels(self):
         self.oa.delete_all_content()
@@ -1033,7 +1033,7 @@ class Test3Orthancs(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             errors_path = os.path.join(temp_dir, 'errors.txt')
             state_path = os.path.join(temp_dir, 'folders.txt')
-            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli", errors_path=errors_path, state_path=state_path)
+            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli", errors_path=errors_path, state_path=state_path, max_retries=0)
             importer.execute()
 
             self.assertEqual(5, len(self.oa.instances.get_all_ids()))
@@ -1102,6 +1102,19 @@ class Test3Orthancs(unittest.TestCase):
             with open(here / "docker-setup-replicator/uninhibit.lua", 'rb') as f:
                 lua_script = f.read()
             self.oa.execute_lua_script(lua_script)
+
+    def test_folder_importer_with_pdf_file(self):
+        self.oa.delete_all_content()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            errors_path = os.path.join(temp_dir, 'errors.txt')
+            state_path = os.path.join(temp_dir, 'folders.txt')
+            importer = OrthancFolderImporter(api_client=self.oa, folder_path=here / "stimuli", errors_path=errors_path, state_path=state_path, max_retries=0, dicomize_pdf=True)
+            importer.execute()
+
+            self.assertEqual(6, len(self.oa.instances.get_all_ids()))
+            with open(errors_path, 'r') as file:
+                lines = file.readlines()
+                self.assertEqual(2, len(lines))
 
     def test_orthanc_syncher_as_a_migrator(self):
         self.oa.delete_all_content()

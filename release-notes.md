@@ -1,3 +1,7 @@
+v 0.22.0
+========
+- improved the `OrthancFolderImporter` to dicomize the pdf files.
+
 v 0.21.2
 ========
 - added the `OrthancFilesChecker` to check the presence of the files in the Orthanc storage

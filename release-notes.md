@@ -1,3 +1,7 @@
+v 0.22.1
+========
+- Added a way to avoid duplicates in the `DicomWorklistBuilder`
+
 v 0.22.0
 ========
 - improved the `OrthancFolderImporter` to dicomize the pdf files.

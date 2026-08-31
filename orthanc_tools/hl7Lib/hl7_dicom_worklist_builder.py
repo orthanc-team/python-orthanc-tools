@@ -4,8 +4,11 @@ import pydicom
 from enum import Enum
 from typing import List, Union
 from pprint import pprint
+import logging
 
 from orthanc_api_client import OrthancApiClient
+
+logger = logging.getLogger(__name__)
 
 class DicomElementType(Enum):
     MANDATORY = 1  # for dicom tags that must be there (type 1 or 1c) -> throw an exception if not present
@@ -67,11 +70,13 @@ class DicomWorklistBuilder:
             return values
         return values
 
-    def generate(self, values: typing.Dict[str, str], file_name: str = None, entropy_srcs: List[str] = None) -> str:
+    def generate(self, values: typing.Dict[str, str], file_name: str = None, entropy_srcs: List[str] = None, avoid_duplicates: bool = False) -> str:
         """
         :param values: a Dictionary object created from an HL7 message.  Keys of the dico shall match pydicom tag names (i.e: AccessionNumber, PatientID, ...)
         :param filename:
         :entropy_srcs: a SHA512 hash of the supplied list will be used for the UIDs which means the result is deterministic
+        :avoid_duplicates: if True (and if the API is used, not the old file way), there will be a check on the acc Nr.
+        If there is already a WL with the acc nr found in the values dict, it will be deleted before the creation of a new wl item
         :return: the filename created or the Orthanc ID if WL are stored into Orthanc
         """
         assert self._folder is not None or file_name is not None or self._orthanc_client is not None, "Please always provide a folder (or an Orthanc client) when creating the builder or provide a filename each time you generate a worklist"
@@ -83,7 +88,7 @@ class DicomWorklistBuilder:
             values['PatientAddress'] = patient_address
 
         if self._orthanc_client is  not None:
-            r = self._generate_wl_through_api(values=values, entropy_srcs=entropy_srcs)
+            r = self._generate_wl_through_api(values=values, entropy_srcs=entropy_srcs, avoid_duplicates=avoid_duplicates)
             return r
 
         elif self._folder is not None or file_name is not None:
@@ -129,7 +134,22 @@ class DicomWorklistBuilder:
         ds.save_as(file_name, enforce_file_format=True)
         return file_name
 
-    def _generate_wl_through_api(self, values: typing.Dict[str, str], entropy_srcs: List[str] = None):
+    def _generate_wl_through_api(self, values: typing.Dict[str, str], entropy_srcs: List[str] = None, avoid_duplicates: bool = False):
+
+        # in some cases, there is a periodic query to a RIS and a WL is created based on the returned results
+        # in such a case, we may want to avoid the creation of a new WL if it has already been generated
+        # chosen way: delete the existing WL, then create a new one (so that, if the returned results are different,
+        # they are taken in account).
+        if avoid_duplicates:
+            if values.get("AccessionNumber") is None:
+                logger.warning("Setup configured to avoid WL duplicates, but there is no Accession Number!")
+            else:
+                existing_wl = self._orthanc_client.worklists.get_all()
+                for wl in existing_wl:
+                    if wl.get("Tags").get("AccessionNumber") == values.get("AccessionNumber"):
+                        self._orthanc_client.worklists.delete(orthanc_id=wl.get("ID"))
+                        break
+
 
         formatted_values = {}
 

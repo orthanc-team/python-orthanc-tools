@@ -81,6 +81,59 @@ class TestDicomWorklistBuilder(unittest.TestCase):
 
         self.assertEqual(1, len(wl_found))
 
+    def test_generate_with_orthanc_client_and_avoid_duplicates(self):
+        self.oa.worklists.delete_all()
+        self.ob.worklists.delete_all()
+
+        o = OrthancApiClient('http://localhost:10042', user='test', pwd='test')
+        builder = DicomWorklistBuilder(orthanc_client=o)
+
+        values = {
+            'AccessionNumber': '3264557',
+            'IssuerOfPatientID': 'ECSIMAGING',
+            'Modality': 'NMR',
+            'OrderFillerIdentifierSequence': '3264557^ECSIMAGING',
+            'OrderPlacerIdentifierSequence': '3264557',
+            'OtherPatientIDs': '',
+            'PatientAddress': '2 rue ^^THUIR^^66300^^H',
+            'PatientBirthDate': '19550812',
+            'PatientID': '5343197',
+            'PatientName': 'LLOxxx^Simxxx^^^',
+            'PatientSex': 'F',
+            'ReferringPhysicianName': 'Docteur^Traitant',
+            'RequestedProcedureDescription': 'IRM FOIE IV',
+            'RequestedProcedureID': '3264557',
+            'RequestingPhysician': 'Docteur^Quenotte',
+            'SOPInstanceUID': '1.2.826.0.1.3680043.8.498.59927963937066647984484704740995616579',
+            'ScheduledPerformingPhysicianName': None,
+            'ScheduledProcedureStepID': '3264557',
+            'ScheduledProcedureStepStartDate': '20201001',
+            'ScheduledProcedureStepStartTime': '141000',
+            'ScheduledStationAETitle': 'UNKNOWN',
+            'ScheduledStationName': None,
+            'SpecificCharacterSet': 'ISO_IR 100',
+            'StudyInstanceUID': '1.3.6.1.4.1.31672.1.2.1.973852.91.1596520991.411',
+            '_encoding': '8859/15',
+            '_requestingPhysicianOBR': 'Docteur^Quenotte',
+            '_requestingPhysicianORC': 'Docteur^Quenotte',
+            '_scheduledProcedureStepStartDateTime': '20201001141000',
+            '_sex': 'F'
+        }
+
+        builder.generate(values = values, avoid_duplicates = True)
+        builder.generate(values = values, avoid_duplicates = True)
+
+        wl_found = self.ob.modalities.find_worklist(
+            modality="orthanc-a",
+            query={
+                'PatientID': "",
+                "StudyInstanceUID": "",
+                "AccessionNumber": ""
+            }
+        )
+
+        self.assertEqual(1, len(wl_found))
+
 
     class MyDicomWorklistBuilder(DicomWorklistBuilder):
 

@@ -1,4 +1,4 @@
-v 0.22.1
+v 0.22.2
 ========
 - Added a way to avoid duplicates in the `DicomWorklistBuilder`
 

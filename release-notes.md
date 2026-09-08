@@ -1,3 +1,7 @@
+v 0.22.3
+========
+- Fix in the `Scheduler` env vars handling.
+
 v 0.22.2
 ========
 - Added a way to avoid duplicates in the `DicomWorklistBuilder`

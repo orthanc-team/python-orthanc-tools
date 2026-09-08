@@ -154,22 +154,11 @@ class OrthancFolderImporter:
                 logger.info(f"Folder {path_to_upload} already processed, skipping...")
                 return study_orthanc_id
 
-            ## list dir and check if there is folders or files in this path
-            ## if files only:
-            ##  sort them (pdf at the end)
-            ## process them
-
             study_id = None
             path_entries = self._list_and_sort_dir(path_to_upload)
             for path in path_entries:
                 full_path = os.path.join(path_to_upload, path)
                 study_id = self.upload_and_label(path_to_upload=full_path, study_orthanc_id=study_id)
-
-            # let's process this folder
-            # for path in os.listdir(path_to_upload):
-            #     full_path = os.path.join(path_to_upload, path)
-            #     ## manage id (get and repush)
-            #     self.upload_and_label(path_to_upload=full_path)
 
             # let's add this folder path in the processed ones:
             self.add_folder_path_in_state_file(path_to_upload)

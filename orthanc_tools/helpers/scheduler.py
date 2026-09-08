@@ -163,7 +163,7 @@ class Scheduler:
         parser.add_argument('--night_start_hour', type=int, default=19, help='Night start hour')
         parser.add_argument('--night_end_hour', type=int, default=6, help='Night start hour')
         parser.add_argument('--run_schedule', type=str, default=None, help='Run on schedule sample: {"Monday": ["0-6", "20-24"], .., "Sunday": ["0-24"]}')
-        parser.add_argument('--timezone', type=str, default="Utc/UTC", help='Timezone for the schedule')
+        parser.add_argument('--timezone', type=str, default="Etc/UTC", help='Timezone for the schedule')
 
     @classmethod
     def create_from_args_and_env_var(cls, args):
@@ -175,7 +175,9 @@ class Scheduler:
             run_only_at_night_and_weekend = os.environ.get("RUN_ONLY_AT_NIGHT_AND_WEEKEND") == "true"
         else:
             run_only_at_night_and_weekend = args.run_only_at_night_and_weekend
-        run_schedule = json.loads(os.environ.get("RUN_SCHEDULE", str(args.run_schedule)))
+        run_schedule = os.environ.get("RUN_SCHEDULE", str(args.run_schedule))
+        if run_schedule is not None:
+            run_schedule = json.loads(run_schedule)
 
         return Scheduler(
             night_start_hour=night_start_hour,

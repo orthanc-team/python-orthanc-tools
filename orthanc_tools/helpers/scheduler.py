@@ -175,9 +175,9 @@ class Scheduler:
             run_only_at_night_and_weekend = os.environ.get("RUN_ONLY_AT_NIGHT_AND_WEEKEND") == "true"
         else:
             run_only_at_night_and_weekend = args.run_only_at_night_and_weekend
-        run_schedule = os.environ.get("RUN_SCHEDULE", str(args.run_schedule))
+        run_schedule = os.environ.get("RUN_SCHEDULE", args.run_schedule)
         if run_schedule is not None:
-            run_schedule = json.loads(run_schedule)
+            run_schedule = json.loads(str(run_schedule))
 
         return Scheduler(
             night_start_hour=night_start_hour,

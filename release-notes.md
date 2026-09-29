@@ -1,3 +1,7 @@
+v 0.22.4
+========
+- Fix in the `DicomWorklistBuilder` (StudyInstanceUID was missing with API way).
+
 v 0.22.3
 ========
 - Fix in the `Scheduler` env vars handling.

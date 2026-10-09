@@ -1000,6 +1000,59 @@ class Test3Orthancs(unittest.TestCase):
         # event they both have the required acc nr
         self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
 
+    def test_orthanc_cleaner_with_label_to_keep(self):
+        self.oa.delete_all_content()
+
+        # We are not able to trick Orthanc to modify the `LastUpdate` value
+        # so let's create studies with dates in the future and
+        # a negative retention period
+
+        # populate Orthanc with and "old" future study...
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=3),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=4)
+        )
+        populator.execute()
+
+        # ...and a "recent" future study
+        populator = OrthancTestDbPopulator(
+            api_client=self.oa,
+            studies_count=1,
+            series_count=1,
+            instances_count=1,
+            from_study_date=datetime.date.today() + datetime.timedelta(weeks=14),
+            to_study_date=datetime.date.today() + datetime.timedelta(weeks=16)
+        )
+        populator.execute()
+
+        studies_ids = self.oa.studies.get_all_ids()
+
+        # let's assign the label 'TO_KEEP' to both studies
+        studies_ids = self.oa.studies.get_all_ids()
+        for id in studies_ids:
+            self.oa.studies.add_label(id, "TO_KEEP")
+
+        cleaner = OrthancCleaner(api_client=self.oa, execution_time=None,
+                                 labels_file_path=here / "stimuli/labels2.csv")
+
+        cleaner.execute()
+
+        # we would like to check that both the recent study and the old one are kept
+        # even one of them is older than the retention period
+        self.assertEqual(len(self.oa.studies.get_all_ids()), 2)
+
+        # let's remove the 'TO_KEEP' label and check that only one study (based on the date) is deleted
+        studies_ids = self.oa.studies.get_all_ids()
+        for id in studies_ids:
+            self.oa.studies.delete_label(id, "TO_KEEP")
+
+        cleaner.execute()
+
+        self.assertEqual(len(self.oa.studies.get_all_ids()), 1)
 
     def test_folder_importer(self):
         self.oa.delete_all_content()
@@ -1039,7 +1092,7 @@ class Test3Orthancs(unittest.TestCase):
             self.assertEqual(5, len(self.oa.instances.get_all_ids()))
             with open(errors_path, 'r') as file:
                 lines = file.readlines()
-                self.assertEqual(3, len(lines))
+                self.assertEqual(4, len(lines))
 
     def test_folder_importer_with_errors(self):
         self.oa.delete_all_content()
@@ -1114,7 +1167,7 @@ class Test3Orthancs(unittest.TestCase):
             self.assertEqual(6, len(self.oa.instances.get_all_ids()))
             with open(errors_path, 'r') as file:
                 lines = file.readlines()
-                self.assertEqual(2, len(lines))
+                self.assertEqual(3, len(lines))
 
     def test_orthanc_syncher_as_a_migrator(self):
         self.oa.delete_all_content()

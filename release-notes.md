@@ -1,3 +1,7 @@
+v 0.23.0
+========
+- BREAKING_CHANGE `OrthancCleaner` can now keep some studies based on the label. Rules file format has changed.
+- 
 v 0.22.4
 ========
 - Fix in the `DicomWorklistBuilder` (StudyInstanceUID was missing with API way).
